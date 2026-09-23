@@ -1,0 +1,151 @@
+# Picklelog version catalog — AC-1.4, AC-1.5, AC-1.9, AC-1.18.
+#
+# R2: this file is the ONLY place a version literal may appear. No version string
+# is permitted in any build.gradle.kts; the AC-1.5 check (`./gradlew checkNoVersionLiterals`)
+# fails the build if one appears.
+#
+# R5 / AC-1.14: no -alpha, -beta, -rc or -SNAPSHOT may appear below.
+# Enforced by `./gradlew checkNoPrereleaseVersions`.
+
+[versions]
+
+# ---------------------------------------------------------------------------
+# R1 — THE LOAD-BEARING PIN. DO NOT RAISE `kotlin` ALONE.
+#
+# Kotlin 2.4.20 exists and is newer. It has NO matching KSP release: KSP's
+# newest is 2.3.12, whose major.minor tracks the Kotlin 2.3 line. Room's
+# annotation processor runs on KSP, so Kotlin 2.4.20 + KSP 2.3.12 breaks the
+# Room compiler, and it surfaces as an opaque annotation-processor failure far
+# from any line mentioning a version — not as a version conflict.
+#
+# `kotlin`, `ksp` and `composeCompilerPlugin` MOVE TOGETHER OR NOT AT ALL.
+# ---------------------------------------------------------------------------
+kotlin = "2.3.21"
+# KSP build suffix to re-confirm against github.com/google/ksp/releases on the
+# first successful sync (RFC-001 3.2; RULES R1 flags this pairing specifically).
+ksp = "2.3.12"
+
+# AC-1.18 — the Compose compiler Gradle plugin replaced the old
+# compose-compiler-artifact model in Kotlin 2.0. Its version must match the
+# KOTLIN version exactly — not the Compose BOM version. Same category of risk as
+# R1, one level removed: raising Kotlin without a same-day Compose-plugin
+# release breaks this.
+composeCompilerPlugin = "2.3.21"
+
+agp = "9.4.0"
+
+# Compose artifacts are declared WITHOUT versions and resolved through this BOM (R3).
+composeBom = "2026.09.00"
+
+room = "2.8.5"
+datastore = "1.2.1"
+work = "2.11.2"
+navigation = "2.10.1"
+glance = "1.2.0"
+benchmark = "1.5.0"
+billing = "9.1.0"
+coil = "3.6.3"
+kotlinxDatetime = "0.8.0"
+
+# VERIFIED 2026-09-23 — newest stable on github.com/Kotlin/kotlinx.coroutines/releases.
+# Added by RFC-002: :domain returns Flow and is a plain kotlin("jvm") module, so nothing
+# else puts coroutines on its compile classpath.
+kotlinxCoroutines = "1.11.0"
+kotlinxSerializationJson = "1.11.0"
+turbine = "1.2.1"
+
+# VERIFIED 2026-09-23 (R103 gap closed). 12.1.1 resolves and runs — proven by
+# ktlintKotlinScriptCheck executing against this tree on a real build. The
+# plugin defaults to ktlint 1.0.1 (KtlintExtension.kt at tag v12.1.1:
+# `objectFactory.property { set("1.0.1") }`), so 1.0.1 is the engine whose
+# ruleset this repo is formatted against — not whatever ktlint is newest.
+# Bumping this plugin changes the bundled ktlint and will surface new rules
+# (ktlint 1.8.0, for one, adds chain-method-continuation, which flags 14 sites
+# here). Reformat deliberately when bumping; do not bump casually.
+ktlintPlugin = "12.1.1"
+
+# UNVERIFIED — androidx.activity:activity-compose is required by AC-1.19's
+# ComponentActivity/setContent and is NOT managed by the Compose BOM (the BOM
+# covers androidx.compose.* only). No version for it exists in RULES.md 1.1 or
+# RFC-001 3.2 — a genuine gap in the RFC. Resolved here the same way owner
+# decision #4 resolved the test libraries: Gradle's dynamic `latest.release`
+# selector, which is a real mechanism rather than an invented number.
+#
+# This one SHIPS, unlike the test libraries, so it costs more reproducibility
+# than owner decision #4 accepted. Replace it with a pinned, checked number as
+# the first task after the build resolves — VERIFICATION.md step 4 prints it.
+activityCompose = "latest.release"
+
+# Owner decision #4 — "use latest", implemented literally as Gradle's dynamic
+# release selector rather than a made-up number. Test-only, never shipped.
+# Known, accepted cost: a rebuild months from now can silently pick up a newer
+# test library. Replace with pinned numbers before RFC-002's suite is
+# load-bearing (RFC-001 3.2, R8).
+junit = "latest.release"
+androidxTest = "latest.release"
+androidxTestExtJunit = "latest.release"
+
+# App identity. Lives here so no quoted semantic-version literal ever appears in
+# app/build.gradle.kts, which AC-1.5's check would otherwise fail on.
+appVersionName = "0.1.0"
+appVersionCode = "1"
+
+[libraries]
+# --- Compose: no versions, resolved by the BOM (R3, AC-1.4) ---
+compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+compose-ui = { group = "androidx.compose.ui", name = "ui" }
+compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+# Compose UI test artifacts resolve through the same BOM — they need no separate
+# version entry (RFC-001 3.2; this is why R8's original three-item list was two).
+compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+
+# --- Declared for AC-1.4; consumed by later RFCs ---
+room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+# AC-2.12 — MigrationTestHelper.
+room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
+datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
+# RFC-002 3.5 / AC-2.15 needs the TYPED DataStore, not the Preferences one. Different
+# artifact, same release train as datastore-preferences.
+datastore = { group = "androidx.datastore", name = "datastore", version.ref = "datastore" }
+work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
+navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
+glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }
+benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmark" }
+
+# AC-1.8 — must resolve on the :app classpath before any billing code exists (F65).
+billing-ktx = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "billing" }
+
+# Coil 3 moved its Maven group to io.coil-kt.coil3. RULES.md flagged the group as
+# unconfirmed; RFC-001 3.2 checked it against Maven Central and confirmed the move.
+coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+
+kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+
+# --- Test ---
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
+androidx-test-core-ktx = { group = "androidx.test", name = "core-ktx", version.ref = "androidxTest" }
+androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTest" }
+androidx-test-rules = { group = "androidx.test", name = "rules", version.ref = "androidxTest" }
+androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExtJunit" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "composeCompilerPlugin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlintPlugin" }
