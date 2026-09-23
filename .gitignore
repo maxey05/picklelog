@@ -1,0 +1,32 @@
+documentation
+claude-outputs
+
+keystore/*.jks
+keystore/*.keystore
+keystore/keystore.properties
+
+# --- Android / Gradle ------------------------------------------------------
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+out/
+build/
+.gradle/
+local.properties
+.cxx/
+release/
+# --- IDE -------------------------------------------------------------------
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+captures/
+.externalNativeBuild/
+# --- OS --------------------------------------------------------------------
+.DS_Store
+Thumbs.db
