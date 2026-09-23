@@ -1,0 +1,254 @@
+fun sourceTree(): Sequence<File> {
+    val self = rootDir.resolve("gradle/rule-checks.gradle.kts").canonicalFile
+    return rootDir.walkTopDown()
+        .onEnter { dir ->
+            dir.name !in setOf("build", ".git", ".gradle", ".idea", "node_modules", ".kotlin")
+        }
+        .filter { it.isFile && it.canonicalFile != self }
+}
+
+fun uncommentedLines(file: File): List<Pair<Int, String>> =
+    file.readLines()
+        .mapIndexed { index, line -> (index + 1) to line }
+        .filterNot { (_, line) ->
+            val t = line.trim()
+            t.startsWith("//") || t.startsWith("#") || t.startsWith("*") || t.startsWith("/*")
+        }
+        .map { (number, line) -> number to line.substringBefore("//").substringBefore(" #") }
+
+fun report(
+    taskName: String,
+    rule: String,
+    hits: List<String>,
+    explanation: String,
+) {
+    if (hits.isEmpty()) return
+    throw GradleException(
+        buildString {
+            appendLine("$taskName FAILED — $rule")
+            appendLine(explanation)
+            appendLine()
+            hits.forEach { appendLine("  $it") }
+        },
+    )
+}
+
+val checkNoVersionLiterals by tasks.registering {
+    group = "verification"
+    description = "Fails if any build.gradle.kts contains a quoted semantic-version literal (R2, AC-1.5)."
+    doLast {
+        val quotedLiteral = Regex("\"([^\"\\n]*)\"")
+        val versionInside = Regex("\\d+\\.\\d+")
+        val hits =
+            sourceTree()
+                .filter { it.name == "build.gradle.kts" }
+                .flatMap { file ->
+                    uncommentedLines(file)
+                        .filter { (_, line) ->
+                            quotedLiteral.findAll(line).any { versionInside.containsMatchIn(it.groupValues[1]) }
+                        }
+                        .map { (number, line) ->
+                            "${file.relativeTo(rootDir)}:$number  ${line.trim()}"
+                        }
+                }
+                .toList()
+        report(
+            "checkNoVersionLiterals",
+            "R2 / AC-1.5",
+            hits,
+            "Move the version into gradle/libs.versions.toml and reference it through the catalog.\n" +
+                "One place to read, one place to change.",
+        )
+    }
+}
+
+val checkNoDestructiveMigration by tasks.registering {
+    group = "verification"
+    description = "Fails if fallbackToDestructiveMigration appears anywhere in the tree (R32, AC-1.12)."
+    doLast {
+        val hits =
+            sourceTree()
+                .filter { it.extension in setOf("kt", "kts", "java") }
+                .flatMap { file ->
+                    uncommentedLines(file)
+                        .filter { (_, line) -> line.contains("fallbackToDestructiveMigration") }
+                        .map { (number, _) -> "${file.relativeTo(rootDir)}:$number" }
+                }
+                .toList()
+        report(
+            "checkNoDestructiveMigration",
+            "R32 / AC-1.12",
+            hits,
+            "fallbackToDestructiveMigration silently deletes the user's entire match history on a\n" +
+                "schema mismatch. Write a versioned Migration and test it with MigrationTestHelper\n" +
+                "against a POPULATED database (R33, R80).",
+        )
+    }
+}
+
+val checkNoReadMediaImages by tasks.registering {
+    group = "verification"
+    description = "Fails if READ_MEDIA_IMAGES appears in any manifest, source or merged (R49, AC-1.13)."
+    doLast {
+        val sourceManifests = sourceTree().filter { it.name == "AndroidManifest.xml" }
+        val mergedManifests =
+            rootDir.walkTopDown()
+                .filter { it.isFile && it.name == "AndroidManifest.xml" && it.path.contains("intermediates") }
+        val xmlComment = Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL)
+        val hits =
+            (sourceManifests + mergedManifests)
+                .filter { xmlComment.replace(it.readText(), "").contains("READ_MEDIA_IMAGES") }
+                .map { it.relativeTo(rootDir).path }
+                .distinct()
+                .toList()
+        report(
+            "checkNoReadMediaImages",
+            "R49 / AC-1.13",
+            hits,
+            "The Android photo picker needs no runtime permission, so READ_MEDIA_IMAGES is both\n" +
+                "unnecessary and an invitation to Play policy scrutiny over restricted permissions.\n" +
+                "Use ActivityResultContracts.PickVisualMedia instead (F9, FR-11).",
+        )
+    }
+}
+
+val checkNoPrereleaseVersions by tasks.registering {
+    group = "verification"
+    description = "Fails if the version catalog pins an alpha, beta, rc or snapshot (R5, AC-1.14)."
+    doLast {
+        val catalog = rootDir.resolve("gradle/libs.versions.toml")
+        val markers = listOf("-alpha", "-beta", "-rc", "-SNAPSHOT")
+        val hits =
+            uncommentedLines(catalog)
+                .filter { (_, line) -> markers.any { line.contains(it, ignoreCase = true) } }
+                .map { (number, line) -> "gradle/libs.versions.toml:$number  ${line.trim()}" }
+        report(
+            "checkNoPrereleaseVersions",
+            "R5 / AC-1.14",
+            hits,
+            "Release builds depend only on stable versions. WorkManager 2.12.0-rc01 and Glance\n" +
+                "1.3.0-alpha02 exist and are explicitly out.\n" +
+                "Note this scans the catalog TEXT: `latest.release` entries hold a selector, not a\n" +
+                "resolved version, so this task cannot see what they resolve to. That is the\n" +
+                "reproducibility gap owner decision #4 accepted knowingly.",
+        )
+    }
+}
+
+val checkNoKeystoreCommitted by tasks.registering {
+    group = "verification"
+    description = "Fails if a .jks or .keystore file is tracked or staged in git (R10, AC-1.11)."
+    doLast {
+        if (!rootDir.resolve(".git").exists()) {
+            logger.lifecycle("checkNoKeystoreCommitted: not a git repository yet — nothing to check.")
+            return@doLast
+        }
+
+        fun git(vararg args: String): List<String> {
+            val result =
+                providers.exec {
+                    commandLine(listOf("git") + args)
+                    workingDir = rootDir
+                    isIgnoreExitValue = true
+                }
+            return result.standardOutput.asText.get().lines().filter { it.isNotBlank() }
+        }
+        val suspicious =
+            (git("ls-files") + git("diff", "--cached", "--name-only"))
+                .filter { it.endsWith(".jks") || it.endsWith(".keystore") }
+                .distinct()
+        report(
+            "checkNoKeystoreCommitted",
+            "R10 / AC-1.11",
+            suspicious,
+            "Signing material must never enter git history. Remove it from the index\n" +
+                "(`git rm --cached <file>`) and confirm .gitignore covers keystore/*.jks.\n" +
+                "A key that reaches a public remote must be replaced, not merely un-committed.",
+        )
+    }
+}
+
+val checkDomainDateTimeIndirection by tasks.registering {
+    group = "verification"
+    description = "Fails if a :domain file reaches past the AppDate/AppTime/AppInstant typealiases (R6, AC-2.25)."
+    doLast {
+        val domainRoot = rootDir.resolve("domain")
+        val indirection =
+            rootDir
+                .resolve("domain/src/main/kotlin/com/maxeydev/picklelog/domain/datetime/DateTime.kt")
+                .canonicalFile
+        val reachingPast = listOf("kotlinx.datetime", "kotlin.time.Instant")
+        val hits =
+            sourceTree()
+                .filter { it.extension == "kt" && it.canonicalFile.startsWith(domainRoot) }
+                .filter { it.canonicalFile != indirection }
+                .flatMap { file ->
+                    uncommentedLines(file)
+                        .filter { (_, line) -> reachingPast.any { line.contains(it) } }
+                        .map { (number, line) -> "${file.relativeTo(rootDir)}:$number  ${line.trim()}" }
+                }
+                .toList()
+        report(
+            "checkDomainDateTimeIndirection",
+            "R6 / AC-2.25",
+            hits,
+            "kotlinx-datetime is pre-1.0 and its Instant is already deprecated in favour of\n" +
+                "kotlin.time.Instant. :domain reaches the date/time library ONLY through\n" +
+                "domain/datetime/DateTime.kt, so the next breaking change costs one file, not forty.\n" +
+                "Use AppDate / AppTime / AppInstant.",
+        )
+    }
+}
+
+val checkSchemaJsonCommitted by tasks.registering {
+    group = "verification"
+    description = "Fails if Room's exported schema JSON for the current version is absent (R33, AC-2.11)."
+    doLast {
+        val databaseSource =
+            rootDir.resolve("data/src/main/kotlin/com/maxeydev/picklelog/data/db/PicklelogDatabase.kt")
+        if (!databaseSource.exists()) {
+            logger.lifecycle("checkSchemaJsonCommitted: no Room database yet — nothing to check.")
+            return@doLast
+        }
+        val version =
+            Regex("PICKLELOG_DB_VERSION\\s*=\\s*(\\d+)")
+                .find(databaseSource.readText())
+                ?.groupValues
+                ?.get(1)
+                ?: throw GradleException("checkSchemaJsonCommitted could not read PICKLELOG_DB_VERSION.")
+        val exported =
+            rootDir
+                .resolve("data/schemas")
+                .walkTopDown()
+                .filter { it.isFile && it.name == "$version.json" }
+                .toList()
+        val hits =
+            if (exported.isEmpty()) {
+                listOf("data/schemas/**/$version.json is missing")
+            } else {
+                emptyList()
+            }
+        report(
+            "checkSchemaJsonCommitted",
+            "R33 / AC-2.11",
+            hits,
+            "Room exports the schema through room.schemaLocation and it must be committed.\n" +
+                "MigrationTestHelper cannot run without it, so a missing file means the next\n" +
+                "migration ships untested. Build :data, then commit data/schemas/.",
+        )
+    }
+}
+
+tasks.register("checkRules") {
+    group = "verification"
+    description = "Runs every mechanically-enforceable RULES.md check (R113)."
+    dependsOn(
+        checkNoVersionLiterals,
+        checkNoDestructiveMigration,
+        checkNoReadMediaImages,
+        checkNoPrereleaseVersions,
+        checkNoKeystoreCommitted,
+        checkDomainDateTimeIndirection,
+        checkSchemaJsonCommitted,
+    )
+}
