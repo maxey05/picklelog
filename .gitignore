@@ -30,3 +30,6 @@ captures/
 # --- OS --------------------------------------------------------------------
 .DS_Store
 Thumbs.db
+
+CLAUDE.md
+VERIFICATION*.md
