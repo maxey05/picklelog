@@ -17,7 +17,9 @@ android {
 
     // AC-2.12: MigrationTestHelper reads the exported schema JSON from the instrumented
     // test APK's assets. Without this the harness fails at runtime, not at compile time.
-    sourceSets.getByName("androidTest").assets.srcDir(layout.projectDirectory.dir("schemas"))
+    sourceSets {
+        getByName("androidTest").assets.srcDir(layout.projectDirectory.dir("schemas"))
+    }
 }
 
 kotlin {
