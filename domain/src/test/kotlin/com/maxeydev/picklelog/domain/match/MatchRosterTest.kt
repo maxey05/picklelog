@@ -1,0 +1,87 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
+package com.maxeydev.picklelog.domain.match
+
+import com.maxeydev.picklelog.domain.datetime.AppDate
+import com.maxeydev.picklelog.domain.datetime.AppInstant
+import com.maxeydev.picklelog.domain.person.Person
+import org.junit.Assert.assertThrows
+import org.junit.Test
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+
+class MatchRosterTest {
+    private fun person(displayName: String): Person =
+        Person(
+            id = Uuid.random(),
+            displayName = displayName,
+            createdAt = AppInstant.fromEpochMilliseconds(0),
+        )
+
+    private fun match(
+        format: MatchFormat,
+        opponents: List<Person> = emptyList(),
+        partner: Person? = null,
+    ): Match =
+        Match(
+            id = Uuid.random(),
+            format = format,
+            date = AppDate.parse("2026-09-23"),
+            result = MatchResult.WIN,
+            createdAt = AppInstant.fromEpochMilliseconds(0),
+            updatedAt = AppInstant.fromEpochMilliseconds(0),
+            opponents = opponents,
+            partner = partner,
+        )
+
+    @Test
+    fun `a singles match carrying a partner is rejected`() {
+        val invalid = match(MatchFormat.SINGLES, partner = person("Ana"))
+        assertThrows(IllegalArgumentException::class.java) { invalid.requireValidRoster() }
+    }
+
+    @Test
+    fun `a singles match with two opponents is rejected`() {
+        val invalid = match(MatchFormat.SINGLES, opponents = listOf(person("Ana"), person("Ben")))
+        assertThrows(IllegalArgumentException::class.java) { invalid.requireValidRoster() }
+    }
+
+    @Test
+    fun `a doubles match with three opponents is rejected`() {
+        val invalid =
+            match(
+                MatchFormat.DOUBLES,
+                opponents = listOf(person("Ana"), person("Ben"), person("Cy")),
+            )
+        assertThrows(IllegalArgumentException::class.java) { invalid.requireValidRoster() }
+    }
+
+    @Test
+    fun `a singles match with no opponent is accepted`() {
+        match(MatchFormat.SINGLES).requireValidRoster()
+    }
+
+    @Test
+    fun `a singles match with one opponent is accepted`() {
+        match(MatchFormat.SINGLES, opponents = listOf(person("Ana"))).requireValidRoster()
+    }
+
+    @Test
+    fun `a doubles match with no opponents and no partner is accepted`() {
+        match(MatchFormat.DOUBLES).requireValidRoster()
+    }
+
+    @Test
+    fun `a doubles match with two opponents and a partner is accepted`() {
+        match(
+            MatchFormat.DOUBLES,
+            opponents = listOf(person("Ana"), person("Ben")),
+            partner = person("Cy"),
+        ).requireValidRoster()
+    }
+
+    @Test
+    fun `a doubles match with a partner but no opponents is accepted`() {
+        match(MatchFormat.DOUBLES, partner = person("Cy")).requireValidRoster()
+    }
+}
