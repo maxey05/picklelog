@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_title">Picklelog</string>
+    <string name="home_empty">No matches yet. Tap + to log your first one.</string>
+    <string name="home_match_headline">%1$s · %2$s</string>
+    <string name="new_match">Log a match</string>
+
+    <string name="edit_title_new">New match</string>
+    <string name="edit_title_existing">Edit match</string>
+    <string name="detail_title">Match</string>
+
+    <string name="action_save">Save</string>
+    <string name="action_close">Close</string>
+    <string name="action_back">Back</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_ok">OK</string>
+
+    <string name="label_format">Format</string>
+    <string name="format_singles">Singles</string>
+    <string name="format_doubles">Doubles</string>
+    <string name="format_switch_cleared">Switched to singles — cleared the partner and second opponent.</string>
+
+    <string name="label_result">Result</string>
+    <string name="result_win">Win</string>
+    <string name="result_loss">Loss</string>
+    <string name="advisory_suggests_win">Scores suggest a win</string>
+    <string name="advisory_suggests_loss">Scores suggest a loss</string>
+
+    <string name="label_date">Date</string>
+    <string name="date_button_description">Date, %1$s. Change date</string>
+
+    <string name="label_time">Time</string>
+    <string name="label_start_time">Start</string>
+    <string name="label_end_time">End</string>
+    <string name="time_not_set">Not set</string>
+    <string name="time_button_description">%1$s time, %2$s. Change</string>
+    <string name="clear_start_time">Clear start time</string>
+    <string name="clear_end_time">Clear end time</string>
+    <string name="duration_hours_minutes">%1$d h %2$d min</string>
+    <string name="duration_minutes">%1$d min</string>
+    <string name="duration_line">Duration: %1$s</string>
+    <string name="duration_line_next_day">Duration: %1$s (ends the next day)</string>
+
+    <string name="label_players">Players</string>
+    <string name="slot_opponent">Opponent</string>
+    <string name="slot_opponent_1">Opponent 1</string>
+    <string name="slot_opponent_2">Opponent 2</string>
+    <string name="slot_partner">Partner</string>
+    <string name="duplicate_person">Already entered as %1$s</string>
+
+    <string name="label_scores">Scores</string>
+    <string name="game_number">Game %1$d</string>
+    <string name="my_score">Me</string>
+    <string name="opponent_score">Them</string>
+    <string name="add_game">Add game</string>
+    <string name="remove_game">Remove game %1$d</string>
+    <string name="incomplete_game">Enter both scores or remove this game.</string>
+    <string name="score_line">Game %1$d: %2$d–%3$d</string>
+
+    <string name="label_location">Location</string>
+    <string name="label_paddle">Paddle</string>
+    <string name="label_notes">Notes</string>
+    <string name="label_opponents">Opponents</string>
+    <string name="label_photos">Photos</string>
+    <plurals name="photo_count">
+        <item quantity="one">%1$d photo</item>
+        <item quantity="other">%1$d photos</item>
+    </plurals>
+
+    <string name="delete_match_title">Delete this match?</string>
+    <string name="delete_match_body">The match and its photos will be permanently deleted. This can\'t be undone.</string>
+</resources>
