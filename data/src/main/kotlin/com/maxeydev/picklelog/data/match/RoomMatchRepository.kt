@@ -4,6 +4,7 @@ package com.maxeydev.picklelog.data.match
 
 import androidx.room.withTransaction
 import com.maxeydev.picklelog.data.db.PicklelogDatabase
+import com.maxeydev.picklelog.data.photo.PhotoFileStore
 import com.maxeydev.picklelog.domain.match.Match
 import com.maxeydev.picklelog.domain.match.MatchRepository
 import com.maxeydev.picklelog.domain.match.requireValidRoster
@@ -17,6 +18,7 @@ import kotlin.uuid.Uuid
 
 class RoomMatchRepository(
     private val database: PicklelogDatabase,
+    private val photoFileStore: PhotoFileStore,
     private val ioDispatcher: CoroutineDispatcher,
 ) : MatchRepository {
     private val matchDao = database.matchDao()
@@ -50,8 +52,15 @@ class RoomMatchRepository(
     }
 
     override suspend fun deleteMatch(id: Uuid) {
+        val matchId = id.toString()
         withContext(ioDispatcher) {
-            matchDao.deleteMatch(id.toString())
+            val photoPaths =
+                database.withTransaction {
+                    val paths = matchDao.photoPathsFor(matchId)
+                    matchDao.deleteMatch(matchId)
+                    paths
+                }
+            photoFileStore.deletePhotoFiles(photoPaths)
         }
     }
 }

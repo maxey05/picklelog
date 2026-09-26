@@ -39,6 +39,9 @@ interface MatchDao {
     @Query("DELETE FROM photo WHERE match_id = :matchId")
     suspend fun deletePhotosFor(matchId: String)
 
+    @Query("SELECT relative_path FROM photo WHERE match_id = :matchId")
+    suspend fun photoPathsFor(matchId: String): List<String>
+
     @Query("DELETE FROM `match` WHERE id = :id")
     suspend fun deleteMatch(id: String)
 }
