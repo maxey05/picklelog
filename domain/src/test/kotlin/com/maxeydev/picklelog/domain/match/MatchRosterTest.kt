@@ -84,4 +84,33 @@ class MatchRosterTest {
     fun `a doubles match with a partner but no opponents is accepted`() {
         match(MatchFormat.DOUBLES, partner = person("Cy")).requireValidRoster()
     }
+
+    @Test
+    fun `the same person in both opponent slots is rejected`() {
+        val ana = person("Ana")
+        val invalid = match(MatchFormat.DOUBLES, opponents = listOf(ana, ana))
+        assertThrows(IllegalArgumentException::class.java) { invalid.requireValidRoster() }
+    }
+
+    @Test
+    fun `the same person as partner and first opponent is rejected`() {
+        val ana = person("Ana")
+        val invalid = match(MatchFormat.DOUBLES, opponents = listOf(ana, person("Ben")), partner = ana)
+        assertThrows(IllegalArgumentException::class.java) { invalid.requireValidRoster() }
+    }
+
+    @Test
+    fun `the same person as partner and second opponent is rejected`() {
+        val ben = person("Ben")
+        val invalid = match(MatchFormat.DOUBLES, opponents = listOf(person("Ana"), ben), partner = ben)
+        assertThrows(IllegalArgumentException::class.java) { invalid.requireValidRoster() }
+    }
+
+    @Test
+    fun `two different people who share a display name are accepted`() {
+        match(
+            MatchFormat.DOUBLES,
+            opponents = listOf(person("Sam"), person("Sam")),
+        ).requireValidRoster()
+    }
 }
