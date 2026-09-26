@@ -64,17 +64,8 @@ turbine = "1.2.1"
 # here). Reformat deliberately when bumping; do not bump casually.
 ktlintPlugin = "12.1.1"
 
-# UNVERIFIED — androidx.activity:activity-compose is required by AC-1.19's
-# ComponentActivity/setContent and is NOT managed by the Compose BOM (the BOM
-# covers androidx.compose.* only). No version for it exists in RULES.md 1.1 or
-# RFC-001 3.2 — a genuine gap in the RFC. Resolved here the same way owner
-# decision #4 resolved the test libraries: Gradle's dynamic `latest.release`
-# selector, which is a real mechanism rather than an invented number.
-#
-# This one SHIPS, unlike the test libraries, so it costs more reproducibility
-# than owner decision #4 accepted. Replace it with a pinned, checked number as
-# the first task after the build resolves — VERIFICATION.md step 4 prints it.
-activityCompose = "latest.release"
+activityCompose = "1.13.0"
+lifecycle = "2.11.0"
 
 # Owner decision #4 — "use latest", implemented literally as Gradle's dynamic
 # release selector rather than a made-up number. Test-only, never shipped.
@@ -104,6 +95,9 @@ compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4
 compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
+lifecycle-viewmodel-savedstate = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-savedstate", version.ref = "lifecycle" }
 
 # --- Declared for AC-1.4; consumed by later RFCs ---
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
