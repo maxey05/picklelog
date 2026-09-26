@@ -40,6 +40,7 @@ dependencies {
     ksp(libs.room.compiler)
 
     implementation(libs.datastore)
+    implementation(libs.datastore.preferences)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.datetime)
