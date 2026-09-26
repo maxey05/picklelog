@@ -9,6 +9,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.maxeydev.picklelog.data.db.PicklelogDatabase
 import com.maxeydev.picklelog.data.person.RoomPersonRepository
+import com.maxeydev.picklelog.data.photo.PhotoFileStore
 import com.maxeydev.picklelog.domain.datetime.AppDate
 import com.maxeydev.picklelog.domain.datetime.AppInstant
 import com.maxeydev.picklelog.domain.datetime.AppTime
@@ -29,12 +30,14 @@ import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 @RunWith(AndroidJUnit4::class)
 class MatchPersistenceTest {
     private lateinit var database: PicklelogDatabase
+    private lateinit var photoRoot: File
     private lateinit var matches: RoomMatchRepository
     private lateinit var people: RoomPersonRepository
 
@@ -45,13 +48,15 @@ class MatchPersistenceTest {
             Room
                 .inMemoryDatabaseBuilder(context, PicklelogDatabase::class.java)
                 .build()
-        matches = RoomMatchRepository(database, Dispatchers.IO)
+        photoRoot = File(context.cacheDir, "match-persistence-test-${Uuid.random()}").apply { mkdirs() }
+        matches = RoomMatchRepository(database, PhotoFileStore(photoRoot), Dispatchers.IO)
         people = RoomPersonRepository(database, Dispatchers.IO)
     }
 
     @After
     fun tearDown() {
         database.close()
+        photoRoot.deleteRecursively()
     }
 
     private fun match(
@@ -134,6 +139,31 @@ class MatchPersistenceTest {
                 runBlocking { matches.saveMatch(invalid) }
             }
             assertNull(matches.observeById(id).first())
+        }
+
+    @Test
+    fun `the_same_person_in_two_slots_is_rejected_before_anything_is_written`() =
+        runBlocking {
+            val ana = people.findOrCreatePerson("Ana")
+            val ben = people.findOrCreatePerson("Ben")
+            val twiceOpponent = Uuid.random()
+            val partnerAndOpponent = Uuid.random()
+
+            assertThrows(IllegalArgumentException::class.java) {
+                runBlocking {
+                    matches.saveMatch(match(twiceOpponent, MatchFormat.DOUBLES, opponents = listOf(ana, ana)))
+                }
+            }
+            assertThrows(IllegalArgumentException::class.java) {
+                runBlocking {
+                    matches.saveMatch(
+                        match(partnerAndOpponent, MatchFormat.DOUBLES, opponents = listOf(ana, ben), partner = ben),
+                    )
+                }
+            }
+            assertNull(matches.observeById(twiceOpponent).first())
+            assertNull(matches.observeById(partnerAndOpponent).first())
+            assertEquals(0, countMatchPersonRows())
         }
 
     @Test
