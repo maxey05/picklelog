@@ -1,4 +1,8 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package com.maxeydev.picklelog.domain.match
+
+import kotlin.uuid.ExperimentalUuidApi
 
 private const val MAX_OPPONENTS_SINGLES = 1
 private const val MAX_OPPONENTS_DOUBLES = 2
@@ -16,5 +20,9 @@ fun Match.requireValidRoster() {
     }
     require(format != MatchFormat.SINGLES || partner == null) {
         "A SINGLES match cannot carry a partner; partner was ${partner?.displayName}."
+    }
+    val assignedIds = opponents.map { it.id } + listOfNotNull(partner?.id)
+    require(assignedIds.size == assignedIds.distinct().size) {
+        "The same person cannot occupy more than one slot on a match."
     }
 }
