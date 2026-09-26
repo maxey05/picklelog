@@ -1,4 +1,4 @@
-package com.maxeydev.picklelog.data.person
+package com.maxeydev.picklelog.domain.person
 
 import java.text.Normalizer
 

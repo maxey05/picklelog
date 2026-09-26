@@ -1,4 +1,4 @@
-package com.maxeydev.picklelog.data.person
+package com.maxeydev.picklelog.domain.person
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -42,5 +42,10 @@ class NameNormalizerTest {
     @Test
     fun `punctuation is preserved so Dave R is not merged into Dave`() {
         assertNotEquals(normalizePersonName("Dave R."), normalizePersonName("Dave"))
+    }
+
+    @Test
+    fun `a whitespace only name normalizes to empty`() {
+        assertEquals("", normalizePersonName(" \t "))
     }
 }

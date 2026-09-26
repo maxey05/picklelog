@@ -6,6 +6,7 @@ import androidx.room.withTransaction
 import com.maxeydev.picklelog.data.db.PicklelogDatabase
 import com.maxeydev.picklelog.domain.person.Person
 import com.maxeydev.picklelog.domain.person.PersonRepository
+import com.maxeydev.picklelog.domain.person.normalizePersonName
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
