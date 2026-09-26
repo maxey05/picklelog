@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -15,6 +16,15 @@ android {
 
     buildFeatures {
         compose = true
+    }
+
+    sourceSets {
+        getByName("test").java.srcDir("src/sharedTest/kotlin")
+        getByName("androidTest").java.srcDir("src/sharedTest/kotlin")
+    }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 }
 
@@ -32,5 +42,20 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     debugImplementation(libs.compose.ui.tooling)
 
+    implementation(libs.navigation.compose)
+    implementation(libs.lifecycle.viewmodel.compose)
+    implementation(libs.lifecycle.runtime.compose)
+    implementation(libs.lifecycle.viewmodel.savedstate)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.datetime)
+
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    debugImplementation(libs.compose.ui.test.manifest)
 }
