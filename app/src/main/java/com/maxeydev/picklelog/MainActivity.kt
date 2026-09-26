@@ -3,40 +3,32 @@ package com.maxeydev.picklelog
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Box
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
+import com.maxeydev.picklelog.ui.navigation.PicklelogNavHost
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        val container = (application as PicklelogApplication).container
         setContent {
             MaterialTheme {
-                ToolchainProofScreen()
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background,
+                ) {
+                    val dependencies by produceState<AppContainer?>(initialValue = null, container) {
+                        value = container.await()
+                    }
+                    dependencies?.let { PicklelogNavHost(dependencies = it) }
+                }
             }
-        }
-    }
-}
-
-@Composable
-private fun ToolchainProofScreen() {
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background,
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "Picklelog",
-                style = MaterialTheme.typography.headlineMedium,
-            )
         }
     }
 }

@@ -80,6 +80,8 @@ dependencies {
     implementation(libs.billing.ktx)
 
     implementation(libs.androidx.activity.compose)
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.datetime)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
