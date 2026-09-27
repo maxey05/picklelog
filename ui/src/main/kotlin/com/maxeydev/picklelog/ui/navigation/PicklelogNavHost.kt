@@ -13,13 +13,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.maxeydev.picklelog.ui.PicklelogDependencies
-import com.maxeydev.picklelog.ui.home.HomePlaceholderScreen
-import com.maxeydev.picklelog.ui.home.HomePlaceholderViewModel
 import com.maxeydev.picklelog.ui.match.detail.MatchDetailScreen
 import com.maxeydev.picklelog.ui.match.detail.MatchDetailViewModel
 import com.maxeydev.picklelog.ui.match.edit.MatchEditActions
 import com.maxeydev.picklelog.ui.match.edit.MatchEditScreen
 import com.maxeydev.picklelog.ui.match.edit.MatchEditViewModel
+import com.maxeydev.picklelog.ui.match.list.MatchListScreen
+import com.maxeydev.picklelog.ui.match.list.MatchListViewModel
 
 @Composable
 fun PicklelogNavHost(
@@ -29,13 +29,14 @@ fun PicklelogNavHost(
 ) {
     NavHost(navController = navController, startDestination = HomeRoute, modifier = modifier) {
         composable<HomeRoute> {
-            val viewModel: HomePlaceholderViewModel =
-                viewModel(factory = HomePlaceholderViewModel.factory(dependencies))
+            val viewModel: MatchListViewModel = viewModel(factory = MatchListViewModel.factory(dependencies))
             val state by viewModel.uiState.collectAsStateWithLifecycle()
-            HomePlaceholderScreen(
+            MatchListScreen(
                 state = state,
                 onNewMatch = { navController.navigate(MatchEditRoute()) },
                 onOpenMatch = { matchId -> navController.navigate(MatchDetailRoute(matchId)) },
+                onSortSelected = viewModel::selectSort,
+                onLastVisibleIndexChanged = viewModel::loadMoreIfNeeded,
             )
         }
         composable<MatchEditRoute> {
