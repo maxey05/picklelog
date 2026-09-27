@@ -9,7 +9,7 @@ import kotlin.time.Clock
 
 class FakeDependencies(
     override val matchRepository: FakeMatchRepository = FakeMatchRepository(),
-    override val personRepository: FakePersonRepository = FakePersonRepository(),
+    override val personRepository: FakePersonRepository = FakePersonRepository(matchSource = matchRepository),
     override val lastUsedFormatStore: FakeLastUsedFormatStore = FakeLastUsedFormatStore(),
     override val matchSortStore: FakeMatchSortStore = FakeMatchSortStore(),
     override val clock: Clock = Clock.System,

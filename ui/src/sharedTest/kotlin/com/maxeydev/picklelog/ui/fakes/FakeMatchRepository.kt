@@ -2,6 +2,8 @@
 
 package com.maxeydev.picklelog.ui.fakes
 
+import com.maxeydev.picklelog.domain.match.FreeTextField
+import com.maxeydev.picklelog.domain.match.FreeTextUsage
 import com.maxeydev.picklelog.domain.match.Match
 import com.maxeydev.picklelog.domain.match.MatchListItem
 import com.maxeydev.picklelog.domain.match.MatchRepository
@@ -44,6 +46,28 @@ class FakeMatchRepository(
     }
 
     override fun observeById(id: Uuid): Flow<Match?> = matches.map { byId -> byId[id] }
+
+    fun observeAllMatches(): Flow<List<Match>> = matches.map { byId -> byId.values.toList() }
+
+    override fun observePriorValues(field: FreeTextField): Flow<List<FreeTextUsage>> =
+        matches.map { byId ->
+            byId.values
+                .mapNotNull { match ->
+                    val value =
+                        when (field) {
+                            FreeTextField.LOCATION -> match.location
+                            FreeTextField.PADDLE -> match.paddle
+                        }
+                    value?.takeIf { it.isNotEmpty() }?.let { it to match }
+                }.groupBy({ it.first }, { it.second })
+                .map { (value, used) ->
+                    FreeTextUsage(
+                        value = value,
+                        lastPlayedOn = used.maxOf { it.date },
+                        lastLoggedAt = used.maxOf { it.createdAt },
+                    )
+                }
+        }
 
     override suspend fun saveMatch(match: Match) {
         match.requireValidRoster()
