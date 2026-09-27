@@ -1,5 +1,6 @@
 package com.maxeydev.picklelog.data.photo
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -80,5 +81,20 @@ class PhotoFileStoreTest {
             PhotoFileStore(root).deletePhotoFiles(listOf("photos/.."))
         }
         assertTrue(root.exists())
+    }
+
+    @Test
+    fun `a stored relative path resolves to the file inside app storage`() {
+        val root = photoRoot()
+        val written = writeFile(root, "photos/a.jpg")
+
+        assertEquals(written.canonicalFile, PhotoFileStore(root).resolve("photos/a.jpg"))
+    }
+
+    @Test
+    fun `resolving a path that climbs out of storage is refused`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            PhotoFileStore(photoRoot()).resolve("../outside.jpg")
+        }
     }
 }
