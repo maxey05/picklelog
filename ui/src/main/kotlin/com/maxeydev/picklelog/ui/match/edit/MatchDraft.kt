@@ -8,6 +8,7 @@ import com.maxeydev.picklelog.domain.match.GameScore
 import com.maxeydev.picklelog.domain.match.Match
 import com.maxeydev.picklelog.domain.match.MatchFormat
 import com.maxeydev.picklelog.domain.match.MatchResult
+import com.maxeydev.picklelog.domain.person.Person
 import com.maxeydev.picklelog.domain.person.normalizePersonName
 import kotlinx.serialization.Serializable
 import kotlin.uuid.ExperimentalUuidApi
@@ -22,7 +23,9 @@ data class MatchDraft(
     val startTime: String? = null,
     val endTime: String? = null,
     val opponentNames: List<String> = listOf("", ""),
+    val opponentIds: List<String?> = listOf(null, null),
     val partnerName: String = "",
+    val partnerId: String? = null,
     val games: List<GameDraft> = emptyList(),
     val location: String = "",
     val paddle: String = "",
@@ -39,7 +42,9 @@ data class MatchDraft(
                 copy(
                     format = MatchFormat.SINGLES,
                     opponentNames = listOf(nameIn(PersonSlot.OPPONENT_1), ""),
+                    opponentIds = listOf(idIn(PersonSlot.OPPONENT_1), null),
                     partnerName = "",
+                    partnerId = null,
                     clearedOnFormatSwitch = clearsSomething,
                 )
             }
@@ -50,11 +55,35 @@ data class MatchDraft(
     fun withPersonName(
         slot: PersonSlot,
         name: String,
+    ): MatchDraft {
+        if (name == nameIn(slot)) {
+            return this
+        }
+        return withPerson(slot, name, id = null)
+    }
+
+    fun withPersonSelected(
+        slot: PersonSlot,
+        person: Person,
+    ): MatchDraft = withPerson(slot, person.displayName, person.id.toString())
+
+    private fun withPerson(
+        slot: PersonSlot,
+        name: String,
+        id: String?,
     ): MatchDraft =
         when (slot) {
-            PersonSlot.OPPONENT_1 -> copy(opponentNames = listOf(name, nameIn(PersonSlot.OPPONENT_2)))
-            PersonSlot.OPPONENT_2 -> copy(opponentNames = listOf(nameIn(PersonSlot.OPPONENT_1), name))
-            PersonSlot.PARTNER -> copy(partnerName = name)
+            PersonSlot.OPPONENT_1 ->
+                copy(
+                    opponentNames = listOf(name, nameIn(PersonSlot.OPPONENT_2)),
+                    opponentIds = listOf(id, idIn(PersonSlot.OPPONENT_2)),
+                )
+            PersonSlot.OPPONENT_2 ->
+                copy(
+                    opponentNames = listOf(nameIn(PersonSlot.OPPONENT_1), name),
+                    opponentIds = listOf(idIn(PersonSlot.OPPONENT_1), id),
+                )
+            PersonSlot.PARTNER -> copy(partnerName = name, partnerId = id)
         }
 
     fun withGameAdded(): MatchDraft = copy(games = games + GameDraft())
@@ -84,22 +113,23 @@ data class MatchDraft(
             PersonSlot.PARTNER -> partnerName
         }
 
+    fun idIn(slot: PersonSlot): String? =
+        when (slot) {
+            PersonSlot.OPPONENT_1 -> opponentIds.getOrNull(0)
+            PersonSlot.OPPONENT_2 -> opponentIds.getOrNull(1)
+            PersonSlot.PARTNER -> partnerId
+        }
+
+    fun boundIdsOutside(slot: PersonSlot): Set<String> =
+        visibleSlots()
+            .filter { it != slot }
+            .mapNotNull { idIn(it) }
+            .toSet()
+
     fun visibleSlots(): List<PersonSlot> =
         when (format) {
             MatchFormat.SINGLES -> listOf(PersonSlot.OPPONENT_1)
             MatchFormat.DOUBLES -> listOf(PersonSlot.OPPONENT_1, PersonSlot.OPPONENT_2, PersonSlot.PARTNER)
-        }
-
-    fun visibleOpponentNames(): List<String> =
-        visibleSlots()
-            .filter { it != PersonSlot.PARTNER }
-            .map { nameIn(it) }
-
-    fun visiblePartnerName(): String? =
-        if (PersonSlot.PARTNER in visibleSlots()) {
-            partnerName
-        } else {
-            null
         }
 
     fun duplicateSlots(): Map<PersonSlot, PersonSlot> {
@@ -163,7 +193,13 @@ data class MatchDraft(
                         match.opponents.getOrNull(0)?.displayName.orEmpty(),
                         match.opponents.getOrNull(1)?.displayName.orEmpty(),
                     ),
+                opponentIds =
+                    listOf(
+                        match.opponents.getOrNull(0)?.id?.toString(),
+                        match.opponents.getOrNull(1)?.id?.toString(),
+                    ),
                 partnerName = match.partner?.displayName.orEmpty(),
+                partnerId = match.partner?.id?.toString(),
                 games =
                     match.games
                         .sortedBy { it.gameNumber }

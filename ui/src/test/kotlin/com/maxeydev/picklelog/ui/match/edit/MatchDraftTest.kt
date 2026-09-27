@@ -1,9 +1,16 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package com.maxeydev.picklelog.ui.match.edit
 
 import com.maxeydev.picklelog.domain.datetime.AppDate
+import com.maxeydev.picklelog.domain.datetime.AppInstant
 import com.maxeydev.picklelog.domain.datetime.AppTime
+import com.maxeydev.picklelog.domain.match.GameScore
+import com.maxeydev.picklelog.domain.match.Match
 import com.maxeydev.picklelog.domain.match.MatchFormat
 import com.maxeydev.picklelog.domain.match.MatchResult
+import com.maxeydev.picklelog.domain.person.Person
+import com.maxeydev.picklelog.domain.photo.PhotoRef
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -12,6 +19,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 class MatchDraftTest {
     private fun newDraft(format: MatchFormat = MatchFormat.DOUBLES): MatchDraft =
@@ -237,5 +246,114 @@ class MatchDraftTest {
 
         val encoded = Json.encodeToString(MatchDraft.serializer(), draft)
         assertEquals(draft, Json.decodeFromString(MatchDraft.serializer(), encoded))
+    }
+
+    private fun person(name: String): Person = Person(Uuid.random(), name, AppInstant.fromEpochMilliseconds(0))
+
+    @Test
+    fun `selecting a person binds its id and typing in that slot unbinds it`() {
+        val dave = person("Dave R.")
+
+        val bound = newDraft().withPersonSelected(PersonSlot.PARTNER, dave)
+        assertEquals("Dave R.", bound.nameIn(PersonSlot.PARTNER))
+        assertEquals(dave.id.toString(), bound.idIn(PersonSlot.PARTNER))
+
+        val retyped = bound.withPersonName(PersonSlot.PARTNER, "Dave R")
+        assertNull(retyped.idIn(PersonSlot.PARTNER))
+    }
+
+    @Test
+    fun `an unchanged name keeps its binding`() {
+        val dave = person("Dave R.")
+        val bound = newDraft().withPersonSelected(PersonSlot.OPPONENT_2, dave)
+
+        val retyped = bound.withPersonName(PersonSlot.OPPONENT_2, "Dave R.")
+
+        assertEquals(dave.id.toString(), retyped.idIn(PersonSlot.OPPONENT_2))
+    }
+
+    @Test
+    fun `switching to singles drops the bindings of the cleared slots`() {
+        val ana = person("Ana")
+        val ben = person("Ben")
+        val cy = person("Cy")
+        val doubles =
+            newDraft()
+                .withPersonSelected(PersonSlot.OPPONENT_1, ana)
+                .withPersonSelected(PersonSlot.OPPONENT_2, ben)
+                .withPersonSelected(PersonSlot.PARTNER, cy)
+
+        val singles = doubles.withFormat(MatchFormat.SINGLES)
+
+        assertEquals(ana.id.toString(), singles.idIn(PersonSlot.OPPONENT_1))
+        assertNull(singles.idIn(PersonSlot.OPPONENT_2))
+        assertNull(singles.idIn(PersonSlot.PARTNER))
+        assertEquals(setOf(ana.id.toString()), singles.boundIdsOutside(PersonSlot.OPPONENT_2))
+    }
+
+    @Test
+    fun `ids bound in other visible slots are reported for exclusion`() {
+        val ana = person("Ana")
+        val cy = person("Cy")
+        val draft = newDraft().withPersonSelected(PersonSlot.OPPONENT_1, ana).withPersonSelected(PersonSlot.PARTNER, cy)
+
+        assertEquals(setOf(cy.id.toString()), draft.boundIdsOutside(PersonSlot.OPPONENT_1))
+        assertEquals(setOf(ana.id.toString(), cy.id.toString()), draft.boundIdsOutside(PersonSlot.OPPONENT_2))
+    }
+
+    @Test
+    fun `log another copies the session fields and leaves the per-game fields blank`() {
+        val source =
+            Match(
+                id = Uuid.random(),
+                format = MatchFormat.DOUBLES,
+                date = AppDate.parse("2026-09-20"),
+                result = MatchResult.LOSS,
+                createdAt = AppInstant.fromEpochMilliseconds(1_000),
+                updatedAt = AppInstant.fromEpochMilliseconds(1_000),
+                startTime = AppTime.parse("18:00"),
+                endTime = AppTime.parse("19:30"),
+                location = "Ayala Triangle",
+                opponents = listOf(person("Ana"), person("Ben")),
+                partner = person("Cy"),
+                games = listOf(GameScore(1, 9, 11)),
+                paddle = "Selkirk",
+                notes = "Windy",
+                photos = listOf(PhotoRef(Uuid.random(), "photos/a.jpg", 10, 10, 100, 0)),
+            )
+
+        val draft =
+            logAnotherDraft(
+                source = source,
+                matchId = "00000000-0000-0000-0000-000000000009",
+                startTime = AppTime.parse("21:05"),
+            )
+
+        assertTrue(draft.isNew)
+        assertEquals("00000000-0000-0000-0000-000000000009", draft.matchId)
+        assertEquals(MatchFormat.DOUBLES, draft.format)
+        assertEquals("2026-09-20", draft.date)
+        assertEquals("Ayala Triangle", draft.location)
+        assertEquals(listOf("Ana", "Ben"), draft.opponentNames)
+        assertEquals(source.opponents.map { it.id.toString() }, draft.opponentIds)
+        assertEquals("Cy", draft.partnerName)
+        assertEquals(source.partner?.id?.toString(), draft.partnerId)
+        assertNull(draft.result)
+        assertTrue(draft.games.isEmpty())
+        assertEquals("21:05", draft.startTime)
+        assertNull(draft.endTime)
+        assertEquals("", draft.notes)
+        assertEquals("", draft.paddle)
+    }
+
+    @Test
+    fun `a bound draft survives a round trip through its saved form`() {
+        val dave = person("Dave R.")
+        val draft = newDraft().withPersonSelected(PersonSlot.OPPONENT_1, dave)
+
+        val encoded = Json.encodeToString(MatchDraft.serializer(), draft)
+        val restored = Json.decodeFromString(MatchDraft.serializer(), encoded)
+
+        assertEquals(draft, restored)
     }
 }
