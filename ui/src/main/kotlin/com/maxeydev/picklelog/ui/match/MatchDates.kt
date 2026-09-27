@@ -22,6 +22,11 @@ fun formatMatchDate(
     locale: Locale,
 ): String = date.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale))
 
+fun formatMatchDateLong(
+    date: AppDate,
+    locale: Locale,
+): String = date.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(locale))
+
 fun formatMatchTime(
     time: AppTime,
     locale: Locale,

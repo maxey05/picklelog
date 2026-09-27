@@ -3,6 +3,7 @@ package com.maxeydev.picklelog.ui.match
 import com.maxeydev.picklelog.domain.datetime.AppDate
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.util.Locale
 
 class MatchDatesTest {
     @Test
@@ -16,5 +17,10 @@ class MatchDatesTest {
     @Test
     fun `utc midnight maps to that calendar day`() {
         assertEquals(1_790_208_000_000L, AppDate.parse("2026-09-24").toUtcEpochMillis())
+    }
+
+    @Test
+    fun `the spoken form of a date spells the month out in full`() {
+        assertEquals("September 20, 2026", formatMatchDateLong(AppDate.parse("2026-09-20"), Locale.US))
     }
 }
