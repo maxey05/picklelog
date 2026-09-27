@@ -7,6 +7,7 @@ data class MatchListUiState(
     val sort: MatchSort = MatchSort.DEFAULT,
     val matches: List<MatchRowUiState> = emptyList(),
     val pageLimit: Int = 0,
+    val savedMatchId: String? = null,
 ) {
     val canLoadMore: Boolean
         get() = pageLimit > 0 && matches.size >= pageLimit

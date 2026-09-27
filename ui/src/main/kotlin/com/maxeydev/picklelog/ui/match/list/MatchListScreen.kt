@@ -17,12 +17,17 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -53,11 +58,21 @@ fun MatchListScreen(
     onOpenMatch: (String) -> Unit,
     onSortSelected: (MatchSort) -> Unit,
     onLastVisibleIndexChanged: (Int) -> Unit,
+    onLogAnother: (String) -> Unit,
+    onSavedConfirmationDismissed: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    SavedMatchSnackbarEffect(
+        savedMatchId = state.savedMatchId,
+        snackbarHostState = snackbarHostState,
+        onLogAnother = onLogAnother,
+        onDismissed = onSavedConfirmationDismissed,
+    )
     Scaffold(
         modifier = modifier.semantics { testTagsAsResourceId = true },
         topBar = { TopAppBar(title = { Text(stringResource(R.string.home_title)) }) },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onNewMatch,
@@ -82,6 +97,35 @@ fun MatchListScreen(
                     onLastVisibleIndexChanged = onLastVisibleIndexChanged,
                     modifier = contentModifier,
                 )
+        }
+    }
+}
+
+@Composable
+private fun SavedMatchSnackbarEffect(
+    savedMatchId: String?,
+    snackbarHostState: SnackbarHostState,
+    onLogAnother: (String) -> Unit,
+    onDismissed: () -> Unit,
+) {
+    val message = stringResource(R.string.match_saved)
+    val actionLabel = stringResource(R.string.log_another)
+    val latestOnLogAnother by rememberUpdatedState(onLogAnother)
+    val latestOnDismissed by rememberUpdatedState(onDismissed)
+    LaunchedEffect(savedMatchId) {
+        if (savedMatchId == null) {
+            return@LaunchedEffect
+        }
+        val result =
+            snackbarHostState.showSnackbar(
+                message = message,
+                actionLabel = actionLabel,
+                withDismissAction = true,
+                duration = SnackbarDuration.Long,
+            )
+        latestOnDismissed()
+        if (result == SnackbarResult.ActionPerformed) {
+            latestOnLogAnother(savedMatchId)
         }
     }
 }

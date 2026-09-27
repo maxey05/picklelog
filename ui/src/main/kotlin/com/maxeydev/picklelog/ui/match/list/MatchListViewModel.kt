@@ -2,6 +2,7 @@
 
 package com.maxeydev.picklelog.ui.match.list
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -12,11 +13,13 @@ import com.maxeydev.picklelog.domain.match.MatchRepository
 import com.maxeydev.picklelog.domain.match.MatchSort
 import com.maxeydev.picklelog.domain.match.MatchSortStore
 import com.maxeydev.picklelog.ui.PicklelogDependencies
+import com.maxeydev.picklelog.ui.navigation.JUST_SAVED_MATCH_ID_KEY
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -30,6 +33,7 @@ const val MATCH_LIST_PREFETCH_DISTANCE = 15
 private const val STOP_TIMEOUT_MILLIS = 5_000L
 
 class MatchListViewModel(
+    private val savedStateHandle: SavedStateHandle,
     private val matchRepository: MatchRepository,
     private val matchSortStore: MatchSortStore,
     private val photoFile: (String) -> File,
@@ -52,7 +56,9 @@ class MatchListViewModel(
                     }
                 }
             }.flowOn(defaultDispatcher)
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), MatchListUiState())
+            .combine(savedStateHandle.getStateFlow<String?>(JUST_SAVED_MATCH_ID_KEY, null)) { state, savedMatchId ->
+                state.copy(savedMatchId = savedMatchId)
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), MatchListUiState())
 
     fun loadMoreIfNeeded(lastVisibleIndex: Int) {
         val state = uiState.value
@@ -63,6 +69,10 @@ class MatchListViewModel(
             return
         }
         pageLimit.compareAndSet(state.pageLimit, state.pageLimit + MATCH_LIST_PAGE_SIZE)
+    }
+
+    fun dismissSavedConfirmation() {
+        savedStateHandle[JUST_SAVED_MATCH_ID_KEY] = null
     }
 
     fun selectSort(sort: MatchSort) {
@@ -82,10 +92,14 @@ class MatchListViewModel(
         )
 
     companion object {
-        fun factory(dependencies: PicklelogDependencies): ViewModelProvider.Factory =
+        fun factory(
+            dependencies: PicklelogDependencies,
+            homeEntryState: SavedStateHandle,
+        ): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
                     MatchListViewModel(
+                        savedStateHandle = homeEntryState,
                         matchRepository = dependencies.matchRepository,
                         matchSortStore = dependencies.matchSortStore,
                         photoFile = dependencies::photoFile,

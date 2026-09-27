@@ -90,6 +90,10 @@
         <item quantity="other">%1$d photos</item>
     </plurals>
 
+    <string name="suggestion_use">Use this suggestion</string>
+    <string name="match_saved">Match saved</string>
+    <string name="log_another">Log another</string>
+
     <string name="delete_match_title">Delete this match?</string>
     <string name="delete_match_body">The match and its photos will be permanently deleted. This can\'t be undone.</string>
 </resources>
