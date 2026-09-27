@@ -16,6 +16,7 @@ import com.maxeydev.picklelog.ui.fakes.FakeLastUsedFormatStore
 import com.maxeydev.picklelog.ui.fakes.FakeMatchRepository
 import com.maxeydev.picklelog.ui.fakes.FakePersonRepository
 import com.maxeydev.picklelog.ui.fakes.FixedClock
+import com.maxeydev.picklelog.ui.navigation.LOG_ANOTHER_FROM_ARGUMENT
 import com.maxeydev.picklelog.ui.navigation.MATCH_ID_ARGUMENT
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -62,6 +63,7 @@ class MatchEditViewModelTest {
             lastUsedFormatStore = formats,
             clock = clock,
             timeZone = { manila },
+            defaultDispatcher = Dispatchers.Main,
         )
 
     private fun person(name: String): Person = Person(Uuid.random(), name, AppInstant.fromEpochMilliseconds(0))
@@ -300,5 +302,90 @@ class MatchEditViewModelTest {
         viewModel.save()
 
         assertEquals(1, matches.saved.size)
+    }
+
+    @Test
+    fun `log another pre-fills location date opponents and partner from the saved match`() {
+        val source = existingMatch()
+        matches = FakeMatchRepository(listOf(source))
+
+        val state = viewModel(SavedStateHandle(mapOf(LOG_ANOTHER_FROM_ARGUMENT to source.id.toString()))).uiState.value
+
+        assertFalse(state.isEditing)
+        assertEquals(source.date, state.date)
+        assertEquals(source.format, state.format)
+        assertEquals("Ayala Triangle", state.location)
+        assertEquals(listOf("Ana", "Ben", "Cy"), state.personSlots.map { it.name })
+    }
+
+    @Test
+    fun `log another leaves result and games blank and starts now rather than at the old start time`() {
+        val source = existingMatch()
+        matches = FakeMatchRepository(listOf(source))
+
+        val state = viewModel(SavedStateHandle(mapOf(LOG_ANOTHER_FROM_ARGUMENT to source.id.toString()))).uiState.value
+
+        assertNull(state.result)
+        assertTrue(state.games.isEmpty())
+        assertEquals(AppTime.parse("20:30"), state.startTime)
+        assertNull(state.endTime)
+        assertFalse(state.canSave)
+    }
+
+    @Test
+    fun `log another copies neither notes nor photos nor paddle and saves as a separate match`() {
+        val source = existingMatch()
+        matches = FakeMatchRepository(listOf(source))
+        people = FakePersonRepository(listOf(source.opponents[0], source.opponents[1], requireNotNull(source.partner)))
+        val viewModel = viewModel(SavedStateHandle(mapOf(LOG_ANOTHER_FROM_ARGUMENT to source.id.toString())))
+        assertEquals("", viewModel.uiState.value.notes)
+        assertEquals("", viewModel.uiState.value.paddle)
+
+        viewModel.selectResult(MatchResult.WIN)
+        viewModel.save()
+
+        val saved = matches.saved.single()
+        assertTrue(saved.id != source.id)
+        assertNull(saved.notes)
+        assertNull(saved.paddle)
+        assertTrue(saved.photos.isEmpty())
+        assertTrue(saved.games.isEmpty())
+        assertEquals(source.opponents.map { it.id }, saved.opponents.map { it.id })
+        assertEquals(source.partner?.id, saved.partner?.id)
+        assertTrue(people.findOrCreateRequests.isEmpty())
+        assertEquals(2, matches.current.size)
+    }
+
+    @Test
+    fun `log another from a match that no longer exists opens a plain new match`() {
+        val handle = SavedStateHandle(mapOf(LOG_ANOTHER_FROM_ARGUMENT to Uuid.random().toString()))
+
+        val state = viewModel(handle).uiState.value
+
+        assertFalse(state.isLoading)
+        assertEquals(AppDate.parse("2026-09-24"), state.date)
+        assertEquals("", state.location)
+        assertTrue(state.personSlots.all { it.name.isEmpty() })
+    }
+
+    @Test
+    fun `saving a new match hands back its id for the log another offer`() {
+        val viewModel = viewModel()
+        viewModel.selectResult(MatchResult.WIN)
+        viewModel.save()
+
+        assertEquals(matches.saved.single().id.toString(), viewModel.uiState.value.savedNewMatchId)
+    }
+
+    @Test
+    fun `saving an edit does not offer log another`() {
+        val existing = existingMatch()
+        matches = FakeMatchRepository(listOf(existing))
+        val viewModel = viewModel(SavedStateHandle(mapOf(MATCH_ID_ARGUMENT to existing.id.toString())))
+
+        viewModel.save()
+
+        assertTrue(viewModel.uiState.value.isFinished)
+        assertNull(viewModel.uiState.value.savedNewMatchId)
     }
 }
