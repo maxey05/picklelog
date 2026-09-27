@@ -4,12 +4,17 @@ import kotlinx.serialization.Serializable
 
 const val MATCH_ID_ARGUMENT = "matchId"
 
+const val LOG_ANOTHER_FROM_ARGUMENT = "logAnotherFrom"
+
+const val JUST_SAVED_MATCH_ID_KEY = "just_saved_match_id"
+
 @Serializable
 data object HomeRoute
 
 @Serializable
 data class MatchEditRoute(
     val matchId: String? = null,
+    val logAnotherFrom: String? = null,
 )
 
 @Serializable

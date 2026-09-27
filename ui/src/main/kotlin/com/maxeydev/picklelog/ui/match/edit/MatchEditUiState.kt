@@ -8,6 +8,7 @@ import com.maxeydev.picklelog.domain.match.MatchResult
 import com.maxeydev.picklelog.domain.match.crossesMidnight
 import com.maxeydev.picklelog.domain.match.deriveDuration
 import com.maxeydev.picklelog.domain.match.resultAdvisory
+import com.maxeydev.picklelog.ui.common.SuggestionUiState
 import kotlin.time.Duration
 
 data class MatchEditUiState(
@@ -27,14 +28,27 @@ data class MatchEditUiState(
     val paddle: String = "",
     val notes: String = "",
     val clearedOnFormatSwitch: Boolean = false,
+    val suggestionTarget: SuggestionTarget? = null,
+    val suggestions: List<SuggestionUiState> = emptyList(),
     val canSave: Boolean = false,
     val isSaving: Boolean = false,
     val isFinished: Boolean = false,
-)
+    val savedNewMatchId: String? = null,
+) {
+    fun suggestionsFor(target: SuggestionTarget): List<SuggestionUiState> =
+        if (target == suggestionTarget) {
+            suggestions
+        } else {
+            emptyList()
+        }
+}
 
 fun MatchDraft.toUiState(
     isSaving: Boolean,
     isFinished: Boolean,
+    suggestionTarget: SuggestionTarget? = null,
+    suggestions: List<SuggestionUiState> = emptyList(),
+    savedNewMatchId: String? = null,
 ): MatchEditUiState {
     val start = startTime?.let(AppTime::parse)
     val end = endTime?.let(AppTime::parse)
@@ -64,8 +78,11 @@ fun MatchDraft.toUiState(
         paddle = paddle,
         notes = notes,
         clearedOnFormatSwitch = clearedOnFormatSwitch,
+        suggestionTarget = suggestionTarget,
+        suggestions = suggestions,
         canSave = canSave() && !isSaving && !isFinished,
         isSaving = isSaving,
         isFinished = isFinished,
+        savedNewMatchId = savedNewMatchId,
     )
 }

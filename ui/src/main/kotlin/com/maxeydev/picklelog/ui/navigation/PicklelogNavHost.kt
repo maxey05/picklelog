@@ -7,6 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -28,8 +29,9 @@ fun PicklelogNavHost(
     navController: NavHostController = rememberNavController(),
 ) {
     NavHost(navController = navController, startDestination = HomeRoute, modifier = modifier) {
-        composable<HomeRoute> {
-            val viewModel: MatchListViewModel = viewModel(factory = MatchListViewModel.factory(dependencies))
+        composable<HomeRoute> { backStackEntry ->
+            val viewModel: MatchListViewModel =
+                viewModel(factory = MatchListViewModel.factory(dependencies, backStackEntry.savedStateHandle))
             val state by viewModel.uiState.collectAsStateWithLifecycle()
             MatchListScreen(
                 state = state,
@@ -37,6 +39,10 @@ fun PicklelogNavHost(
                 onOpenMatch = { matchId -> navController.navigate(MatchDetailRoute(matchId)) },
                 onSortSelected = viewModel::selectSort,
                 onLastVisibleIndexChanged = viewModel::loadMoreIfNeeded,
+                onLogAnother = { savedMatchId ->
+                    navController.navigate(MatchEditRoute(logAnotherFrom = savedMatchId))
+                },
+                onSavedConfirmationDismissed = viewModel::dismissSavedConfirmation,
             )
         }
         composable<MatchEditRoute> {
@@ -44,6 +50,12 @@ fun PicklelogNavHost(
             val state by viewModel.uiState.collectAsStateWithLifecycle()
             LaunchedEffect(state.isFinished) {
                 if (state.isFinished) {
+                    state.savedNewMatchId?.let { savedMatchId ->
+                        navController.previousBackStackEntry
+                            ?.takeIf { it.destination.hasRoute<HomeRoute>() }
+                            ?.savedStateHandle
+                            ?.set(JUST_SAVED_MATCH_ID_KEY, savedMatchId)
+                    }
                     navController.popBackStack()
                 }
             }
@@ -62,6 +74,14 @@ fun PicklelogNavHost(
                         onLocationChanged = viewModel::changeLocation,
                         onPaddleChanged = viewModel::changePaddle,
                         onNotesChanged = viewModel::changeNotes,
+                        onSuggestionFocusChanged = { target, isFocused ->
+                            if (isFocused) {
+                                viewModel.focusSuggestionTarget(target)
+                            } else {
+                                viewModel.leaveSuggestionTarget(target)
+                            }
+                        },
+                        onSuggestionSelected = viewModel::selectSuggestion,
                         onSave = viewModel::save,
                         onClose = { navController.popBackStack() },
                     )

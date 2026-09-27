@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalUuidApi::class)
+@file:OptIn(ExperimentalUuidApi::class, ExperimentalCoroutinesApi::class, FlowPreview::class)
 
 package com.maxeydev.picklelog.ui.match.edit
 
@@ -11,20 +11,38 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.maxeydev.picklelog.domain.datetime.AppDate
 import com.maxeydev.picklelog.domain.datetime.AppTime
+import com.maxeydev.picklelog.domain.match.FreeTextField
 import com.maxeydev.picklelog.domain.match.LastUsedFormatStore
 import com.maxeydev.picklelog.domain.match.Match
 import com.maxeydev.picklelog.domain.match.MatchFormat
 import com.maxeydev.picklelog.domain.match.MatchRepository
 import com.maxeydev.picklelog.domain.match.MatchResult
+import com.maxeydev.picklelog.domain.match.suggestFreeText
 import com.maxeydev.picklelog.domain.person.Person
 import com.maxeydev.picklelog.domain.person.PersonRepository
 import com.maxeydev.picklelog.domain.person.normalizePersonName
+import com.maxeydev.picklelog.domain.person.suggestPeople
 import com.maxeydev.picklelog.ui.PicklelogDependencies
+import com.maxeydev.picklelog.ui.common.SuggestionUiState
+import com.maxeydev.picklelog.ui.navigation.LOG_ANOTHER_FROM_ARGUMENT
 import com.maxeydev.picklelog.ui.navigation.MATCH_ID_ARGUMENT
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -37,6 +55,21 @@ private const val DRAFT_KEY = "match_edit_draft"
 
 private val draftJson = Json { ignoreUnknownKeys = true }
 
+const val SUGGESTION_DEBOUNCE_MILLIS = 150L
+
+private data class SuggestionInput(
+    val target: SuggestionTarget,
+    val text: String,
+    val excludedIds: Set<String>,
+    val isDismissed: Boolean,
+)
+
+private data class SuggestionResult(
+    val target: SuggestionTarget,
+    val people: List<Person> = emptyList(),
+    val values: List<String> = emptyList(),
+)
+
 class MatchEditViewModel(
     private val savedStateHandle: SavedStateHandle,
     private val matchRepository: MatchRepository,
@@ -44,6 +77,7 @@ class MatchEditViewModel(
     private val lastUsedFormatStore: LastUsedFormatStore,
     private val clock: Clock,
     private val timeZone: () -> TimeZone,
+    private val defaultDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
     private var draft: MatchDraft? =
         savedStateHandle.get<String>(DRAFT_KEY)?.let { encoded ->
@@ -51,6 +85,9 @@ class MatchEditViewModel(
         }
     private var isSaving = false
     private var isFinished = false
+    private var savedNewMatchId: String? = null
+    private val suggestionInput = MutableStateFlow<SuggestionInput?>(null)
+    private var suggestionResult: SuggestionResult? = null
 
     private val mutableUiState = MutableStateFlow(renderState())
     val uiState: StateFlow<MatchEditUiState> = mutableUiState.asStateFlow()
@@ -58,6 +95,12 @@ class MatchEditViewModel(
     init {
         if (draft == null) {
             viewModelScope.launch { loadInitialDraft() }
+        }
+        viewModelScope.launch {
+            observeSuggestions().collect { result ->
+                suggestionResult = result
+                mutableUiState.value = renderState()
+            }
         }
     }
 
@@ -75,6 +118,48 @@ class MatchEditViewModel(
         slot: PersonSlot,
         name: String,
     ) = updateDraft { it.withPersonName(slot, name) }
+
+    fun focusSuggestionTarget(target: SuggestionTarget) {
+        val current = draft ?: return
+        suggestionInput.value = suggestionInputFor(target, current, isDismissed = false)
+        mutableUiState.value = renderState()
+    }
+
+    fun leaveSuggestionTarget(target: SuggestionTarget) {
+        if (suggestionInput.value?.target != target) {
+            return
+        }
+        suggestionInput.value = null
+        mutableUiState.value = renderState()
+    }
+
+    fun selectSuggestion(
+        target: SuggestionTarget,
+        suggestion: SuggestionUiState,
+    ) {
+        val current = draft ?: return
+        if (isSaving || isFinished) {
+            return
+        }
+        val slot = target.personSlot
+        val next =
+            if (slot != null) {
+                val person =
+                    suggestionResult
+                        ?.takeIf { it.target == target }
+                        ?.people
+                        ?.firstOrNull { it.id.toString() == suggestion.key }
+                        ?: return
+                current.withPersonSelected(slot, person)
+            } else {
+                when (requireNotNull(target.freeTextField)) {
+                    FreeTextField.LOCATION -> current.copy(location = suggestion.label)
+                    FreeTextField.PADDLE -> current.copy(paddle = suggestion.label)
+                }
+            }
+        suggestionInput.value = suggestionInputFor(target, next, isDismissed = true)
+        publish(next)
+    }
 
     fun addGame() = updateDraft { it.withGameAdded() }
 
@@ -106,6 +191,9 @@ class MatchEditViewModel(
             }
             isSaving = false
             isFinished = true
+            if (current.isNew) {
+                savedNewMatchId = current.matchId
+            }
             mutableUiState.value = renderState()
         }
     }
@@ -113,15 +201,7 @@ class MatchEditViewModel(
     private suspend fun loadInitialDraft() {
         val editingId = savedStateHandle.get<String>(MATCH_ID_ARGUMENT)
         if (editingId == null) {
-            val now = clock.now().toLocalDateTime(timeZone())
-            publish(
-                MatchDraft.forNewMatch(
-                    matchId = Uuid.random().toString(),
-                    format = lastUsedFormatStore.lastUsedFormat(),
-                    date = now.date,
-                    startTime = AppTime(now.hour, now.minute),
-                ),
-            )
+            publish(newMatchDraft())
             return
         }
         val existing = matchRepository.observeById(Uuid.parse(editingId)).first()
@@ -130,6 +210,26 @@ class MatchEditViewModel(
             mutableUiState.value = renderState()
         } else {
             publish(MatchDraft.fromMatch(existing))
+        }
+    }
+
+    private suspend fun newMatchDraft(): MatchDraft {
+        val now = clock.now().toLocalDateTime(timeZone())
+        val matchId = Uuid.random().toString()
+        val startTime = AppTime(now.hour, now.minute)
+        val source =
+            savedStateHandle.get<String>(LOG_ANOTHER_FROM_ARGUMENT)?.let { sourceId ->
+                matchRepository.observeById(Uuid.parse(sourceId)).first()
+            }
+        return if (source == null) {
+            MatchDraft.forNewMatch(
+                matchId = matchId,
+                format = lastUsedFormatStore.lastUsedFormat(),
+                date = now.date,
+                startTime = startTime,
+            )
+        } else {
+            logAnotherDraft(source = source, matchId = matchId, startTime = startTime)
         }
     }
 
@@ -144,12 +244,101 @@ class MatchEditViewModel(
     private fun publish(next: MatchDraft) {
         draft = next
         savedStateHandle[DRAFT_KEY] = draftJson.encodeToString(MatchDraft.serializer(), next)
+        suggestionInput.value?.let { input ->
+            val refreshed = suggestionInputFor(input.target, next, isDismissed = false)
+            suggestionInput.value = refreshed.copy(isDismissed = input.isDismissed && input.text == refreshed.text)
+        }
         mutableUiState.value = renderState()
     }
 
     private fun renderState(): MatchEditUiState =
-        draft?.toUiState(isSaving = isSaving, isFinished = isFinished)
-            ?: MatchEditUiState(isLoading = !isFinished, isFinished = isFinished)
+        draft?.toUiState(
+            isSaving = isSaving,
+            isFinished = isFinished,
+            suggestionTarget = suggestionInput.value?.target,
+            suggestions = visibleSuggestions(),
+            savedNewMatchId = savedNewMatchId,
+        ) ?: MatchEditUiState(isLoading = !isFinished, isFinished = isFinished)
+
+    private fun visibleSuggestions(): List<SuggestionUiState> {
+        val input = suggestionInput.value ?: return emptyList()
+        if (input.isDismissed || input.text.isBlank() || isSaving || isFinished) {
+            return emptyList()
+        }
+        val result = suggestionResult?.takeIf { it.target == input.target } ?: return emptyList()
+        return result.people.map { SuggestionUiState(key = it.id.toString(), label = it.displayName) } +
+            result.values.map { SuggestionUiState(key = it, label = it) }
+    }
+
+    private fun suggestionInputFor(
+        target: SuggestionTarget,
+        source: MatchDraft,
+        isDismissed: Boolean,
+    ): SuggestionInput {
+        val slot = target.personSlot
+        return if (slot != null) {
+            SuggestionInput(
+                target = target,
+                text = source.nameIn(slot),
+                excludedIds = source.boundIdsOutside(slot) + listOfNotNull(source.idIn(slot)),
+                isDismissed = isDismissed,
+            )
+        } else {
+            val text =
+                when (requireNotNull(target.freeTextField)) {
+                    FreeTextField.LOCATION -> source.location
+                    FreeTextField.PADDLE -> source.paddle
+                }
+            SuggestionInput(target = target, text = text, excludedIds = emptySet(), isDismissed = isDismissed)
+        }
+    }
+
+    private fun observeSuggestions(): Flow<SuggestionResult?> =
+        suggestionInput
+            .map { it?.target }
+            .distinctUntilChanged()
+            .flatMapLatest { target ->
+                if (target == null) {
+                    flowOf(null)
+                } else {
+                    suggestionsFor(target)
+                }
+            }.flowOn(defaultDispatcher)
+
+    private fun suggestionsFor(target: SuggestionTarget): Flow<SuggestionResult> {
+        val typed =
+            suggestionInput
+                .filterNotNull()
+                .filter { it.target == target }
+                .debounce(SUGGESTION_DEBOUNCE_MILLIS)
+                .distinctUntilChanged()
+        val field = target.freeTextField
+        return if (field == null) {
+            combine(personRepository.observeRecentlyUsed(), typed) { usage, input ->
+                SuggestionResult(
+                    target = target,
+                    people =
+                        if (input.isDismissed) {
+                            emptyList()
+                        } else {
+                            suggestPeople(input.text, usage, input.excludedIds.map(Uuid::parse).toSet())
+                        },
+                )
+            }
+        } else {
+            combine(matchRepository.observePriorValues(field), typed) { values, input ->
+                SuggestionResult(
+                    target = target,
+                    values =
+                        if (input.isDismissed) {
+                            emptyList()
+                        } else {
+                            suggestFreeText(input.text, values)
+                        },
+                )
+            }
+        }
+    }
 
     private suspend fun buildMatch(source: MatchDraft): Match {
         val id = Uuid.parse(source.matchId)
@@ -172,8 +361,17 @@ class MatchEditViewModel(
             startTime = source.startTime?.let(AppTime::parse),
             endTime = source.endTime?.let(AppTime::parse),
             location = source.location.trim().ifEmpty { null },
-            opponents = source.visibleOpponentNames().mapNotNull { resolvePerson(it) },
-            partner = source.visiblePartnerName()?.let { resolvePerson(it) },
+            opponents =
+                source
+                    .visibleSlots()
+                    .filter { it != PersonSlot.PARTNER }
+                    .mapNotNull { resolvePerson(source, it) },
+            partner =
+                if (PersonSlot.PARTNER in source.visibleSlots()) {
+                    resolvePerson(source, PersonSlot.PARTNER)
+                } else {
+                    null
+                },
             games = source.completeGames(),
             paddle = source.paddle.trim().ifEmpty { null },
             notes = source.notes.trim().ifEmpty { null },
@@ -181,12 +379,17 @@ class MatchEditViewModel(
         )
     }
 
-    private suspend fun resolvePerson(name: String): Person? =
+    private suspend fun resolvePerson(
+        source: MatchDraft,
+        slot: PersonSlot,
+    ): Person? {
+        val name = source.nameIn(slot)
         if (normalizePersonName(name).isEmpty()) {
-            null
-        } else {
-            personRepository.findOrCreatePerson(name)
+            return null
         }
+        val bound = source.idIn(slot)?.let { personRepository.findById(Uuid.parse(it)) }
+        return bound ?: personRepository.findOrCreatePerson(name)
+    }
 
     companion object {
         fun factory(dependencies: PicklelogDependencies): ViewModelProvider.Factory =
@@ -199,6 +402,7 @@ class MatchEditViewModel(
                         lastUsedFormatStore = dependencies.lastUsedFormatStore,
                         clock = dependencies.clock,
                         timeZone = dependencies::currentTimeZone,
+                        defaultDispatcher = dependencies.defaultDispatcher,
                     )
                 }
             }

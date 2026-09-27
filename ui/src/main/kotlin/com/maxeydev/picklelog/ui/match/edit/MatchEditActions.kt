@@ -4,6 +4,7 @@ import com.maxeydev.picklelog.domain.datetime.AppDate
 import com.maxeydev.picklelog.domain.datetime.AppTime
 import com.maxeydev.picklelog.domain.match.MatchFormat
 import com.maxeydev.picklelog.domain.match.MatchResult
+import com.maxeydev.picklelog.ui.common.SuggestionUiState
 
 class MatchEditActions(
     val onFormatSelected: (MatchFormat) -> Unit,
@@ -18,6 +19,8 @@ class MatchEditActions(
     val onLocationChanged: (String) -> Unit,
     val onPaddleChanged: (String) -> Unit,
     val onNotesChanged: (String) -> Unit,
+    val onSuggestionFocusChanged: (SuggestionTarget, Boolean) -> Unit,
+    val onSuggestionSelected: (SuggestionTarget, SuggestionUiState) -> Unit,
     val onSave: () -> Unit,
     val onClose: () -> Unit,
 )
