@@ -14,6 +14,8 @@ interface MatchRepository {
 
     fun observeById(id: Uuid): Flow<Match?>
 
+    fun observePriorValues(field: FreeTextField): Flow<List<FreeTextUsage>>
+
     suspend fun saveMatch(match: Match)
 
     suspend fun deleteMatch(id: Uuid)
