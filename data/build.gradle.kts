@@ -12,6 +12,7 @@ android {
     defaultConfig {
         minSdk = 26
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunnerArguments["timeout_msec"] = "60000"
         consumerProguardFiles("consumer-rules.pro")
     }
 

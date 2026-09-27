@@ -12,6 +12,7 @@ android {
     defaultConfig {
         minSdk = 26
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunnerArguments["timeout_msec"] = "60000"
     }
 
     buildFeatures {
@@ -43,6 +44,7 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
 
     implementation(libs.navigation.compose)
+    implementation(libs.coil.compose)
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.lifecycle.viewmodel.savedstate)
@@ -57,5 +59,10 @@ dependencies {
     androidTestImplementation(libs.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.espresso.core)
     debugImplementation(libs.compose.ui.test.manifest)
+}
+
+tasks.matching { it.name == "connectedDebugAndroidTest" }.configureEach {
+    mustRunAfter(":data:connectedDebugAndroidTest")
 }
