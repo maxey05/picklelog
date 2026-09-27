@@ -1,9 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="home_title">Picklelog</string>
-    <string name="home_empty">No matches yet. Tap + to log your first one.</string>
     <string name="home_match_headline">%1$s · %2$s</string>
     <string name="new_match">Log a match</string>
+
+    <string name="list_empty_title">No matches yet</string>
+    <string name="list_empty_body">Tap + to log your first match. It only takes a few taps.</string>
+    <string name="list_versus_one">vs %1$s</string>
+    <string name="list_versus_two">vs %1$s &amp; %2$s</string>
+    <string name="list_format_and_date">%1$s · %2$s</string>
+    <string name="list_score">%1$d–%2$d</string>
+    <string name="open_match_details">Open match details</string>
+
+    <string name="sort_button">Sort: %1$s</string>
+    <string name="sort_date_newest">Date — newest first</string>
+    <string name="sort_date_oldest">Date — oldest first</string>
+    <string name="sort_result_wins_first">Result — wins first</string>
+    <string name="sort_result_losses_first">Result — losses first</string>
+    <string name="sort_opponent_a_to_z">Opponent A–Z — by first opponent</string>
+
+    <string name="a11y_row_separator">", "</string>
+    <string name="a11y_against_one">against %1$s</string>
+    <string name="a11y_against_two">against %1$s and %2$s</string>
+    <string name="a11y_scores">scores %1$s</string>
+    <string name="a11y_score">%1$d to %2$d</string>
+    <string name="a11y_with_photo">with photo</string>
 
     <string name="edit_title_new">New match</string>
     <string name="edit_title_existing">Edit match</string>
