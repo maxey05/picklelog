@@ -7,7 +7,10 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 interface MatchRepository {
-    fun observeAll(): Flow<List<Match>>
+    fun observeListPage(
+        sort: MatchSort,
+        limit: Int,
+    ): Flow<List<MatchListItem>>
 
     fun observeById(id: Uuid): Flow<Match?>
 
