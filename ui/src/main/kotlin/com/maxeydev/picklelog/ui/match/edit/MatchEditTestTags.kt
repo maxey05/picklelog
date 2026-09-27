@@ -7,6 +7,9 @@ object MatchEditTestTags {
     const val FORMAT_SINGLES = "match_edit_format_singles"
     const val FORMAT_DOUBLES = "match_edit_format_doubles"
     const val ADD_GAME = "match_edit_add_game"
+    const val LOCATION = "match_edit_location"
+    const val PADDLE = "match_edit_paddle"
+    const val NOTES = "match_edit_notes"
 
     fun personSlot(slot: PersonSlot): String = "match_edit_person_${slot.name.lowercase()}"
 }

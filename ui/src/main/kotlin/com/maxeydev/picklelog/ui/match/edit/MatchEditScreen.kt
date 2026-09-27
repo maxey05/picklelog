@@ -48,6 +48,7 @@ import com.maxeydev.picklelog.domain.datetime.AppDate
 import com.maxeydev.picklelog.domain.match.MatchFormat
 import com.maxeydev.picklelog.domain.match.MatchResult
 import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.common.AutocompleteField
 import com.maxeydev.picklelog.ui.match.currentLocale
 import com.maxeydev.picklelog.ui.match.formatLabel
 import com.maxeydev.picklelog.ui.match.formatMatchDate
@@ -150,9 +151,8 @@ private fun MatchEditForm(
             onEndTimeChanged = actions.onEndTimeChanged,
         )
         PlayersSection(
-            format = state.format,
-            slots = state.personSlots,
-            onPersonNameChanged = actions.onPersonNameChanged,
+            state = state,
+            actions = actions,
         )
         ScoresSection(
             games = state.games,
@@ -161,12 +161,8 @@ private fun MatchEditForm(
             onGameScoresChanged = actions.onGameScoresChanged,
         )
         DetailsSection(
-            location = state.location,
-            paddle = state.paddle,
-            notes = state.notes,
-            onLocationChanged = actions.onLocationChanged,
-            onPaddleChanged = actions.onPaddleChanged,
-            onNotesChanged = actions.onNotesChanged,
+            state = state,
+            actions = actions,
         )
     }
 }
@@ -332,17 +328,20 @@ private fun MatchDatePickerDialog(
 
 @Composable
 private fun PlayersSection(
-    format: MatchFormat,
-    slots: List<PersonSlotUiState>,
-    onPersonNameChanged: (PersonSlot, String) -> Unit,
+    state: MatchEditUiState,
+    actions: MatchEditActions,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionLabel(stringResource(R.string.label_players))
-        slots.forEach { slot ->
+        state.personSlots.forEach { slot ->
+            val target = SuggestionTarget.forSlot(slot.slot)
             PersonSlotField(
                 slot = slot,
-                format = format,
-                onNameChanged = { name -> onPersonNameChanged(slot.slot, name) },
+                format = state.format,
+                suggestions = state.suggestionsFor(target),
+                onNameChanged = { name -> actions.onPersonNameChanged(slot.slot, name) },
+                onSuggestionSelected = { suggestion -> actions.onSuggestionSelected(target, suggestion) },
+                onFocusChanged = { isFocused -> actions.onSuggestionFocusChanged(target, isFocused) },
             )
         }
     }
@@ -372,37 +371,37 @@ private fun ScoresSection(
 
 @Composable
 private fun DetailsSection(
-    location: String,
-    paddle: String,
-    notes: String,
-    onLocationChanged: (String) -> Unit,
-    onPaddleChanged: (String) -> Unit,
-    onNotesChanged: (String) -> Unit,
+    state: MatchEditUiState,
+    actions: MatchEditActions,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(
-            value = location,
-            onValueChange = onLocationChanged,
-            label = { Text(stringResource(R.string.label_location)) },
-            singleLine = true,
+        AutocompleteField(
+            value = state.location,
+            onValueChange = actions.onLocationChanged,
+            suggestions = state.suggestionsFor(SuggestionTarget.LOCATION),
+            onSuggestionSelected = { actions.onSuggestionSelected(SuggestionTarget.LOCATION, it) },
+            onFocusChanged = { actions.onSuggestionFocusChanged(SuggestionTarget.LOCATION, it) },
+            label = stringResource(R.string.label_location),
+            fieldTestTag = MatchEditTestTags.LOCATION,
             keyboardOptions = sentenceKeyboard(),
-            modifier = Modifier.fillMaxWidth(),
+        )
+        AutocompleteField(
+            value = state.paddle,
+            onValueChange = actions.onPaddleChanged,
+            suggestions = state.suggestionsFor(SuggestionTarget.PADDLE),
+            onSuggestionSelected = { actions.onSuggestionSelected(SuggestionTarget.PADDLE, it) },
+            onFocusChanged = { actions.onSuggestionFocusChanged(SuggestionTarget.PADDLE, it) },
+            label = stringResource(R.string.label_paddle),
+            fieldTestTag = MatchEditTestTags.PADDLE,
+            keyboardOptions = sentenceKeyboard(),
         )
         OutlinedTextField(
-            value = paddle,
-            onValueChange = onPaddleChanged,
-            label = { Text(stringResource(R.string.label_paddle)) },
-            singleLine = true,
-            keyboardOptions = sentenceKeyboard(),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = notes,
-            onValueChange = onNotesChanged,
+            value = state.notes,
+            onValueChange = actions.onNotesChanged,
             label = { Text(stringResource(R.string.label_notes)) },
             minLines = 3,
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag(MatchEditTestTags.NOTES),
         )
     }
 }

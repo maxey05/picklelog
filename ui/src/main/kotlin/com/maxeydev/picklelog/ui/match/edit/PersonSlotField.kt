@@ -1,31 +1,36 @@
 package com.maxeydev.picklelog.ui.match.edit
 
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import com.maxeydev.picklelog.domain.match.MatchFormat
 import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.common.AutocompleteField
+import com.maxeydev.picklelog.ui.common.SuggestionUiState
 
 @Composable
 fun PersonSlotField(
     slot: PersonSlotUiState,
     format: MatchFormat,
+    suggestions: List<SuggestionUiState>,
     onNameChanged: (String) -> Unit,
+    onSuggestionSelected: (SuggestionUiState) -> Unit,
+    onFocusChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val duplicateOf = slot.duplicateOf
-    OutlinedTextField(
+    AutocompleteField(
         value = slot.name,
         onValueChange = onNameChanged,
-        label = { Text(personSlotLabel(slot.slot, format)) },
-        singleLine = true,
+        suggestions = suggestions,
+        onSuggestionSelected = onSuggestionSelected,
+        onFocusChanged = onFocusChanged,
+        label = personSlotLabel(slot.slot, format),
+        fieldTestTag = MatchEditTestTags.personSlot(slot.slot),
         isError = duplicateOf != null,
         supportingText =
             if (duplicateOf != null) {
@@ -38,7 +43,7 @@ fun PersonSlotField(
                 capitalization = KeyboardCapitalization.Words,
                 imeAction = ImeAction.Next,
             ),
-        modifier = modifier.fillMaxWidth().testTag(MatchEditTestTags.personSlot(slot.slot)),
+        modifier = modifier,
     )
 }
 
