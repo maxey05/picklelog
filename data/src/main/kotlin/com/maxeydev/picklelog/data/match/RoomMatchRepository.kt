@@ -5,6 +5,8 @@ package com.maxeydev.picklelog.data.match
 import androidx.room.withTransaction
 import com.maxeydev.picklelog.data.db.PicklelogDatabase
 import com.maxeydev.picklelog.data.photo.PhotoFileStore
+import com.maxeydev.picklelog.domain.match.FreeTextField
+import com.maxeydev.picklelog.domain.match.FreeTextUsage
 import com.maxeydev.picklelog.domain.match.Match
 import com.maxeydev.picklelog.domain.match.MatchListItem
 import com.maxeydev.picklelog.domain.match.MatchRepository
@@ -48,6 +50,17 @@ class RoomMatchRepository(
             .observeById(id.toString())
             .map { row -> row?.toDomain() }
             .flowOn(ioDispatcher)
+
+    override fun observePriorValues(field: FreeTextField): Flow<List<FreeTextUsage>> {
+        val rows =
+            when (field) {
+                FreeTextField.LOCATION -> matchDao.observePriorLocations()
+                FreeTextField.PADDLE -> matchDao.observePriorPaddles()
+            }
+        return rows
+            .map { values -> values.map { it.toDomain() } }
+            .flowOn(ioDispatcher)
+    }
 
     override suspend fun saveMatch(match: Match) {
         match.requireValidRoster()

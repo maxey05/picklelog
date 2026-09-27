@@ -34,6 +34,20 @@ interface MatchDao {
     @Query("SELECT * FROM `match` WHERE id = :id")
     fun observeById(id: String): Flow<MatchWithRelationsEntity?>
 
+    @Query(
+        "SELECT location AS value, MAX(date) AS last_played_on, MAX(created_at) AS last_logged_at " +
+            "FROM `match` WHERE location IS NOT NULL AND location != '' " +
+            "GROUP BY location ORDER BY last_played_on DESC, last_logged_at DESC",
+    )
+    fun observePriorLocations(): Flow<List<FreeTextUsageRowEntity>>
+
+    @Query(
+        "SELECT paddle AS value, MAX(date) AS last_played_on, MAX(created_at) AS last_logged_at " +
+            "FROM `match` WHERE paddle IS NOT NULL AND paddle != '' " +
+            "GROUP BY paddle ORDER BY last_played_on DESC, last_logged_at DESC",
+    )
+    fun observePriorPaddles(): Flow<List<FreeTextUsageRowEntity>>
+
     @Upsert
     suspend fun upsertMatch(match: MatchEntity)
 
