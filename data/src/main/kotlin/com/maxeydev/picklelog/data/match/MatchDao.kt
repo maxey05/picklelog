@@ -11,8 +11,24 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface MatchDao {
     @Transaction
-    @Query("SELECT * FROM `match` ORDER BY `date` DESC, created_at DESC")
-    fun observeAll(): Flow<List<MatchWithRelationsEntity>>
+    @Query("$MATCH_LIST_SELECT ORDER BY $NEWEST_FIRST $PAGE_LIMIT")
+    fun observeListByDateNewest(limit: Int): Flow<List<MatchListRowEntity>>
+
+    @Transaction
+    @Query("$MATCH_LIST_SELECT ORDER BY $OLDEST_FIRST $PAGE_LIMIT")
+    fun observeListByDateOldest(limit: Int): Flow<List<MatchListRowEntity>>
+
+    @Transaction
+    @Query("$MATCH_LIST_SELECT ORDER BY $WINS_BEFORE_LOSSES, $NEWEST_FIRST $PAGE_LIMIT")
+    fun observeListByWinsFirst(limit: Int): Flow<List<MatchListRowEntity>>
+
+    @Transaction
+    @Query("$MATCH_LIST_SELECT ORDER BY $LOSSES_BEFORE_WINS, $NEWEST_FIRST $PAGE_LIMIT")
+    fun observeListByLossesFirst(limit: Int): Flow<List<MatchListRowEntity>>
+
+    @Transaction
+    @Query("$MATCH_LIST_SELECT ORDER BY $NO_OPPONENT_LAST_THEN_A_TO_Z, $NEWEST_FIRST $PAGE_LIMIT")
+    fun observeListByOpponent(limit: Int): Flow<List<MatchListRowEntity>>
 
     @Transaction
     @Query("SELECT * FROM `match` WHERE id = :id")
