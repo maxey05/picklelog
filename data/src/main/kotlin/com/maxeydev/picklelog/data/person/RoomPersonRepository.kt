@@ -6,6 +6,7 @@ import androidx.room.withTransaction
 import com.maxeydev.picklelog.data.db.PicklelogDatabase
 import com.maxeydev.picklelog.domain.person.Person
 import com.maxeydev.picklelog.domain.person.PersonRepository
+import com.maxeydev.picklelog.domain.person.PersonUsage
 import com.maxeydev.picklelog.domain.person.normalizePersonName
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
@@ -28,6 +29,17 @@ class RoomPersonRepository(
             .observeAll()
             .map { rows -> rows.map { it.toDomain() } }
             .flowOn(ioDispatcher)
+
+    override fun observeRecentlyUsed(): Flow<List<PersonUsage>> =
+        personDao
+            .observeRecentlyUsed()
+            .map { rows -> rows.map { it.toDomain() } }
+            .flowOn(ioDispatcher)
+
+    override suspend fun findById(id: Uuid): Person? =
+        withContext(ioDispatcher) {
+            personDao.findById(id.toString())?.toDomain()
+        }
 
     override suspend fun findOrCreatePerson(displayName: String): Person {
         val normalizedName = normalizePersonName(displayName)
