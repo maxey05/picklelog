@@ -2,6 +2,7 @@
 
 package com.maxeydev.picklelog.ui.match.list
 
+import androidx.lifecycle.SavedStateHandle
 import com.maxeydev.picklelog.domain.datetime.AppDate
 import com.maxeydev.picklelog.domain.datetime.AppInstant
 import com.maxeydev.picklelog.domain.match.Match
@@ -11,6 +12,7 @@ import com.maxeydev.picklelog.domain.match.MatchSort
 import com.maxeydev.picklelog.domain.photo.PhotoRef
 import com.maxeydev.picklelog.ui.fakes.FakeMatchRepository
 import com.maxeydev.picklelog.ui.fakes.FakeMatchSortStore
+import com.maxeydev.picklelog.ui.navigation.JUST_SAVED_MATCH_ID_KEY
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -36,11 +38,13 @@ class MatchListViewModelTest {
     private val photoRoot = File("/data/user/0/picklelog/files")
     private lateinit var matches: FakeMatchRepository
     private lateinit var sorts: FakeMatchSortStore
+    private lateinit var handle: SavedStateHandle
 
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         sorts = FakeMatchSortStore()
+        handle = SavedStateHandle()
     }
 
     @After
@@ -67,6 +71,7 @@ class MatchListViewModelTest {
         matches = FakeMatchRepository(stored)
         val viewModel =
             MatchListViewModel(
+                savedStateHandle = handle,
                 matchRepository = matches,
                 matchSortStore = sorts,
                 photoFile = { relativePath -> File(photoRoot, relativePath) },
@@ -195,5 +200,31 @@ class MatchListViewModelTest {
 
             assertTrue(state.isEmpty)
             assertFalse(state.canLoadMore)
+        }
+
+    @Test
+    fun `a just-saved match id handed back by the edit screen offers log another`() =
+        runTest {
+            val saved = match(day = 1)
+            val viewModel = subscribedViewModel(listOf(saved))
+            assertNull(viewModel.uiState.value.savedMatchId)
+
+            handle[JUST_SAVED_MATCH_ID_KEY] = saved.id.toString()
+
+            assertEquals(saved.id.toString(), viewModel.uiState.value.savedMatchId)
+        }
+
+    @Test
+    fun `dismissing the saved confirmation clears the offer so it is not shown again`() =
+        runTest {
+            val saved = match(day = 1)
+            handle[JUST_SAVED_MATCH_ID_KEY] = saved.id.toString()
+            val viewModel = subscribedViewModel(listOf(saved))
+
+            viewModel.dismissSavedConfirmation()
+
+            assertNull(viewModel.uiState.value.savedMatchId)
+            assertNull(handle.get<String>(JUST_SAVED_MATCH_ID_KEY))
+            assertEquals(1, viewModel.uiState.value.matches.size)
         }
 }

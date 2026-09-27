@@ -69,6 +69,8 @@ class MatchListScreenTest {
                     onOpenMatch = {},
                     onSortSelected = onSortSelected,
                     onLastVisibleIndexChanged = {},
+                    onLogAnother = {},
+                    onSavedConfirmationDismissed = {},
                 )
             }
         }
