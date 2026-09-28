@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalCoroutinesApi::class, ExperimentalUuidApi::class)
+@file:OptIn(ExperimentalCoroutinesApi::class, ExperimentalUuidApi::class, FlowPreview::class)
 
 package com.maxeydev.picklelog.ui.match.list
 
@@ -8,18 +8,27 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.maxeydev.picklelog.domain.match.FilterKind
+import com.maxeydev.picklelog.domain.match.FilterState
+import com.maxeydev.picklelog.domain.match.FreeTextField
 import com.maxeydev.picklelog.domain.match.MatchListItem
 import com.maxeydev.picklelog.domain.match.MatchRepository
 import com.maxeydev.picklelog.domain.match.MatchSort
 import com.maxeydev.picklelog.domain.match.MatchSortStore
+import com.maxeydev.picklelog.domain.match.SearchTerm
+import com.maxeydev.picklelog.domain.person.PersonRepository
 import com.maxeydev.picklelog.ui.PicklelogDependencies
 import com.maxeydev.picklelog.ui.navigation.JUST_SAVED_MATCH_ID_KEY
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -30,35 +39,86 @@ import kotlin.uuid.ExperimentalUuidApi
 
 const val MATCH_LIST_PAGE_SIZE = 50
 const val MATCH_LIST_PREFETCH_DISTANCE = 15
+const val SEARCH_DEBOUNCE_MILLIS = 300L
+const val FILTER_STATE_KEY = "match_list_filter"
+const val SEARCH_TEXT_KEY = "match_list_search"
 private const val STOP_TIMEOUT_MILLIS = 5_000L
+
+private data class ListQuery(
+    val sort: MatchSort,
+    val filter: FilterState,
+    val search: SearchTerm?,
+)
+
+private data class FilterChoices(
+    val opponents: List<OpponentChoice>,
+    val locations: List<String>,
+)
 
 class MatchListViewModel(
     private val savedStateHandle: SavedStateHandle,
     private val matchRepository: MatchRepository,
+    private val personRepository: PersonRepository,
     private val matchSortStore: MatchSortStore,
     private val photoFile: (String) -> File,
     defaultDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
     private val pageLimit = MutableStateFlow(MATCH_LIST_PAGE_SIZE)
 
-    val uiState: StateFlow<MatchListUiState> =
-        matchSortStore
-            .observeSort()
-            .flatMapLatest { sort ->
+    private val filter: Flow<FilterState> =
+        savedStateHandle
+            .getStateFlow<String?>(FILTER_STATE_KEY, null)
+            .map(::decodeFilterState)
+
+    private val appliedSearch: Flow<SearchTerm?> =
+        savedStateHandle
+            .getStateFlow(SEARCH_TEXT_KEY, "")
+            .debounce { text -> if (text.isBlank()) 0L else SEARCH_DEBOUNCE_MILLIS }
+            .map { text -> SearchTerm.of(text) }
+            .distinctUntilChanged()
+
+    private val listContent: Flow<MatchListUiState> =
+        combine(matchSortStore.observeSort(), filter, appliedSearch, ::ListQuery)
+            .distinctUntilChanged()
+            .flatMapLatest { query ->
+                pageLimit.value = MATCH_LIST_PAGE_SIZE
                 pageLimit.flatMapLatest { limit ->
-                    matchRepository.observeListPage(sort, limit).map { items ->
+                    matchRepository.observeListPage(query.sort, limit, query.filter, query.search).map { items ->
                         MatchListUiState(
                             isLoading = false,
-                            sort = sort,
+                            sort = query.sort,
                             matches = items.map { it.toRowUiState() },
                             pageLimit = limit,
+                            filter = query.filter,
+                            appliedSearch = query.search?.text,
                         )
                     }
                 }
             }.flowOn(defaultDispatcher)
-            .combine(savedStateHandle.getStateFlow<String?>(JUST_SAVED_MATCH_ID_KEY, null)) { state, savedMatchId ->
-                state.copy(savedMatchId = savedMatchId)
-            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), MatchListUiState())
+
+    private val filterChoices: Flow<FilterChoices> =
+        combine(
+            personRepository.observeAll(),
+            matchRepository.observePriorValues(FreeTextField.LOCATION),
+        ) { people, locations ->
+            FilterChoices(
+                opponents = people.map { OpponentChoice(id = it.id, name = it.displayName) },
+                locations = locations.map { it.value }.sortedWith(String.CASE_INSENSITIVE_ORDER),
+            )
+        }.flowOn(defaultDispatcher)
+
+    val uiState: StateFlow<MatchListUiState> =
+        combine(
+            listContent,
+            filterChoices,
+            savedStateHandle.getStateFlow<String?>(JUST_SAVED_MATCH_ID_KEY, null),
+        ) { state, choices, savedMatchId ->
+            state.copy(
+                savedMatchId = savedMatchId,
+                opponentChoices = choices.opponents,
+                locationChoices = choices.locations,
+            )
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), MatchListUiState())
 
     fun loadMoreIfNeeded(lastVisibleIndex: Int) {
         val state = uiState.value
@@ -76,9 +136,31 @@ class MatchListViewModel(
     }
 
     fun selectSort(sort: MatchSort) {
-        pageLimit.value = MATCH_LIST_PAGE_SIZE
         viewModelScope.launch { matchSortStore.saveSort(sort) }
     }
+
+    fun changeFilter(filter: FilterState) {
+        savedStateHandle[FILTER_STATE_KEY] = encodeFilterState(filter)
+    }
+
+    fun clearFilter(kind: FilterKind) {
+        changeFilter(currentFilter().without(kind))
+    }
+
+    fun clearAllFilters() {
+        changeFilter(FilterState.NONE)
+    }
+
+    fun changeSearch(text: String) {
+        savedStateHandle[SEARCH_TEXT_KEY] = text
+    }
+
+    fun clearFiltersAndSearch() {
+        clearAllFilters()
+        changeSearch("")
+    }
+
+    private fun currentFilter(): FilterState = decodeFilterState(savedStateHandle[FILTER_STATE_KEY])
 
     private fun MatchListItem.toRowUiState(): MatchRowUiState =
         MatchRowUiState(
@@ -101,6 +183,7 @@ class MatchListViewModel(
                     MatchListViewModel(
                         savedStateHandle = homeEntryState,
                         matchRepository = dependencies.matchRepository,
+                        personRepository = dependencies.personRepository,
                         matchSortStore = dependencies.matchSortStore,
                         photoFile = dependencies::photoFile,
                         defaultDispatcher = dependencies.defaultDispatcher,
