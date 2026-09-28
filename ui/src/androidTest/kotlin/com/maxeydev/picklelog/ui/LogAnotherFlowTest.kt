@@ -15,6 +15,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.text.AnnotatedString
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -61,7 +62,7 @@ class LogAnotherFlowTest {
         compose.onNodeWithTag(MatchEditTestTags.personSlot(PersonSlot.OPPONENT_1)).performTextInput("Ana")
         compose.onNodeWithTag(MatchEditTestTags.personSlot(PersonSlot.OPPONENT_2)).performTextInput("Ben")
         compose.onNodeWithTag(MatchEditTestTags.personSlot(PersonSlot.PARTNER)).performTextInput("Cy")
-        compose.onNodeWithTag(MatchEditTestTags.ADD_GAME).performClick()
+        compose.onNodeWithTag(MatchEditTestTags.ADD_GAME).performScrollTo().performClick()
         compose.onNode(hasText("Me") and hasSetTextAction()).performTextInput("11")
         compose.onNode(hasText("Them") and hasSetTextAction()).performTextInput("7")
         compose.onNodeWithTag(MatchEditTestTags.LOCATION).performTextInput("Ayala Triangle")
