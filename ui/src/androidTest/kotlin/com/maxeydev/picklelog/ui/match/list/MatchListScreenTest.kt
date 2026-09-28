@@ -3,6 +3,8 @@
 package com.maxeydev.picklelog.ui.match.list
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
@@ -15,9 +17,11 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToKey
+import androidx.compose.ui.unit.Density
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.maxeydev.picklelog.domain.datetime.AppDate
 import com.maxeydev.picklelog.domain.datetime.AppInstant
+import com.maxeydev.picklelog.domain.match.FilterState
 import com.maxeydev.picklelog.domain.match.Match
 import com.maxeydev.picklelog.domain.match.MatchFormat
 import com.maxeydev.picklelog.domain.match.MatchResult
@@ -71,6 +75,14 @@ class MatchListScreenTest {
                     onLastVisibleIndexChanged = {},
                     onLogAnother = {},
                     onSavedConfirmationDismissed = {},
+                    filterActions =
+                        MatchListFilterActions(
+                            onSearchChanged = {},
+                            onFilterChanged = {},
+                            onFilterCleared = {},
+                            onAllFiltersCleared = {},
+                            onFiltersAndSearchCleared = {},
+                        ),
                 )
             }
         }
@@ -139,7 +151,7 @@ class MatchListScreenTest {
     }
 
     @Test
-    fun `the_sort_menu_offers_the_five_sorts_marks_the_active_one_and_reports_a_choice`() {
+    fun `the_sort_menu_offers_all_eight_sorts_marks_the_active_one_and_reports_a_choice`() {
         val chosen = mutableListOf<MatchSort>()
         showScreen(contentState(sort = MatchSort.DATE_OLDEST), onSortSelected = { chosen += it })
 
@@ -154,6 +166,9 @@ class MatchListScreenTest {
         compose.onNodeWithText("Result — wins first").assertIsDisplayed()
         compose.onNodeWithText("Result — losses first").assertIsDisplayed()
         compose.onNodeWithText("Opponent A–Z — by first opponent").assertIsDisplayed()
+        compose.onNodeWithText("Location A–Z").assertIsDisplayed()
+        compose.onNodeWithText("Duration — shortest first").assertIsDisplayed()
+        compose.onNodeWithText("Duration — longest first").assertIsDisplayed()
 
         compose.onNodeWithTag(MatchListTestTags.sortOption(MatchSort.RESULT_WINS_FIRST)).performClick()
 
@@ -224,5 +239,57 @@ class MatchListScreenTest {
         val oldest = stored.first()
         compose.onNodeWithTag(MatchListTestTags.LIST).performScrollToKey(oldest.id.toString())
         compose.onNodeWithTag(MatchListTestTags.row(oldest.id.toString())).assertIsDisplayed()
+    }
+
+    @Test
+    fun `the_search_and_filter_header_scrolls_away_with_the_list_so_rows_get_the_screen`() {
+        val stored = List(80) { match(day = it) }
+        compose.setContent {
+            PicklelogNavHost(
+                dependencies = FakeDependencies(matchRepository = FakeMatchRepository(stored)),
+            )
+        }
+        waitForTag(MatchListTestTags.LIST)
+        compose.onNodeWithTag(MatchListTestTags.SEARCH_FIELD).assertIsDisplayed()
+
+        compose.onNodeWithTag(MatchListTestTags.LIST).performScrollToIndex(40)
+
+        compose.onNodeWithTag(MatchListTestTags.SEARCH_FIELD).assertDoesNotExist()
+        compose.onNodeWithTag(MatchListTestTags.LIST).performScrollToIndex(0)
+        compose.onNodeWithTag(MatchListTestTags.SEARCH_FIELD).assertIsDisplayed()
+    }
+
+    @Test
+    fun `at_200_percent_font_the_no_results_button_is_not_covered_by_the_new_match_button`() {
+        compose.setContent {
+            val base = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(base.density, fontScale = 2f)) {
+                MaterialTheme {
+                    MatchListScreen(
+                        state = MatchListUiState(isLoading = false, filter = FilterState(format = MatchFormat.SINGLES)),
+                        onNewMatch = {},
+                        onOpenMatch = {},
+                        onSortSelected = {},
+                        onLastVisibleIndexChanged = {},
+                        onLogAnother = {},
+                        onSavedConfirmationDismissed = {},
+                        filterActions =
+                            MatchListFilterActions(
+                                onSearchChanged = {},
+                                onFilterChanged = {},
+                                onFilterCleared = {},
+                                onAllFiltersCleared = {},
+                                onFiltersAndSearchCleared = {},
+                            ),
+                    )
+                }
+            }
+        }
+        compose.onNodeWithTag(MatchListTestTags.LIST).performScrollToIndex(1)
+
+        val clear = compose.onNodeWithTag(MatchListTestTags.NO_RESULTS_CLEAR).fetchSemanticsNode().boundsInRoot
+        val newMatch = compose.onNodeWithTag(MatchListTestTags.NEW_MATCH).fetchSemanticsNode().boundsInRoot
+
+        assertTrue("clear button $clear overlaps new match button $newMatch", !clear.overlaps(newMatch))
     }
 }
