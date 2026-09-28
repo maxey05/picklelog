@@ -32,3 +32,35 @@ internal const val NO_OPPONENT_LAST_THEN_A_TO_Z =
     "$FIRST_OPPONENT_SORT_KEY IS NULL, $FIRST_OPPONENT_SORT_KEY ASC"
 
 internal const val PAGE_LIMIT = "LIMIT :limit"
+
+internal const val MATCH_LIST_FILTER =
+    "WHERE (:format IS NULL OR m.format = :format) " +
+        "AND (:result IS NULL OR m.result = :result) " +
+        "AND (:fromDate IS NULL OR m.date >= :fromDate) " +
+        "AND (:toDate IS NULL OR m.date <= :toDate) " +
+        "AND (:location IS NULL OR m.location = :location) " +
+        "AND (:opponentId IS NULL OR EXISTS (SELECT 1 FROM match_person fo " +
+        "WHERE fo.match_id = m.id AND fo.role = '${MatchPersonEntity.ROLE_OPPONENT}' " +
+        "AND fo.person_id = :opponentId)) " +
+        "AND (:textPattern IS NULL " +
+        "OR m.location LIKE :textPattern ESCAPE '\\' " +
+        "OR m.paddle LIKE :textPattern ESCAPE '\\' " +
+        "OR m.notes LIKE :textPattern ESCAPE '\\' " +
+        "OR EXISTS (SELECT 1 FROM match_person sp INNER JOIN person sq ON sq.id = sp.person_id " +
+        "WHERE sp.match_id = m.id AND sq.normalized_name LIKE :namePattern ESCAPE '\\'))"
+
+internal const val FILTERED_MATCH_LIST = "$MATCH_LIST_SELECT $MATCH_LIST_FILTER"
+
+private const val START_SECONDS = "CAST(strftime('%s', m.start_time) AS INTEGER)"
+
+private const val END_SECONDS = "CAST(strftime('%s', m.end_time) AS INTEGER)"
+
+internal const val DURATION_SECONDS =
+    "(CASE WHEN m.start_time IS NULL OR m.end_time IS NULL THEN NULL " +
+        "WHEN $END_SECONDS >= $START_SECONDS THEN $END_SECONDS - $START_SECONDS " +
+        "ELSE $END_SECONDS - $START_SECONDS + 86400 END)"
+
+internal const val NO_DURATION_LAST = "$DURATION_SECONDS IS NULL"
+
+internal const val NO_LOCATION_LAST_THEN_A_TO_Z =
+    "(m.location IS NULL OR m.location = ''), COALESCE(m.location, '') COLLATE NOCASE ASC"
