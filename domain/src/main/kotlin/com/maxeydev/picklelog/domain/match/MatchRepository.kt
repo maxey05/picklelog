@@ -10,6 +10,8 @@ interface MatchRepository {
     fun observeListPage(
         sort: MatchSort,
         limit: Int,
+        filter: FilterState = FilterState.NONE,
+        search: SearchTerm? = null,
     ): Flow<List<MatchListItem>>
 
     fun observeById(id: Uuid): Flow<Match?>
