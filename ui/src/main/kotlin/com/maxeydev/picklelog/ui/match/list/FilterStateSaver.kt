@@ -2,10 +2,13 @@
 
 package com.maxeydev.picklelog.ui.match.list
 
+import androidx.lifecycle.SavedStateHandle
 import com.maxeydev.picklelog.domain.datetime.AppDate
 import com.maxeydev.picklelog.domain.match.FilterState
 import com.maxeydev.picklelog.domain.match.MatchFormat
 import com.maxeydev.picklelog.domain.match.MatchResult
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.uuid.ExperimentalUuidApi
@@ -20,6 +23,11 @@ private data class SavedFilterState(
     val opponentId: String? = null,
     val location: String? = null,
 )
+
+fun observeHomeFilter(homeEntryState: SavedStateHandle): Flow<FilterState> =
+    homeEntryState
+        .getStateFlow<String?>(FILTER_STATE_KEY, null)
+        .map(::decodeFilterState)
 
 internal fun encodeFilterState(filter: FilterState): String? {
     if (!filter.isActive) {
