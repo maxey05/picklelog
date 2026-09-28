@@ -123,6 +123,18 @@ interface MatchDao {
         limit: Int,
     ): Flow<List<MatchListRowEntity>>
 
+    @Query("$MATCH_STAT_SELECT $MATCH_LIST_FILTER")
+    fun observeStatLines(
+        format: String?,
+        result: String?,
+        fromDate: LocalDate?,
+        toDate: LocalDate?,
+        opponentId: String?,
+        location: String?,
+        textPattern: String?,
+        namePattern: String?,
+    ): Flow<List<MatchStatRowEntity>>
+
     @Transaction
     @Query("SELECT * FROM `match` WHERE id = :id")
     fun observeById(id: String): Flow<MatchWithRelationsEntity?>
@@ -150,17 +162,35 @@ interface MatchDao {
     @Insert
     suspend fun insertGames(rows: List<GameScoreEntity>)
 
-    @Insert
-    suspend fun insertPhotos(rows: List<PhotoEntity>)
-
     @Query("DELETE FROM match_person WHERE match_id = :matchId")
     suspend fun deletePeopleFor(matchId: String)
 
     @Query("DELETE FROM game_score WHERE match_id = :matchId")
     suspend fun deleteGamesFor(matchId: String)
 
-    @Query("DELETE FROM photo WHERE match_id = :matchId")
-    suspend fun deletePhotosFor(matchId: String)
+    @Upsert
+    suspend fun upsertPhotos(rows: List<PhotoEntity>)
+
+    @Query("SELECT relative_path FROM photo WHERE match_id = :matchId AND id IN (:photoIds)")
+    suspend fun photoPathsAmong(
+        matchId: String,
+        photoIds: List<String>,
+    ): List<String>
+
+    @Query("DELETE FROM photo WHERE match_id = :matchId AND id IN (:photoIds)")
+    suspend fun deletePhotosAmong(
+        matchId: String,
+        photoIds: List<String>,
+    )
+
+    @Query("SELECT MAX(sort_index) FROM photo WHERE match_id = :matchId")
+    suspend fun maxPhotoSortIndex(matchId: String): Int?
+
+    @Query("SELECT EXISTS(SELECT 1 FROM `match` WHERE id = :matchId)")
+    suspend fun matchExists(matchId: String): Boolean
+
+    @Query("SELECT relative_path FROM photo")
+    suspend fun allPhotoPaths(): List<String>
 
     @Query("SELECT relative_path FROM photo WHERE match_id = :matchId")
     suspend fun photoPathsFor(matchId: String): List<String>
