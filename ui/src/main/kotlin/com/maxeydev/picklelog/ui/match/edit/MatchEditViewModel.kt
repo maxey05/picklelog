@@ -22,6 +22,9 @@ import com.maxeydev.picklelog.domain.person.Person
 import com.maxeydev.picklelog.domain.person.PersonRepository
 import com.maxeydev.picklelog.domain.person.normalizePersonName
 import com.maxeydev.picklelog.domain.person.suggestPeople
+import com.maxeydev.picklelog.domain.photo.PhotoImportQueue
+import com.maxeydev.picklelog.domain.photo.PhotoImportState
+import com.maxeydev.picklelog.domain.photo.PhotoSource
 import com.maxeydev.picklelog.ui.PicklelogDependencies
 import com.maxeydev.picklelog.ui.common.SuggestionUiState
 import com.maxeydev.picklelog.ui.navigation.LOG_ANOTHER_FROM_ARGUMENT
@@ -29,6 +32,7 @@ import com.maxeydev.picklelog.ui.navigation.MATCH_ID_ARGUMENT
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -47,6 +51,7 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.json.Json
+import java.io.File
 import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -75,6 +80,8 @@ class MatchEditViewModel(
     private val matchRepository: MatchRepository,
     private val personRepository: PersonRepository,
     private val lastUsedFormatStore: LastUsedFormatStore,
+    private val photoImportQueue: PhotoImportQueue,
+    private val photoFile: (String) -> File,
     private val clock: Clock,
     private val timeZone: () -> TimeZone,
     private val defaultDispatcher: CoroutineDispatcher,
@@ -88,6 +95,8 @@ class MatchEditViewModel(
     private var savedNewMatchId: String? = null
     private val suggestionInput = MutableStateFlow<SuggestionInput?>(null)
     private var suggestionResult: SuggestionResult? = null
+    private var hasPhotoError = false
+    private val photoWatchers = mutableMapOf<String, Job>()
 
     private val mutableUiState = MutableStateFlow(renderState())
     val uiState: StateFlow<MatchEditUiState> = mutableUiState.asStateFlow()
@@ -95,6 +104,8 @@ class MatchEditViewModel(
     init {
         if (draft == null) {
             viewModelScope.launch { loadInitialDraft() }
+        } else {
+            resumePendingPhotos()
         }
         viewModelScope.launch {
             observeSuggestions().collect { result ->
@@ -177,6 +188,37 @@ class MatchEditViewModel(
 
     fun changeNotes(notes: String) = updateDraft { it.copy(notes = notes) }
 
+    fun addPickedPhotos(uris: List<String>) {
+        addPhotos(uris.map { PhotoSource(uri = it, isTemporaryCapture = false) })
+    }
+
+    fun addCapturedPhoto(uri: String) {
+        addPhotos(listOf(PhotoSource(uri = uri, isTemporaryCapture = true)))
+    }
+
+    fun removePhoto(key: String) {
+        val current = draft ?: return
+        if (isSaving || isFinished) {
+            return
+        }
+        val photo = current.photos.firstOrNull { it.key == key } ?: return
+        photoWatchers.remove(key)?.cancel()
+        if (!photo.isPersisted) {
+            photoImportQueue.discard(key)
+        }
+        publish(current.withPhotoRemoved(key))
+    }
+
+    fun movePhoto(
+        key: String,
+        offset: Int,
+    ) = updateDraft { it.withPhotoMoved(key, offset) }
+
+    fun dismissPhotoError() {
+        hasPhotoError = false
+        mutableUiState.value = renderState()
+    }
+
     fun save() {
         val current = draft ?: return
         if (!current.canSave() || isSaving || isFinished) {
@@ -185,7 +227,15 @@ class MatchEditViewModel(
         isSaving = true
         mutableUiState.value = renderState()
         viewModelScope.launch {
-            matchRepository.saveMatch(buildMatch(current))
+            val matchId = Uuid.parse(current.matchId)
+            matchRepository.saveMatch(
+                buildMatch(current),
+                removedPhotoIds = current.removedPhotoIds.map(Uuid::parse).toSet(),
+            )
+            current.photos
+                .filter { it.isReady && !it.isPersisted }
+                .forEach { photoImportQueue.release(it.key) }
+            photoImportQueue.attachWhenReady(matchId, current.pendingPhotoKeys())
             if (current.isNew) {
                 lastUsedFormatStore.recordLastUsedFormat(current.format)
             }
@@ -233,6 +283,62 @@ class MatchEditViewModel(
         }
     }
 
+    private fun addPhotos(sources: List<PhotoSource>) {
+        val current = draft ?: return
+        if (isSaving || isFinished || sources.isEmpty()) {
+            return
+        }
+        val added = sources.map(PhotoDraft::importing)
+        publish(current.withPhotosAdded(added))
+        added.forEach(::startImport)
+    }
+
+    private fun resumePendingPhotos() {
+        draft
+            ?.photos
+            ?.filter { !it.isReady && !it.isPersisted }
+            ?.forEach(::startImport)
+    }
+
+    private fun startImport(photo: PhotoDraft) {
+        val source = photo.source ?: return
+        photoImportQueue.ensureStarted(photo.key, source)
+        photoWatchers[photo.key] =
+            viewModelScope.launch {
+                val finished = photoImportQueue.observe(photo.key).first { it !is PhotoImportState.Importing }
+                photoWatchers.remove(photo.key)
+                onImportFinished(photo.key, finished)
+            }
+    }
+
+    private fun onImportFinished(
+        key: String,
+        finished: PhotoImportState,
+    ) {
+        val current = draft ?: return
+        if (isSaving || isFinished) {
+            return
+        }
+        when (finished) {
+            is PhotoImportState.Ready -> publish(current.withPhotoImported(key, finished.photo))
+            else -> {
+                photoImportQueue.discard(key)
+                hasPhotoError = true
+                publish(current.withPhotoRemoved(key))
+            }
+        }
+    }
+
+    override fun onCleared() {
+        if (!isFinished) {
+            draft
+                ?.photos
+                ?.filterNot { it.isPersisted }
+                ?.forEach { photoImportQueue.discard(it.key) }
+        }
+        super.onCleared()
+    }
+
     private fun updateDraft(transform: (MatchDraft) -> MatchDraft) {
         val current = draft ?: return
         if (isSaving || isFinished) {
@@ -258,6 +364,8 @@ class MatchEditViewModel(
             suggestionTarget = suggestionInput.value?.target,
             suggestions = visibleSuggestions(),
             savedNewMatchId = savedNewMatchId,
+            photoFilePath = { photoFile(it).path },
+            hasPhotoError = hasPhotoError,
         ) ?: MatchEditUiState(isLoading = !isFinished, isFinished = isFinished)
 
     private fun visibleSuggestions(): List<SuggestionUiState> {
@@ -375,7 +483,7 @@ class MatchEditViewModel(
             games = source.completeGames(),
             paddle = source.paddle.trim().ifEmpty { null },
             notes = source.notes.trim().ifEmpty { null },
-            photos = existing?.photos.orEmpty(),
+            photos = source.readyPhotoRefs(),
         )
     }
 
@@ -400,6 +508,8 @@ class MatchEditViewModel(
                         matchRepository = dependencies.matchRepository,
                         personRepository = dependencies.personRepository,
                         lastUsedFormatStore = dependencies.lastUsedFormatStore,
+                        photoImportQueue = dependencies.photoImportQueue,
+                        photoFile = dependencies::photoFile,
                         clock = dependencies.clock,
                         timeZone = dependencies::currentTimeZone,
                         defaultDispatcher = dependencies.defaultDispatcher,
