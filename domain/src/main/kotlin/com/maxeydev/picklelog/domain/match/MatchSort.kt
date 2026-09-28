@@ -6,6 +6,9 @@ enum class MatchSort {
     RESULT_WINS_FIRST,
     RESULT_LOSSES_FIRST,
     OPPONENT_A_TO_Z,
+    LOCATION_A_TO_Z,
+    DURATION_SHORTEST,
+    DURATION_LONGEST,
     ;
 
     companion object {
