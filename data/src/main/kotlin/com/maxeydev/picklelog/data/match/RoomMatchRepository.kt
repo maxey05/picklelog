@@ -4,7 +4,8 @@ package com.maxeydev.picklelog.data.match
 
 import androidx.room.withTransaction
 import com.maxeydev.picklelog.data.db.PicklelogDatabase
-import com.maxeydev.picklelog.data.photo.PhotoFileStore
+import com.maxeydev.picklelog.data.photo.PhotoStore
+import com.maxeydev.picklelog.data.photo.toEntity
 import com.maxeydev.picklelog.domain.match.FilterState
 import com.maxeydev.picklelog.domain.match.FreeTextField
 import com.maxeydev.picklelog.domain.match.FreeTextUsage
@@ -14,6 +15,8 @@ import com.maxeydev.picklelog.domain.match.MatchRepository
 import com.maxeydev.picklelog.domain.match.MatchSort
 import com.maxeydev.picklelog.domain.match.SearchTerm
 import com.maxeydev.picklelog.domain.match.requireValidRoster
+import com.maxeydev.picklelog.domain.photo.ImportedPhoto
+import com.maxeydev.picklelog.domain.stats.MatchStatLine
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
@@ -37,7 +40,7 @@ private typealias FilteredListQuery = (
 
 class RoomMatchRepository(
     private val database: PicklelogDatabase,
-    private val photoFileStore: PhotoFileStore,
+    private val photoStore: PhotoStore,
     private val ioDispatcher: CoroutineDispatcher,
 ) : MatchRepository {
     private val matchDao = database.matchDao()
@@ -79,6 +82,20 @@ class RoomMatchRepository(
             MatchSort.DURATION_LONGEST -> matchDao::observeListByDurationLongest
         }
 
+    override fun observeStatLines(filter: FilterState): Flow<List<MatchStatLine>> =
+        matchDao
+            .observeStatLines(
+                format = filter.format?.name,
+                result = filter.result?.name,
+                fromDate = filter.fromDate,
+                toDate = filter.toDate,
+                opponentId = filter.opponentId?.toString(),
+                location = filter.location,
+                textPattern = null,
+                namePattern = null,
+            ).map { rows -> rows.map { it.toDomain() } }
+            .flowOn(ioDispatcher)
+
     override fun observeById(id: Uuid): Flow<Match?> =
         matchDao
             .observeById(id.toString())
@@ -96,21 +113,54 @@ class RoomMatchRepository(
             .flowOn(ioDispatcher)
     }
 
-    override suspend fun saveMatch(match: Match) {
+    override suspend fun saveMatch(
+        match: Match,
+        removedPhotoIds: Set<Uuid>,
+    ) {
         match.requireValidRoster()
         val matchId = match.id.toString()
+        val keptIds = match.photos.map { it.id }.toSet()
+        val removed = (removedPhotoIds - keptIds).map { it.toString() }
         withContext(ioDispatcher) {
+            val removedPaths =
+                database.withTransaction {
+                    val paths = if (removed.isEmpty()) emptyList() else matchDao.photoPathsAmong(matchId, removed)
+                    matchDao.upsertMatch(match.toEntity())
+                    matchDao.deletePeopleFor(matchId)
+                    matchDao.deleteGamesFor(matchId)
+                    if (removed.isNotEmpty()) {
+                        matchDao.deletePhotosAmong(matchId, removed)
+                    }
+                    matchDao.insertPeople(match.toMatchPersonRows())
+                    matchDao.insertGames(match.toGameScoreRows())
+                    matchDao.upsertPhotos(match.toPhotoRows())
+                    paths
+                }
+            photoStore.deletePhotoFiles(removedPaths)
+        }
+    }
+
+    override suspend fun appendPhoto(
+        matchId: Uuid,
+        photo: ImportedPhoto,
+    ): Boolean {
+        val id = matchId.toString()
+        return withContext(ioDispatcher) {
             database.withTransaction {
-                matchDao.upsertMatch(match.toEntity())
-                matchDao.deletePeopleFor(matchId)
-                matchDao.deleteGamesFor(matchId)
-                matchDao.deletePhotosFor(matchId)
-                matchDao.insertPeople(match.toMatchPersonRows())
-                matchDao.insertGames(match.toGameScoreRows())
-                matchDao.insertPhotos(match.toPhotoRows())
+                if (!matchDao.matchExists(id)) {
+                    return@withTransaction false
+                }
+                val nextIndex = (matchDao.maxPhotoSortIndex(id) ?: -1) + 1
+                matchDao.upsertPhotos(listOf(photo.toPhotoRef(Uuid.random(), nextIndex).toEntity(id)))
+                true
             }
         }
     }
+
+    suspend fun referencedPhotoPaths(): Set<String> =
+        withContext(ioDispatcher) {
+            matchDao.allPhotoPaths().toSet()
+        }
 
     override suspend fun deleteMatch(id: Uuid) {
         val matchId = id.toString()
@@ -121,7 +171,7 @@ class RoomMatchRepository(
                     matchDao.deleteMatch(matchId)
                     paths
                 }
-            photoFileStore.deletePhotoFiles(photoPaths)
+            photoStore.deletePhotoFiles(photoPaths)
         }
     }
 }
