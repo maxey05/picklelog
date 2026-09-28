@@ -74,6 +74,7 @@ fun MatchListScreen(
     onSavedConfirmationDismissed: () -> Unit,
     filterActions: MatchListFilterActions,
     modifier: Modifier = Modifier,
+    dashboard: @Composable () -> Unit = {},
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     var searchText by rememberSaveable { mutableStateOf("") }
@@ -99,30 +100,60 @@ fun MatchListScreen(
             }
         },
     ) { innerPadding ->
-        val contentModifier = Modifier.fillMaxSize().padding(innerPadding)
-        when {
-            state.isLoading -> Box(modifier = contentModifier)
-            state.isEmpty && searchText.isBlank() ->
-                MatchListEmptyState(onNewMatch = onNewMatch, modifier = contentModifier)
-            else ->
-                MatchListContent(
-                    state = state,
-                    searchText = searchText,
-                    onSearchChanged = { text ->
-                        searchText = text
-                        filterActions.onSearchChanged(text)
-                    },
-                    onFiltersAndSearchCleared = {
-                        searchText = ""
-                        filterActions.onFiltersAndSearchCleared()
-                    },
-                    filterActions = filterActions,
-                    onOpenMatch = onOpenMatch,
-                    onSortSelected = onSortSelected,
-                    onLastVisibleIndexChanged = onLastVisibleIndexChanged,
-                    modifier = contentModifier,
-                )
-        }
+        MatchListBody(
+            state = state,
+            searchText = searchText,
+            onSearchTextChanged = { searchText = it },
+            onNewMatch = onNewMatch,
+            onOpenMatch = onOpenMatch,
+            onSortSelected = onSortSelected,
+            onLastVisibleIndexChanged = onLastVisibleIndexChanged,
+            filterActions = filterActions,
+            dashboard = dashboard,
+            modifier = Modifier.fillMaxSize().padding(innerPadding),
+        )
+    }
+}
+
+@Composable
+private fun MatchListBody(
+    state: MatchListUiState,
+    searchText: String,
+    onSearchTextChanged: (String) -> Unit,
+    onNewMatch: () -> Unit,
+    onOpenMatch: (String) -> Unit,
+    onSortSelected: (MatchSort) -> Unit,
+    onLastVisibleIndexChanged: (Int) -> Unit,
+    filterActions: MatchListFilterActions,
+    dashboard: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    when {
+        state.isLoading -> Box(modifier = modifier)
+        state.isEmpty && searchText.isBlank() ->
+            Column(modifier = modifier) {
+                dashboard()
+                MatchListEmptyState(onNewMatch = onNewMatch, modifier = Modifier.weight(1f).fillMaxWidth())
+            }
+        else ->
+            MatchListContent(
+                state = state,
+                searchText = searchText,
+                onSearchChanged = { text ->
+                    onSearchTextChanged(text)
+                    filterActions.onSearchChanged(text)
+                },
+                onFiltersAndSearchCleared = {
+                    onSearchTextChanged("")
+                    filterActions.onFiltersAndSearchCleared()
+                },
+                filterActions = filterActions,
+                onOpenMatch = onOpenMatch,
+                onSortSelected = onSortSelected,
+                onLastVisibleIndexChanged = onLastVisibleIndexChanged,
+                dashboard = dashboard,
+                modifier = modifier,
+            )
     }
 }
 
@@ -165,6 +196,7 @@ private fun MatchListContent(
     onOpenMatch: (String) -> Unit,
     onSortSelected: (MatchSort) -> Unit,
     onLastVisibleIndexChanged: (Int) -> Unit,
+    dashboard: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -197,6 +229,7 @@ private fun MatchListContent(
         item(key = HEADER_KEY, contentType = HEADER_KEY) {
             MatchListHeader(
                 state = state,
+                dashboard = dashboard,
                 searchText = searchText,
                 onSearchChanged = onSearchChanged,
                 onSortSelected = onSortSelected,
@@ -234,6 +267,7 @@ private fun MatchListContent(
 @Composable
 private fun MatchListHeader(
     state: MatchListUiState,
+    dashboard: @Composable () -> Unit,
     searchText: String,
     onSearchChanged: (String) -> Unit,
     onSortSelected: (MatchSort) -> Unit,
@@ -241,6 +275,7 @@ private fun MatchListHeader(
     filterActions: MatchListFilterActions,
 ) {
     Column {
+        dashboard()
         MatchSearchBar(
             text = searchText,
             onTextChanged = onSearchChanged,
