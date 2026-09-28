@@ -21,6 +21,7 @@ class MatchEditActions(
     val onNotesChanged: (String) -> Unit,
     val onSuggestionFocusChanged: (SuggestionTarget, Boolean) -> Unit,
     val onSuggestionSelected: (SuggestionTarget, SuggestionUiState) -> Unit,
+    val photoActions: PhotoPickerActions,
     val onSave: () -> Unit,
     val onClose: () -> Unit,
 )
