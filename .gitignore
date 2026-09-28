@@ -35,3 +35,6 @@ CLAUDE.md
 VERIFICATION*.md
 hs_err_pid*.log
 replay_pid*.log
+
+# AC-9.12: real phone photos for the one-off compression measurement. Personal photos never enter git.
+app/src/androidTest/assets/compression-samples/
