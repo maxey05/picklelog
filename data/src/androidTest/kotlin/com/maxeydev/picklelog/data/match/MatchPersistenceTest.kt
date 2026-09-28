@@ -9,7 +9,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.maxeydev.picklelog.data.db.PicklelogDatabase
 import com.maxeydev.picklelog.data.person.RoomPersonRepository
-import com.maxeydev.picklelog.data.photo.PhotoFileStore
+import com.maxeydev.picklelog.data.photo.PhotoStore
 import com.maxeydev.picklelog.domain.datetime.AppDate
 import com.maxeydev.picklelog.domain.datetime.AppInstant
 import com.maxeydev.picklelog.domain.datetime.AppTime
@@ -49,7 +49,7 @@ class MatchPersistenceTest {
                 .inMemoryDatabaseBuilder(context, PicklelogDatabase::class.java)
                 .build()
         photoRoot = File(context.cacheDir, "match-persistence-test-${Uuid.random()}").apply { mkdirs() }
-        matches = RoomMatchRepository(database, PhotoFileStore(photoRoot), Dispatchers.IO)
+        matches = RoomMatchRepository(database, PhotoStore(photoRoot), Dispatchers.IO)
         people = RoomPersonRepository(database, Dispatchers.IO)
     }
 
