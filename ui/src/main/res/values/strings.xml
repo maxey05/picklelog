@@ -62,6 +62,62 @@
     <string name="a11y_score">%1$d to %2$d</string>
     <string name="a11y_with_photo">with photo</string>
 
+    <plurals name="dashboard_match_count">
+        <item quantity="one">%1$d match</item>
+        <item quantity="other">%1$d matches</item>
+    </plurals>
+    <string name="dashboard_record">%1$d W · %2$d L</string>
+    <string name="dashboard_win_percent">%1$d%% won</string>
+    <string name="dashboard_win_percent_none">— won</string>
+    <plurals name="dashboard_streak_weeks">
+        <item quantity="one">%1$d-week streak</item>
+        <item quantity="other">%1$d-week streak</item>
+    </plurals>
+    <string name="dashboard_no_streak">No active streak</string>
+    <string name="dashboard_streak_scope">%1$s · all matches</string>
+    <string name="dashboard_empty">No matches yet. Your record starts with the first one.</string>
+    <string name="dashboard_filtered_empty">No matches with these filters.</string>
+    <string name="dashboard_filtered">Filtered: %1$s</string>
+    <string name="dashboard_filter_separator">" · "</string>
+    <string name="dashboard_a11y_record">%1$d won, %2$d lost</string>
+    <string name="dashboard_a11y_percent">%1$d percent won</string>
+    <string name="dashboard_a11y_no_percent">no win percentage yet</string>
+    <plurals name="dashboard_a11y_streak">
+        <item quantity="one">current streak %1$d week, counting all matches</item>
+        <item quantity="other">current streak %1$d weeks, counting all matches</item>
+    </plurals>
+    <string name="dashboard_a11y_no_streak">no active streak, counting all matches</string>
+    <string name="dashboard_a11y_filtered">figures filtered by %1$s</string>
+    <string name="dashboard_a11y_open">Open full stats</string>
+
+    <string name="stats_title">Your stats</string>
+    <string name="stats_record">Record</string>
+    <string name="stats_matches">Matches</string>
+    <string name="stats_wins_losses">Wins – losses</string>
+    <string name="stats_win_rate">Win rate</string>
+    <string name="stats_percent">%1$d%%</string>
+    <string name="stats_no_value">—</string>
+    <string name="stats_streaks">Streaks · all matches</string>
+    <string name="stats_streak_scope_note">Streaks always count every match, even when filters are on.</string>
+    <string name="stats_current_streak">Current streak</string>
+    <string name="stats_longest_streak">Longest streak</string>
+    <plurals name="stats_weeks">
+        <item quantity="one">%1$d week</item>
+        <item quantity="other">%1$d weeks</item>
+    </plurals>
+    <string name="stats_no_streak">None yet</string>
+    <string name="stats_current_is_longest">This is your longest streak ever.</string>
+    <string name="stats_by_format">Win rate by format</string>
+    <string name="stats_split_record">%1$d–%2$d</string>
+    <string name="stats_split_empty">No matches</string>
+    <string name="stats_pro_title">More with Pro</string>
+    <string name="stats_pro_locked">Locked · Pro</string>
+    <string name="stats_pro_head_to_head">Head-to-head record by opponent</string>
+    <string name="stats_pro_partner">Win rate by partner</string>
+    <string name="stats_pro_location">Win rate by location</string>
+    <string name="stats_pro_paddle">Win rate by paddle</string>
+    <string name="stats_pro_monthly">Matches and win rate by month</string>
+
     <string name="edit_title_new">New match</string>
     <string name="edit_title_existing">Edit match</string>
     <string name="detail_title">Match</string>
@@ -121,6 +177,24 @@
     <string name="label_notes">Notes</string>
     <string name="label_opponents">Opponents</string>
     <string name="label_photos">Photos</string>
+    <string name="photos_add">Add photos</string>
+    <string name="photos_take">Take photo</string>
+    <string name="photo_position">Photo %1$d of %2$d</string>
+    <string name="photo_position_cover">Photo %1$d of %2$d, used as the cover</string>
+    <string name="photo_position_importing">Photo %1$d of %2$d, still processing</string>
+    <string name="photo_cover">Cover</string>
+    <string name="photo_move_earlier">Move photo %1$d earlier</string>
+    <string name="photo_move_later">Move photo %1$d later</string>
+    <string name="photo_remove">Remove photo %1$d</string>
+    <string name="photo_unreadable">Couldn\'t read that photo — it may be damaged or no longer available. The match can still be saved without it.</string>
+    <string name="photo_error_dismiss">OK</string>
+    <string name="camera_rationale_title">Use your camera?</string>
+    <string name="camera_rationale_body">Picklelog needs camera access only to take this photo. The photo stays on your phone. You can always add photos from your gallery without giving this permission.</string>
+    <string name="camera_settings_title">Camera access is off</string>
+    <string name="camera_settings_body">Camera access was turned off for Picklelog. To take photos here, allow it in Settings. Adding photos from your gallery still works without it.</string>
+    <string name="permission_continue">Continue</string>
+    <string name="permission_not_now">Not now</string>
+    <string name="permission_open_settings">Open settings</string>
     <plurals name="photo_count">
         <item quantity="one">%1$d photo</item>
         <item quantity="other">%1$d photos</item>
@@ -129,6 +203,18 @@
     <string name="suggestion_use">Use this suggestion</string>
     <string name="match_saved">Match saved</string>
     <string name="log_another">Log another</string>
+
+    <string name="action_share">Share</string>
+    <string name="share_title">Share card</string>
+    <string name="share_action">Share</string>
+    <string name="share_chooser_title">Share your match</string>
+    <string name="share_preview_description">Share card preview: %1$s</string>
+    <string name="share_failed">Couldn\'t make the card this time. Your match is safe — try again.</string>
+    <string name="share_retry">Try again</string>
+    <string name="share_send_failed">Couldn\'t prepare the image to share. Check that your phone has free storage, then try again.</string>
+    <string name="card_brand">Picklelog</string>
+    <string name="card_partner">with %1$s</string>
+    <string name="card_score_separator">" · "</string>
 
     <string name="delete_match_title">Delete this match?</string>
     <string name="delete_match_body">The match and its photos will be permanently deleted. This can\'t be undone.</string>
