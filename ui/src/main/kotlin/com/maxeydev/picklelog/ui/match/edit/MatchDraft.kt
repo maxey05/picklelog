@@ -10,6 +10,10 @@ import com.maxeydev.picklelog.domain.match.MatchFormat
 import com.maxeydev.picklelog.domain.match.MatchResult
 import com.maxeydev.picklelog.domain.person.Person
 import com.maxeydev.picklelog.domain.person.normalizePersonName
+import com.maxeydev.picklelog.domain.photo.ImportedPhoto
+import com.maxeydev.picklelog.domain.photo.PhotoRef
+import com.maxeydev.picklelog.domain.photo.inDisplayOrder
+import com.maxeydev.picklelog.domain.photo.movedTo
 import kotlinx.serialization.Serializable
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -31,6 +35,8 @@ data class MatchDraft(
     val paddle: String = "",
     val notes: String = "",
     val clearedOnFormatSwitch: Boolean = false,
+    val photos: List<PhotoDraft> = emptyList(),
+    val removedPhotoIds: List<String> = emptyList(),
 ) {
     fun withFormat(newFormat: MatchFormat): MatchDraft {
         if (newFormat == format) {
@@ -105,6 +111,39 @@ data class MatchDraft(
                     }
                 },
         )
+
+    fun withPhotosAdded(added: List<PhotoDraft>): MatchDraft = copy(photos = photos + added)
+
+    fun withPhotoMoved(
+        key: String,
+        offset: Int,
+    ): MatchDraft {
+        val from = photos.indexOfFirst { it.key == key }
+        if (from < 0) {
+            return this
+        }
+        return copy(photos = photos.movedTo(from, from + offset))
+    }
+
+    fun withPhotoRemoved(key: String): MatchDraft {
+        val removed = photos.firstOrNull { it.key == key } ?: return this
+        return copy(
+            photos = photos.filterNot { it.key == key },
+            removedPhotoIds = if (removed.isPersisted) removedPhotoIds + key else removedPhotoIds,
+        )
+    }
+
+    fun withPhotoImported(
+        key: String,
+        photo: ImportedPhoto,
+    ): MatchDraft = copy(photos = photos.map { if (it.key == key) it.withImported(photo) else it })
+
+    fun readyPhotoRefs(): List<PhotoRef> =
+        photos
+            .filter { it.isReady }
+            .mapIndexed { index, photo -> photo.toPhotoRef(sortIndex = index) }
+
+    fun pendingPhotoKeys(): List<String> = photos.filter { !it.isReady }.map { it.key }
 
     fun nameIn(slot: PersonSlot): String =
         when (slot) {
@@ -212,6 +251,7 @@ data class MatchDraft(
                 location = match.location.orEmpty(),
                 paddle = match.paddle.orEmpty(),
                 notes = match.notes.orEmpty(),
+                photos = match.photos.inDisplayOrder().map(PhotoDraft::persisted),
             )
     }
 }
