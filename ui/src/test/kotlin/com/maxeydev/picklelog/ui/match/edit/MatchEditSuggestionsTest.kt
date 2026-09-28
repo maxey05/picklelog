@@ -12,6 +12,7 @@ import com.maxeydev.picklelog.domain.person.Person
 import com.maxeydev.picklelog.ui.fakes.FakeLastUsedFormatStore
 import com.maxeydev.picklelog.ui.fakes.FakeMatchRepository
 import com.maxeydev.picklelog.ui.fakes.FakePersonRepository
+import com.maxeydev.picklelog.ui.fakes.FakePhotoImportQueue
 import com.maxeydev.picklelog.ui.fakes.FixedClock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -28,6 +29,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.File
 import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -58,6 +60,8 @@ class MatchEditSuggestionsTest {
             matchRepository = matches,
             personRepository = people,
             lastUsedFormatStore = FakeLastUsedFormatStore(),
+            photoImportQueue = FakePhotoImportQueue(),
+            photoFile = { File("/files", it) },
             clock = clock,
             timeZone = { TimeZone.of("Asia/Manila") },
             defaultDispatcher = dispatcher,
