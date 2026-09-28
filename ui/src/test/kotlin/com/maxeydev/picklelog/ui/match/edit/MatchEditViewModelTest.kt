@@ -15,6 +15,7 @@ import com.maxeydev.picklelog.domain.photo.PhotoRef
 import com.maxeydev.picklelog.ui.fakes.FakeLastUsedFormatStore
 import com.maxeydev.picklelog.ui.fakes.FakeMatchRepository
 import com.maxeydev.picklelog.ui.fakes.FakePersonRepository
+import com.maxeydev.picklelog.ui.fakes.FakePhotoImportQueue
 import com.maxeydev.picklelog.ui.fakes.FixedClock
 import com.maxeydev.picklelog.ui.navigation.LOG_ANOTHER_FROM_ARGUMENT
 import com.maxeydev.picklelog.ui.navigation.MATCH_ID_ARGUMENT
@@ -31,6 +32,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.File
 import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -41,6 +43,7 @@ class MatchEditViewModelTest {
     private lateinit var matches: FakeMatchRepository
     private lateinit var people: FakePersonRepository
     private lateinit var formats: FakeLastUsedFormatStore
+    private val photoQueue = FakePhotoImportQueue()
 
     @Before
     fun setUp() {
@@ -61,6 +64,8 @@ class MatchEditViewModelTest {
             matchRepository = matches,
             personRepository = people,
             lastUsedFormatStore = formats,
+            photoImportQueue = photoQueue,
+            photoFile = { File("/files", it) },
             clock = clock,
             timeZone = { manila },
             defaultDispatcher = Dispatchers.Main,
