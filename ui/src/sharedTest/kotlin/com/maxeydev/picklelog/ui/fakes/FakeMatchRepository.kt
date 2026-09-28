@@ -14,6 +14,8 @@ import com.maxeydev.picklelog.domain.match.SearchTerm
 import com.maxeydev.picklelog.domain.match.deriveDuration
 import com.maxeydev.picklelog.domain.match.requireValidRoster
 import com.maxeydev.picklelog.domain.person.normalizePersonName
+import com.maxeydev.picklelog.domain.photo.ImportedPhoto
+import com.maxeydev.picklelog.domain.stats.MatchStatLine
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -36,6 +38,8 @@ class FakeMatchRepository(
 
     val saved = mutableListOf<Match>()
     val deletedIds = mutableListOf<Uuid>()
+    val removedPhotos = mutableSetOf<Uuid>()
+    val appendedPhotos: MutableList<Pair<Uuid, ImportedPhoto>> = CopyOnWriteArrayList()
     val requestedPages: MutableList<Pair<MatchSort, Int>> = CopyOnWriteArrayList()
     val requestedQueries: MutableList<ListPageRequest> = CopyOnWriteArrayList()
 
@@ -59,6 +63,13 @@ class FakeMatchRepository(
                 .map { it.toListItem() }
         }
     }
+
+    override fun observeStatLines(filter: FilterState): Flow<List<MatchStatLine>> =
+        matches.map { byId ->
+            byId.values
+                .filter { it.passes(filter) }
+                .map { MatchStatLine(date = it.date, format = it.format, result = it.result) }
+        }
 
     override fun observeById(id: Uuid): Flow<Match?> = matches.map { byId -> byId[id] }
 
@@ -84,10 +95,34 @@ class FakeMatchRepository(
                 }
         }
 
-    override suspend fun saveMatch(match: Match) {
+    override suspend fun saveMatch(
+        match: Match,
+        removedPhotoIds: Set<Uuid>,
+    ) {
         match.requireValidRoster()
         saved += match
-        matches.update { byId -> byId + (match.id to match) }
+        removedPhotos += removedPhotoIds
+        matches.update { byId ->
+            val existing = byId[match.id]
+            val keptLate =
+                existing
+                    ?.photos
+                    .orEmpty()
+                    .filter { old -> old.id !in removedPhotoIds && match.photos.none { it.id == old.id } }
+            byId + (match.id to match.copy(photos = match.photos + keptLate))
+        }
+    }
+
+    override suspend fun appendPhoto(
+        matchId: Uuid,
+        photo: ImportedPhoto,
+    ): Boolean {
+        val existing = matches.value[matchId] ?: return false
+        val nextIndex = (existing.photos.maxOfOrNull { it.sortIndex } ?: -1) + 1
+        val appended = existing.copy(photos = existing.photos + photo.toPhotoRef(Uuid.random(), nextIndex))
+        appendedPhotos += matchId to photo
+        matches.update { byId -> byId + (matchId to appended) }
+        return true
     }
 
     override suspend fun deleteMatch(id: Uuid) {
