@@ -18,6 +18,42 @@
     <string name="sort_result_wins_first">Result — wins first</string>
     <string name="sort_result_losses_first">Result — losses first</string>
     <string name="sort_opponent_a_to_z">Opponent A–Z — by first opponent</string>
+    <string name="sort_location_a_to_z">Location A–Z</string>
+    <string name="sort_duration_shortest">Duration — shortest first</string>
+    <string name="sort_duration_longest">Duration — longest first</string>
+
+    <string name="search_label">Search matches</string>
+    <string name="search_placeholder">Opponent, partner, place, paddle or notes</string>
+    <string name="search_clear">Clear search</string>
+
+    <string name="filter_button">Filters</string>
+    <string name="filter_button_active">Filters (%1$d)</string>
+    <string name="filter_sheet_title">Filter matches</string>
+    <string name="filter_any">Any</string>
+    <string name="filter_wins">Wins</string>
+    <string name="filter_losses">Losses</string>
+    <string name="filter_any_date">Any date</string>
+    <string name="filter_any_opponent">Any opponent</string>
+    <string name="filter_any_location">Any location</string>
+    <string name="filter_no_opponents">No opponents logged yet</string>
+    <string name="filter_no_locations">No locations logged yet</string>
+    <string name="filter_date_range">%1$s – %2$s</string>
+    <string name="filter_date_from">From %1$s</string>
+    <string name="filter_date_until">Until %1$s</string>
+    <string name="filter_opponent_chip">vs %1$s</string>
+    <string name="filter_unknown_opponent">vs unknown opponent</string>
+    <string name="filter_location_chip">At %1$s</string>
+    <string name="filter_clear_date">Clear date range</string>
+    <string name="filter_choose_dates">Choose dates</string>
+    <string name="filter_remove">Remove filter: %1$s</string>
+    <string name="filter_clear_all">Clear all</string>
+    <string name="filter_done">Done</string>
+    <string name="filter_reset_notice">Filters reset each time you reopen Picklelog.</string>
+    <string name="filter_picker_description">%1$s, %2$s. Change</string>
+
+    <string name="no_results_title">No matches with these filters</string>
+    <string name="no_results_body">Try removing a filter or changing your search.</string>
+    <string name="no_results_clear">Clear filters and search</string>
 
     <string name="a11y_row_separator">", "</string>
     <string name="a11y_against_one">against %1$s</string>
