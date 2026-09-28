@@ -7,6 +7,7 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 
 class PicklelogApplication : Application() {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -18,7 +19,9 @@ class PicklelogApplication : Application() {
         super.onCreate()
         container =
             applicationScope.async {
-                AppContainer(createDataLayer(this@PicklelogApplication, applicationScope, Dispatchers.IO))
+                val dataLayer = createDataLayer(this@PicklelogApplication, applicationScope, Dispatchers.IO)
+                applicationScope.launch { dataLayer.sweepOrphanPhotos(System.currentTimeMillis()) }
+                AppContainer(this@PicklelogApplication, dataLayer)
             }
     }
 }
