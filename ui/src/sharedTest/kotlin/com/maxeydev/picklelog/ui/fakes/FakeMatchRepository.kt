@@ -2,6 +2,7 @@
 
 package com.maxeydev.picklelog.ui.fakes
 
+import com.maxeydev.picklelog.domain.match.FilterState
 import com.maxeydev.picklelog.domain.match.FreeTextField
 import com.maxeydev.picklelog.domain.match.FreeTextUsage
 import com.maxeydev.picklelog.domain.match.Match
@@ -9,6 +10,8 @@ import com.maxeydev.picklelog.domain.match.MatchListItem
 import com.maxeydev.picklelog.domain.match.MatchRepository
 import com.maxeydev.picklelog.domain.match.MatchResult
 import com.maxeydev.picklelog.domain.match.MatchSort
+import com.maxeydev.picklelog.domain.match.SearchTerm
+import com.maxeydev.picklelog.domain.match.deriveDuration
 import com.maxeydev.picklelog.domain.match.requireValidRoster
 import com.maxeydev.picklelog.domain.person.normalizePersonName
 import kotlinx.coroutines.flow.Flow
@@ -19,6 +22,13 @@ import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+data class ListPageRequest(
+    val sort: MatchSort,
+    val limit: Int,
+    val filter: FilterState,
+    val search: SearchTerm?,
+)
+
 class FakeMatchRepository(
     initial: List<Match> = emptyList(),
 ) : MatchRepository {
@@ -27,6 +37,7 @@ class FakeMatchRepository(
     val saved = mutableListOf<Match>()
     val deletedIds = mutableListOf<Uuid>()
     val requestedPages: MutableList<Pair<MatchSort, Int>> = CopyOnWriteArrayList()
+    val requestedQueries: MutableList<ListPageRequest> = CopyOnWriteArrayList()
 
     val current: List<Match>
         get() = matches.value.values.toList()
@@ -34,11 +45,15 @@ class FakeMatchRepository(
     override fun observeListPage(
         sort: MatchSort,
         limit: Int,
+        filter: FilterState,
+        search: SearchTerm?,
     ): Flow<List<MatchListItem>> {
         require(limit > 0) { "A list page needs a positive limit, but was $limit." }
         requestedPages += sort to limit
+        requestedQueries += ListPageRequest(sort, limit, filter, search)
         return matches.map { byId ->
             byId.values
+                .filter { it.passes(filter) && it.contains(search) }
                 .sortedWith(orderFor(sort))
                 .take(limit)
                 .map { it.toListItem() }
@@ -97,7 +112,40 @@ class FakeMatchRepository(
                 compareBy<Match> { it.opponents.isEmpty() }
                     .thenBy { match -> match.opponents.firstOrNull()?.let { normalizePersonName(it.displayName) } }
                     .then(newestFirst)
+            MatchSort.LOCATION_A_TO_Z ->
+                compareBy<Match> { it.location.isNullOrEmpty() }
+                    .thenBy { it.location.orEmpty().lowercase() }
+                    .then(newestFirst)
+            MatchSort.DURATION_SHORTEST ->
+                compareBy<Match> { deriveDuration(it.startTime, it.endTime) == null }
+                    .thenBy { deriveDuration(it.startTime, it.endTime) }
+                    .then(newestFirst)
+            MatchSort.DURATION_LONGEST ->
+                compareBy<Match> { deriveDuration(it.startTime, it.endTime) == null }
+                    .thenByDescending { deriveDuration(it.startTime, it.endTime) }
+                    .then(newestFirst)
         }
+    }
+
+    private fun Match.passes(filter: FilterState): Boolean =
+        (filter.format == null || format == filter.format) &&
+            (filter.result == null || result == filter.result) &&
+            (filter.fromDate?.let { date >= it } ?: true) &&
+            (filter.toDate?.let { date <= it } ?: true) &&
+            (filter.location == null || location == filter.location) &&
+            (filter.opponentId == null || opponents.any { it.id == filter.opponentId })
+
+    private fun Match.contains(search: SearchTerm?): Boolean {
+        if (search == null) {
+            return true
+        }
+        val needle = search.text.lowercase()
+        val freeText = listOfNotNull(location, paddle, notes).any { it.lowercase().contains(needle) }
+        val names =
+            (opponents + listOfNotNull(partner)).any {
+                normalizePersonName(it.displayName).contains(normalizePersonName(search.text))
+            }
+        return freeText || names
     }
 
     private fun Match.toListItem(): MatchListItem =
