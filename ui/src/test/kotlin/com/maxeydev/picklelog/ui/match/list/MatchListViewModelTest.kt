@@ -5,19 +5,26 @@ package com.maxeydev.picklelog.ui.match.list
 import androidx.lifecycle.SavedStateHandle
 import com.maxeydev.picklelog.domain.datetime.AppDate
 import com.maxeydev.picklelog.domain.datetime.AppInstant
+import com.maxeydev.picklelog.domain.match.FilterKind
+import com.maxeydev.picklelog.domain.match.FilterState
 import com.maxeydev.picklelog.domain.match.Match
 import com.maxeydev.picklelog.domain.match.MatchFormat
 import com.maxeydev.picklelog.domain.match.MatchResult
 import com.maxeydev.picklelog.domain.match.MatchSort
+import com.maxeydev.picklelog.domain.match.SearchTerm
+import com.maxeydev.picklelog.domain.person.Person
 import com.maxeydev.picklelog.domain.photo.PhotoRef
 import com.maxeydev.picklelog.ui.fakes.FakeMatchRepository
 import com.maxeydev.picklelog.ui.fakes.FakeMatchSortStore
+import com.maxeydev.picklelog.ui.fakes.FakePersonRepository
+import com.maxeydev.picklelog.ui.fakes.ListPageRequest
 import com.maxeydev.picklelog.ui.navigation.JUST_SAVED_MATCH_ID_KEY
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -39,6 +46,7 @@ class MatchListViewModelTest {
     private lateinit var matches: FakeMatchRepository
     private lateinit var sorts: FakeMatchSortStore
     private lateinit var handle: SavedStateHandle
+    private lateinit var people: FakePersonRepository
 
     @Before
     fun setUp() {
@@ -55,24 +63,38 @@ class MatchListViewModelTest {
     private fun match(
         day: Int,
         result: MatchResult = MatchResult.WIN,
+        format: MatchFormat = MatchFormat.DOUBLES,
         photos: List<PhotoRef> = emptyList(),
+        location: String? = null,
+        notes: String? = null,
+        opponents: List<Person> = emptyList(),
     ): Match =
         Match(
             id = Uuid.random(),
-            format = MatchFormat.DOUBLES,
+            format = format,
             date = AppDate.parse("2026-01-01").plus(day, DateTimeUnit.DAY),
             result = result,
             createdAt = AppInstant.fromEpochMilliseconds(1_000),
             updatedAt = AppInstant.fromEpochMilliseconds(1_000),
             photos = photos,
+            location = location,
+            notes = notes,
+            opponents = opponents,
         )
 
-    private fun TestScope.subscribedViewModel(stored: List<Match>): MatchListViewModel {
+    private fun person(name: String): Person = Person(Uuid.random(), name, AppInstant.fromEpochMilliseconds(0))
+
+    private fun TestScope.subscribedViewModel(
+        stored: List<Match>,
+        knownPeople: List<Person> = emptyList(),
+    ): MatchListViewModel {
         matches = FakeMatchRepository(stored)
+        people = FakePersonRepository(initial = knownPeople)
         val viewModel =
             MatchListViewModel(
                 savedStateHandle = handle,
                 matchRepository = matches,
+                personRepository = people,
                 matchSortStore = sorts,
                 photoFile = { relativePath -> File(photoRoot, relativePath) },
                 defaultDispatcher = UnconfinedTestDispatcher(testScheduler),
@@ -226,5 +248,213 @@ class MatchListViewModelTest {
             assertNull(viewModel.uiState.value.savedMatchId)
             assertNull(handle.get<String>(JUST_SAVED_MATCH_ID_KEY))
             assertEquals(1, viewModel.uiState.value.matches.size)
+        }
+
+    @Test
+    fun `a filter change re_queries from one page and is the same filter the screen state exposes`() =
+        runTest {
+            val loss = match(day = 1, result = MatchResult.LOSS)
+            val viewModel = subscribedViewModel(listOf(loss) + List(119) { match(day = 10 + it) })
+            viewModel.loadMoreIfNeeded(MATCH_LIST_PAGE_SIZE - 1)
+            val lossesOnly = FilterState(result = MatchResult.LOSS)
+
+            viewModel.changeFilter(lossesOnly)
+
+            val state = viewModel.uiState.value
+            assertEquals(lossesOnly, state.filter)
+            assertEquals(
+                ListPageRequest(MatchSort.DATE_NEWEST, MATCH_LIST_PAGE_SIZE, lossesOnly, null),
+                matches.requestedQueries.last(),
+            )
+            assertEquals(listOf(loss.id.toString()), state.matches.map { it.id })
+        }
+
+    @Test
+    fun `the filter lives in the saved state that both the list query and the screen read`() =
+        runTest {
+            val viewModel = subscribedViewModel(listOf(match(day = 1)))
+            val singles = FilterState(format = MatchFormat.SINGLES)
+
+            viewModel.changeFilter(singles)
+
+            assertEquals(singles, decodeFilterState(handle[FILTER_STATE_KEY]))
+            assertEquals(singles, viewModel.uiState.value.filter)
+            assertEquals(singles, matches.requestedQueries.last().filter)
+        }
+
+    @Test
+    fun `a filter set elsewhere in the saved state reaches the list without going through the list screen`() =
+        runTest {
+            val viewModel = subscribedViewModel(listOf(match(day = 1, result = MatchResult.LOSS), match(day = 2)))
+            val winsOnly = FilterState(result = MatchResult.WIN)
+
+            handle[FILTER_STATE_KEY] = encodeFilterState(winsOnly)
+
+            assertEquals(winsOnly, viewModel.uiState.value.filter)
+            assertEquals(1, viewModel.uiState.value.matches.size)
+        }
+
+    @Test
+    fun `clearing one filter keeps every other filter`() =
+        runTest {
+            val viewModel = subscribedViewModel(listOf(match(day = 1)))
+            viewModel.changeFilter(
+                FilterState(format = MatchFormat.SINGLES, result = MatchResult.WIN, location = "BGC"),
+            )
+
+            viewModel.clearFilter(FilterKind.RESULT)
+
+            assertEquals(FilterState(format = MatchFormat.SINGLES, location = "BGC"), viewModel.uiState.value.filter)
+        }
+
+    @Test
+    fun `clear all removes every filter and leaves nothing in saved state`() =
+        runTest {
+            val viewModel = subscribedViewModel(listOf(match(day = 1)))
+            viewModel.changeFilter(FilterState(format = MatchFormat.SINGLES, result = MatchResult.WIN))
+
+            viewModel.clearAllFilters()
+
+            assertEquals(FilterState.NONE, viewModel.uiState.value.filter)
+            assertNull(handle.get<String>(FILTER_STATE_KEY))
+        }
+
+    @Test
+    fun `a fresh launch opens with no filter and no search`() =
+        runTest {
+            val state = subscribedViewModel(listOf(match(day = 1))).uiState.value
+
+            assertEquals(FilterState.NONE, state.filter)
+            assertNull(state.appliedSearch)
+            assertEquals(
+                ListPageRequest(MatchSort.DATE_NEWEST, MATCH_LIST_PAGE_SIZE, FilterState.NONE, null),
+                matches.requestedQueries.single(),
+            )
+        }
+
+    @Test
+    fun `filters and search restored after process death are applied again`() =
+        runTest {
+            val ana = person("Ana")
+            val filter = FilterState(opponentId = ana.id, format = MatchFormat.SINGLES)
+            handle = SavedStateHandle(mapOf(FILTER_STATE_KEY to encodeFilterState(filter), SEARCH_TEXT_KEY to "dink"))
+            val wanted = match(day = 2, format = MatchFormat.SINGLES, opponents = listOf(ana), notes = "good dinks")
+            val stored = listOf(wanted, match(day = 3, format = MatchFormat.SINGLES, opponents = listOf(ana)))
+
+            val viewModel = subscribedViewModel(stored, knownPeople = listOf(ana))
+            advanceTimeBy(SEARCH_DEBOUNCE_MILLIS + 1)
+
+            val state = viewModel.uiState.value
+            assertEquals(filter, state.filter)
+            assertEquals("dink", state.appliedSearch)
+            assertEquals(listOf(wanted.id.toString()), state.matches.map { it.id })
+            assertEquals("Ana", state.filteredOpponentName)
+        }
+
+    @Test
+    fun `typing a search issues one query after the pause rather than one per keystroke`() =
+        runTest {
+            val viewModel = subscribedViewModel(listOf(match(day = 1, notes = "ana was great")))
+
+            listOf("a", "an", "ana").forEach { text ->
+                viewModel.changeSearch(text)
+                advanceTimeBy(SEARCH_DEBOUNCE_MILLIS / 3)
+            }
+            assertEquals(listOf<SearchTerm?>(null), matches.requestedQueries.map { it.search })
+
+            advanceTimeBy(SEARCH_DEBOUNCE_MILLIS)
+
+            assertEquals(listOf(null, SearchTerm.of("ana")), matches.requestedQueries.map { it.search })
+            assertEquals("ana", viewModel.uiState.value.appliedSearch)
+        }
+
+    @Test
+    fun `clearing the search applies at once without waiting for the pause`() =
+        runTest {
+            val viewModel = subscribedViewModel(listOf(match(day = 1, notes = "dink"), match(day = 2)))
+            viewModel.changeSearch("dink")
+            advanceTimeBy(SEARCH_DEBOUNCE_MILLIS + 1)
+            assertEquals(1, viewModel.uiState.value.matches.size)
+
+            viewModel.changeSearch("")
+
+            assertNull(viewModel.uiState.value.appliedSearch)
+            assertEquals(2, viewModel.uiState.value.matches.size)
+        }
+
+    @Test
+    fun `search results respect the active filter and sort`() =
+        runTest {
+            val oldWin = match(day = 1, notes = "windy")
+            val newWin = match(day = 5, notes = "windy again")
+            val loss = match(day = 3, result = MatchResult.LOSS, notes = "windy")
+            val viewModel = subscribedViewModel(listOf(oldWin, newWin, loss, match(day = 4)))
+            viewModel.changeFilter(FilterState(result = MatchResult.WIN))
+            viewModel.selectSort(MatchSort.DATE_OLDEST)
+
+            viewModel.changeSearch("WINDY")
+            advanceTimeBy(SEARCH_DEBOUNCE_MILLIS + 1)
+
+            assertEquals(
+                listOf(oldWin.id.toString(), newWin.id.toString()),
+                viewModel.uiState.value.matches.map { it.id },
+            )
+        }
+
+    @Test
+    fun `a filter that matches nothing is a no_results state and not the never_logged empty state`() =
+        runTest {
+            val viewModel = subscribedViewModel(listOf(match(day = 1, format = MatchFormat.DOUBLES)))
+
+            viewModel.changeFilter(FilterState(format = MatchFormat.SINGLES))
+
+            val state = viewModel.uiState.value
+            assertTrue(state.hasNoResults)
+            assertFalse(state.isEmpty)
+        }
+
+    @Test
+    fun `a search that matches nothing is also a no_results state`() =
+        runTest {
+            val viewModel = subscribedViewModel(listOf(match(day = 1)))
+
+            viewModel.changeSearch("nobody")
+            advanceTimeBy(SEARCH_DEBOUNCE_MILLIS + 1)
+
+            assertTrue(viewModel.uiState.value.hasNoResults)
+            assertFalse(viewModel.uiState.value.isEmpty)
+        }
+
+    @Test
+    fun `clearing filters and search together returns the whole list`() =
+        runTest {
+            val viewModel = subscribedViewModel(listOf(match(day = 1), match(day = 2, result = MatchResult.LOSS)))
+            viewModel.changeFilter(FilterState(format = MatchFormat.SINGLES))
+            viewModel.changeSearch("nothing")
+            advanceTimeBy(SEARCH_DEBOUNCE_MILLIS + 1)
+
+            viewModel.clearFiltersAndSearch()
+
+            val state = viewModel.uiState.value
+            assertFalse(state.isNarrowed)
+            assertEquals(2, state.matches.size)
+        }
+
+    @Test
+    fun `opponent choices come from the person list and locations from prior matches in a to z order`() =
+        runTest {
+            val ana = person("Ana")
+            val ben = person("Ben")
+            val stored =
+                listOf(
+                    match(day = 1, location = "bgc"),
+                    match(day = 2, location = "Ayala"),
+                    match(day = 3, location = "Alabang"),
+                )
+
+            val state = subscribedViewModel(stored, knownPeople = listOf(ana, ben)).uiState.value
+
+            assertEquals(listOf(OpponentChoice(ana.id, "Ana"), OpponentChoice(ben.id, "Ben")), state.opponentChoices)
+            assertEquals(listOf("Alabang", "Ayala", "bgc"), state.locationChoices)
         }
 }
