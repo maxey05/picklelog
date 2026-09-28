@@ -3,9 +3,15 @@ package com.maxeydev.picklelog.ui.match.list
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -22,6 +28,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -48,7 +55,12 @@ import com.maxeydev.picklelog.ui.R
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 private val LIST_BOTTOM_PADDING = 88.dp
+private val MIN_TOUCH_TARGET = 48.dp
 private const val MATCH_ROW_CONTENT_TYPE = "match_row"
+private const val HEADER_KEY = "match_list_header"
+private const val NO_RESULTS_KEY = "match_list_no_results"
+private const val ITEMS_ABOVE_MATCHES = 1
+private val NO_RESULTS_TOP_PADDING = 48.dp
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -60,9 +72,11 @@ fun MatchListScreen(
     onLastVisibleIndexChanged: (Int) -> Unit,
     onLogAnother: (String) -> Unit,
     onSavedConfirmationDismissed: () -> Unit,
+    filterActions: MatchListFilterActions,
     modifier: Modifier = Modifier,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
+    var searchText by rememberSaveable { mutableStateOf("") }
     SavedMatchSnackbarEffect(
         savedMatchId = state.savedMatchId,
         snackbarHostState = snackbarHostState,
@@ -88,10 +102,21 @@ fun MatchListScreen(
         val contentModifier = Modifier.fillMaxSize().padding(innerPadding)
         when {
             state.isLoading -> Box(modifier = contentModifier)
-            state.isEmpty -> MatchListEmptyState(onNewMatch = onNewMatch, modifier = contentModifier)
+            state.isEmpty && searchText.isBlank() ->
+                MatchListEmptyState(onNewMatch = onNewMatch, modifier = contentModifier)
             else ->
                 MatchListContent(
                     state = state,
+                    searchText = searchText,
+                    onSearchChanged = { text ->
+                        searchText = text
+                        filterActions.onSearchChanged(text)
+                    },
+                    onFiltersAndSearchCleared = {
+                        searchText = ""
+                        filterActions.onFiltersAndSearchCleared()
+                    },
+                    filterActions = filterActions,
                     onOpenMatch = onOpenMatch,
                     onSortSelected = onSortSelected,
                     onLastVisibleIndexChanged = onLastVisibleIndexChanged,
@@ -133,6 +158,10 @@ private fun SavedMatchSnackbarEffect(
 @Composable
 private fun MatchListContent(
     state: MatchListUiState,
+    searchText: String,
+    onSearchChanged: (String) -> Unit,
+    onFiltersAndSearchCleared: () -> Unit,
+    filterActions: MatchListFilterActions,
     onOpenMatch: (String) -> Unit,
     onSortSelected: (MatchSort) -> Unit,
     onLastVisibleIndexChanged: (Int) -> Unit,
@@ -140,39 +169,156 @@ private fun MatchListContent(
 ) {
     val listState = rememberLazyListState()
     val latestOnLastVisibleIndexChanged by rememberUpdatedState(onLastVisibleIndexChanged)
-    var sortOnScreen by rememberSaveable { mutableStateOf(state.sort) }
+    val queryKey = listOf(state.sort, state.filter, state.appliedSearch).toString()
+    var queryOnScreen by rememberSaveable { mutableStateOf(queryKey) }
+    var isFilterSheetOpen by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(listState) {
         snapshotFlow {
             val layoutInfo = listState.layoutInfo
             (layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0) to layoutInfo.totalItemsCount
         }.distinctUntilChanged()
-            .collect { (lastVisibleIndex, _) -> latestOnLastVisibleIndexChanged(lastVisibleIndex) }
+            .collect { (lastVisibleIndex, _) ->
+                latestOnLastVisibleIndexChanged((lastVisibleIndex - ITEMS_ABOVE_MATCHES).coerceAtLeast(0))
+            }
     }
-    LaunchedEffect(state.sort) {
-        if (state.sort != sortOnScreen) {
-            sortOnScreen = state.sort
+    LaunchedEffect(queryKey) {
+        if (queryKey != queryOnScreen) {
+            queryOnScreen = queryKey
             listState.scrollToItem(0)
         }
     }
 
-    Column(modifier = modifier) {
-        SortMenu(
-            activeSort = state.sort,
-            onSortSelected = onSortSelected,
-            modifier = Modifier.padding(horizontal = 8.dp),
-        )
-        LazyColumn(
-            state = listState,
-            contentPadding = PaddingValues(bottom = LIST_BOTTOM_PADDING),
-            modifier = Modifier.fillMaxSize().testTag(MatchListTestTags.LIST),
-        ) {
+    LazyColumn(
+        state = listState,
+        contentPadding = PaddingValues(bottom = LIST_BOTTOM_PADDING),
+        modifier = modifier.testTag(MatchListTestTags.LIST),
+    ) {
+        item(key = HEADER_KEY, contentType = HEADER_KEY) {
+            MatchListHeader(
+                state = state,
+                searchText = searchText,
+                onSearchChanged = onSearchChanged,
+                onSortSelected = onSortSelected,
+                onOpenFilters = { isFilterSheetOpen = true },
+                filterActions = filterActions,
+            )
+        }
+        if (state.hasNoResults) {
+            item(key = NO_RESULTS_KEY, contentType = NO_RESULTS_KEY) {
+                NoResultsState(onClear = onFiltersAndSearchCleared, modifier = Modifier.fillMaxWidth())
+            }
+        } else {
             items(
                 items = state.matches,
                 key = { row -> row.id },
                 contentType = { MATCH_ROW_CONTENT_TYPE },
             ) { row ->
                 MatchRow(state = row, onClick = { onOpenMatch(row.id) })
+            }
+        }
+    }
+    if (isFilterSheetOpen) {
+        FilterSheet(
+            filter = state.filter,
+            opponentChoices = state.opponentChoices,
+            locationChoices = state.locationChoices,
+            onFilterChanged = filterActions.onFilterChanged,
+            onAllFiltersCleared = filterActions.onAllFiltersCleared,
+            onDismiss = { isFilterSheetOpen = false },
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MatchListHeader(
+    state: MatchListUiState,
+    searchText: String,
+    onSearchChanged: (String) -> Unit,
+    onSortSelected: (MatchSort) -> Unit,
+    onOpenFilters: () -> Unit,
+    filterActions: MatchListFilterActions,
+) {
+    Column {
+        MatchSearchBar(
+            text = searchText,
+            onTextChanged = onSearchChanged,
+            modifier = Modifier.padding(horizontal = 16.dp).padding(top = 8.dp),
+        )
+        FlowRow(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            SortMenu(activeSort = state.sort, onSortSelected = onSortSelected)
+            FilterButton(activeCount = state.filter.activeKinds.size, onClick = onOpenFilters)
+        }
+        if (state.filter.isActive) {
+            FilterChips(
+                filter = state.filter,
+                opponentName = state.filteredOpponentName,
+                onFilterCleared = filterActions.onFilterCleared,
+                onAllFiltersCleared = filterActions.onAllFiltersCleared,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun FilterButton(
+    activeCount: Int,
+    onClick: () -> Unit,
+) {
+    TextButton(
+        onClick = onClick,
+        modifier = Modifier.heightIn(min = MIN_TOUCH_TARGET).testTag(MatchListTestTags.FILTER_BUTTON),
+    ) {
+        Icon(painter = painterResource(R.drawable.ic_filter), contentDescription = null)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text =
+                if (activeCount == 0) {
+                    stringResource(R.string.filter_button)
+                } else {
+                    stringResource(R.string.filter_button_active, activeCount)
+                },
+        )
+    }
+}
+
+@Composable
+private fun NoResultsState(
+    onClear: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier = modifier, contentAlignment = Alignment.TopCenter) {
+        Column(
+            modifier =
+                Modifier
+                    .padding(horizontal = 24.dp)
+                    .padding(top = NO_RESULTS_TOP_PADDING, bottom = 24.dp)
+                    .testTag(MatchListTestTags.NO_RESULTS),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = stringResource(R.string.no_results_title),
+                style = MaterialTheme.typography.titleLarge,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.semantics { heading() },
+            )
+            Text(
+                text = stringResource(R.string.no_results_body),
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+            )
+            FilledTonalButton(
+                onClick = onClear,
+                modifier = Modifier.testTag(MatchListTestTags.NO_RESULTS_CLEAR),
+            ) {
+                Text(text = stringResource(R.string.no_results_clear))
             }
         }
     }
