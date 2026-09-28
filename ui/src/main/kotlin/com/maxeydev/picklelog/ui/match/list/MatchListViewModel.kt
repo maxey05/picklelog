@@ -65,10 +65,7 @@ class MatchListViewModel(
 ) : ViewModel() {
     private val pageLimit = MutableStateFlow(MATCH_LIST_PAGE_SIZE)
 
-    private val filter: Flow<FilterState> =
-        savedStateHandle
-            .getStateFlow<String?>(FILTER_STATE_KEY, null)
-            .map(::decodeFilterState)
+    private val filter: Flow<FilterState> = observeHomeFilter(savedStateHandle)
 
     private val appliedSearch: Flow<SearchTerm?> =
         savedStateHandle
