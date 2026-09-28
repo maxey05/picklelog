@@ -7,28 +7,121 @@ import androidx.room.Transaction
 import androidx.room.Upsert
 import com.maxeydev.picklelog.data.photo.PhotoEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.datetime.LocalDate
 
 @Dao
 interface MatchDao {
     @Transaction
-    @Query("$MATCH_LIST_SELECT ORDER BY $NEWEST_FIRST $PAGE_LIMIT")
-    fun observeListByDateNewest(limit: Int): Flow<List<MatchListRowEntity>>
+    @Query("$FILTERED_MATCH_LIST ORDER BY $NEWEST_FIRST $PAGE_LIMIT")
+    fun observeListByDateNewest(
+        format: String?,
+        result: String?,
+        fromDate: LocalDate?,
+        toDate: LocalDate?,
+        opponentId: String?,
+        location: String?,
+        textPattern: String?,
+        namePattern: String?,
+        limit: Int,
+    ): Flow<List<MatchListRowEntity>>
 
     @Transaction
-    @Query("$MATCH_LIST_SELECT ORDER BY $OLDEST_FIRST $PAGE_LIMIT")
-    fun observeListByDateOldest(limit: Int): Flow<List<MatchListRowEntity>>
+    @Query("$FILTERED_MATCH_LIST ORDER BY $OLDEST_FIRST $PAGE_LIMIT")
+    fun observeListByDateOldest(
+        format: String?,
+        result: String?,
+        fromDate: LocalDate?,
+        toDate: LocalDate?,
+        opponentId: String?,
+        location: String?,
+        textPattern: String?,
+        namePattern: String?,
+        limit: Int,
+    ): Flow<List<MatchListRowEntity>>
 
     @Transaction
-    @Query("$MATCH_LIST_SELECT ORDER BY $WINS_BEFORE_LOSSES, $NEWEST_FIRST $PAGE_LIMIT")
-    fun observeListByWinsFirst(limit: Int): Flow<List<MatchListRowEntity>>
+    @Query("$FILTERED_MATCH_LIST ORDER BY $WINS_BEFORE_LOSSES, $NEWEST_FIRST $PAGE_LIMIT")
+    fun observeListByWinsFirst(
+        format: String?,
+        result: String?,
+        fromDate: LocalDate?,
+        toDate: LocalDate?,
+        opponentId: String?,
+        location: String?,
+        textPattern: String?,
+        namePattern: String?,
+        limit: Int,
+    ): Flow<List<MatchListRowEntity>>
 
     @Transaction
-    @Query("$MATCH_LIST_SELECT ORDER BY $LOSSES_BEFORE_WINS, $NEWEST_FIRST $PAGE_LIMIT")
-    fun observeListByLossesFirst(limit: Int): Flow<List<MatchListRowEntity>>
+    @Query("$FILTERED_MATCH_LIST ORDER BY $LOSSES_BEFORE_WINS, $NEWEST_FIRST $PAGE_LIMIT")
+    fun observeListByLossesFirst(
+        format: String?,
+        result: String?,
+        fromDate: LocalDate?,
+        toDate: LocalDate?,
+        opponentId: String?,
+        location: String?,
+        textPattern: String?,
+        namePattern: String?,
+        limit: Int,
+    ): Flow<List<MatchListRowEntity>>
 
     @Transaction
-    @Query("$MATCH_LIST_SELECT ORDER BY $NO_OPPONENT_LAST_THEN_A_TO_Z, $NEWEST_FIRST $PAGE_LIMIT")
-    fun observeListByOpponent(limit: Int): Flow<List<MatchListRowEntity>>
+    @Query("$FILTERED_MATCH_LIST ORDER BY $NO_OPPONENT_LAST_THEN_A_TO_Z, $NEWEST_FIRST $PAGE_LIMIT")
+    fun observeListByOpponent(
+        format: String?,
+        result: String?,
+        fromDate: LocalDate?,
+        toDate: LocalDate?,
+        opponentId: String?,
+        location: String?,
+        textPattern: String?,
+        namePattern: String?,
+        limit: Int,
+    ): Flow<List<MatchListRowEntity>>
+
+    @Transaction
+    @Query("$FILTERED_MATCH_LIST ORDER BY $NO_LOCATION_LAST_THEN_A_TO_Z, $NEWEST_FIRST $PAGE_LIMIT")
+    fun observeListByLocation(
+        format: String?,
+        result: String?,
+        fromDate: LocalDate?,
+        toDate: LocalDate?,
+        opponentId: String?,
+        location: String?,
+        textPattern: String?,
+        namePattern: String?,
+        limit: Int,
+    ): Flow<List<MatchListRowEntity>>
+
+    @Transaction
+    @Query("$FILTERED_MATCH_LIST ORDER BY $NO_DURATION_LAST, $DURATION_SECONDS ASC, $NEWEST_FIRST $PAGE_LIMIT")
+    fun observeListByDurationShortest(
+        format: String?,
+        result: String?,
+        fromDate: LocalDate?,
+        toDate: LocalDate?,
+        opponentId: String?,
+        location: String?,
+        textPattern: String?,
+        namePattern: String?,
+        limit: Int,
+    ): Flow<List<MatchListRowEntity>>
+
+    @Transaction
+    @Query("$FILTERED_MATCH_LIST ORDER BY $NO_DURATION_LAST, $DURATION_SECONDS DESC, $NEWEST_FIRST $PAGE_LIMIT")
+    fun observeListByDurationLongest(
+        format: String?,
+        result: String?,
+        fromDate: LocalDate?,
+        toDate: LocalDate?,
+        opponentId: String?,
+        location: String?,
+        textPattern: String?,
+        namePattern: String?,
+        limit: Int,
+    ): Flow<List<MatchListRowEntity>>
 
     @Transaction
     @Query("SELECT * FROM `match` WHERE id = :id")
