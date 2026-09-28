@@ -34,6 +34,8 @@ data class MatchEditUiState(
     val isSaving: Boolean = false,
     val isFinished: Boolean = false,
     val savedNewMatchId: String? = null,
+    val photos: List<PhotoUiState> = emptyList(),
+    val hasPhotoError: Boolean = false,
 ) {
     fun suggestionsFor(target: SuggestionTarget): List<SuggestionUiState> =
         if (target == suggestionTarget) {
@@ -49,6 +51,8 @@ fun MatchDraft.toUiState(
     suggestionTarget: SuggestionTarget? = null,
     suggestions: List<SuggestionUiState> = emptyList(),
     savedNewMatchId: String? = null,
+    photoFilePath: (String) -> String = { it },
+    hasPhotoError: Boolean = false,
 ): MatchEditUiState {
     val start = startTime?.let(AppTime::parse)
     val end = endTime?.let(AppTime::parse)
@@ -84,5 +88,7 @@ fun MatchDraft.toUiState(
         isSaving = isSaving,
         isFinished = isFinished,
         savedNewMatchId = savedNewMatchId,
+        photos = photos.map { PhotoUiState(key = it.key, filePath = it.relativePath?.let(photoFilePath)) },
+        hasPhotoError = hasPhotoError,
     )
 }
