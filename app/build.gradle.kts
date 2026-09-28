@@ -87,6 +87,7 @@ dependencies {
     implementation(libs.billing.ktx)
 
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.core)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.datetime)
 
@@ -98,6 +99,7 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.compose.ui.test.junit4)
     debugImplementation(libs.compose.ui.test.manifest)
 }
