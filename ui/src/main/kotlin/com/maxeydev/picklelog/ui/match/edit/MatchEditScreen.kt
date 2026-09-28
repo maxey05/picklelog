@@ -160,6 +160,11 @@ private fun MatchEditForm(
             onGameRemoved = actions.onGameRemoved,
             onGameScoresChanged = actions.onGameScoresChanged,
         )
+        PhotoPickerSection(
+            photos = state.photos,
+            hasPhotoError = state.hasPhotoError,
+            actions = actions.photoActions,
+        )
         DetailsSection(
             state = state,
             actions = actions,
