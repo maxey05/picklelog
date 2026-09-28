@@ -75,4 +75,7 @@ fun sortLabel(sort: MatchSort): String =
         MatchSort.RESULT_WINS_FIRST -> stringResource(R.string.sort_result_wins_first)
         MatchSort.RESULT_LOSSES_FIRST -> stringResource(R.string.sort_result_losses_first)
         MatchSort.OPPONENT_A_TO_Z -> stringResource(R.string.sort_opponent_a_to_z)
+        MatchSort.LOCATION_A_TO_Z -> stringResource(R.string.sort_location_a_to_z)
+        MatchSort.DURATION_SHORTEST -> stringResource(R.string.sort_duration_shortest)
+        MatchSort.DURATION_LONGEST -> stringResource(R.string.sort_duration_longest)
     }
