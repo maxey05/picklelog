@@ -1,10 +1,13 @@
 package com.maxeydev.picklelog.ui.match.detail
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -17,6 +20,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
@@ -24,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.maxeydev.picklelog.domain.match.Match
 import com.maxeydev.picklelog.ui.R
 import com.maxeydev.picklelog.ui.match.currentLocale
@@ -32,7 +38,10 @@ import com.maxeydev.picklelog.ui.match.formatLabel
 import com.maxeydev.picklelog.ui.match.formatMatchDate
 import com.maxeydev.picklelog.ui.match.formatMatchTime
 import com.maxeydev.picklelog.ui.match.resultLabel
+import java.io.File
 import kotlin.time.Duration
+
+private val DETAIL_PHOTO_SIZE = 120.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,6 +49,7 @@ fun MatchDetailScreen(
     state: MatchDetailUiState,
     onBack: () -> Unit,
     onEdit: () -> Unit,
+    onShare: () -> Unit,
     onDeleteRequested: () -> Unit,
     onDeleteConfirmed: () -> Unit,
     onDeleteDismissed: () -> Unit,
@@ -59,6 +69,16 @@ fun MatchDetailScreen(
                     }
                 },
                 actions = {
+                    IconButton(
+                        onClick = onShare,
+                        enabled = state.match != null,
+                        modifier = Modifier.testTag(MatchDetailTestTags.SHARE),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_share),
+                            contentDescription = stringResource(R.string.action_share),
+                        )
+                    }
                     TextButton(
                         onClick = onEdit,
                         enabled = state.match != null,
@@ -82,6 +102,7 @@ fun MatchDetailScreen(
                 match = match,
                 duration = state.duration,
                 endsNextDay = state.endsNextDay,
+                photoPaths = state.photoPaths,
                 modifier = Modifier.padding(innerPadding),
             )
         }
@@ -96,6 +117,7 @@ private fun MatchDetailContent(
     match: Match,
     duration: Duration?,
     endsNextDay: Boolean,
+    photoPaths: List<String>,
     modifier: Modifier = Modifier,
 ) {
     val locale = currentLocale()
@@ -142,11 +164,12 @@ private fun MatchDetailContent(
         match.location?.let { DetailRow(label = stringResource(R.string.label_location), value = it) }
         match.paddle?.let { DetailRow(label = stringResource(R.string.label_paddle), value = it) }
         match.notes?.let { DetailRow(label = stringResource(R.string.label_notes), value = it) }
-        if (match.photos.isNotEmpty()) {
+        if (photoPaths.isNotEmpty()) {
             DetailRow(
                 label = stringResource(R.string.label_photos),
-                value = pluralStringResource(R.plurals.photo_count, match.photos.size, match.photos.size),
+                value = pluralStringResource(R.plurals.photo_count, photoPaths.size, photoPaths.size),
             )
+            DetailPhotos(photoPaths)
         }
     }
 }
@@ -163,5 +186,22 @@ private fun DetailRow(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(text = value, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+@Composable
+private fun DetailPhotos(photoPaths: List<String>) {
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()).testTag(MatchDetailTestTags.PHOTOS),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        photoPaths.forEachIndexed { index, path ->
+            AsyncImage(
+                model = File(path),
+                contentDescription = stringResource(R.string.photo_position, index + 1, photoPaths.size),
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(DETAIL_PHOTO_SIZE).clip(MaterialTheme.shapes.small),
+            )
+        }
     }
 }
