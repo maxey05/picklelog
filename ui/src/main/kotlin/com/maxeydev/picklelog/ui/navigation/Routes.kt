@@ -21,3 +21,11 @@ data class MatchEditRoute(
 data class MatchDetailRoute(
     val matchId: String,
 )
+
+@Serializable
+data object StatsRoute
+
+@Serializable
+data class ShareRoute(
+    val matchId: String,
+)
