@@ -2,6 +2,8 @@
 
 package com.maxeydev.picklelog.domain.match
 
+import com.maxeydev.picklelog.domain.photo.ImportedPhoto
+import com.maxeydev.picklelog.domain.stats.MatchStatLine
 import kotlinx.coroutines.flow.Flow
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -14,11 +16,21 @@ interface MatchRepository {
         search: SearchTerm? = null,
     ): Flow<List<MatchListItem>>
 
+    fun observeStatLines(filter: FilterState = FilterState.NONE): Flow<List<MatchStatLine>>
+
     fun observeById(id: Uuid): Flow<Match?>
 
     fun observePriorValues(field: FreeTextField): Flow<List<FreeTextUsage>>
 
-    suspend fun saveMatch(match: Match)
+    suspend fun saveMatch(
+        match: Match,
+        removedPhotoIds: Set<Uuid> = emptySet(),
+    )
+
+    suspend fun appendPhoto(
+        matchId: Uuid,
+        photo: ImportedPhoto,
+    ): Boolean
 
     suspend fun deleteMatch(id: Uuid)
 }
