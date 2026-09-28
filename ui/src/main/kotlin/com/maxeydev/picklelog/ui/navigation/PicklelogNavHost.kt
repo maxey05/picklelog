@@ -19,6 +19,7 @@ import com.maxeydev.picklelog.ui.match.detail.MatchDetailViewModel
 import com.maxeydev.picklelog.ui.match.edit.MatchEditActions
 import com.maxeydev.picklelog.ui.match.edit.MatchEditScreen
 import com.maxeydev.picklelog.ui.match.edit.MatchEditViewModel
+import com.maxeydev.picklelog.ui.match.list.MatchListFilterActions
 import com.maxeydev.picklelog.ui.match.list.MatchListScreen
 import com.maxeydev.picklelog.ui.match.list.MatchListViewModel
 
@@ -43,6 +44,16 @@ fun PicklelogNavHost(
                     navController.navigate(MatchEditRoute(logAnotherFrom = savedMatchId))
                 },
                 onSavedConfirmationDismissed = viewModel::dismissSavedConfirmation,
+                filterActions =
+                    remember(viewModel) {
+                        MatchListFilterActions(
+                            onSearchChanged = viewModel::changeSearch,
+                            onFilterChanged = viewModel::changeFilter,
+                            onFilterCleared = viewModel::clearFilter,
+                            onAllFiltersCleared = viewModel::clearAllFilters,
+                            onFiltersAndSearchCleared = viewModel::clearFiltersAndSearch,
+                        )
+                    },
             )
         }
         composable<MatchEditRoute> {
