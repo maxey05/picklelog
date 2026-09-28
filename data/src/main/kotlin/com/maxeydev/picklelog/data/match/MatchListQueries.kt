@@ -49,6 +49,8 @@ internal const val MATCH_LIST_FILTER =
         "OR EXISTS (SELECT 1 FROM match_person sp INNER JOIN person sq ON sq.id = sp.person_id " +
         "WHERE sp.match_id = m.id AND sq.normalized_name LIKE :namePattern ESCAPE '\\'))"
 
+internal const val MATCH_STAT_SELECT = "SELECT m.date AS date, m.format AS format, m.result AS result FROM `match` m"
+
 internal const val FILTERED_MATCH_LIST = "$MATCH_LIST_SELECT $MATCH_LIST_FILTER"
 
 private const val START_SECONDS = "CAST(strftime('%s', m.start_time) AS INTEGER)"
