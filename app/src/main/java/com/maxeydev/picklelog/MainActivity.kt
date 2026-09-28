@@ -1,14 +1,17 @@
 package com.maxeydev.picklelog
 
 import android.os.Bundle
+import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import com.maxeydev.picklelog.ui.navigation.PicklelogNavHost
 
@@ -26,7 +29,16 @@ class MainActivity : ComponentActivity() {
                     val dependencies by produceState<AppContainer?>(initialValue = null, container) {
                         value = container.await()
                     }
-                    dependencies?.let { PicklelogNavHost(dependencies = it) }
+                    dependencies?.let { ready ->
+                        PicklelogNavHost(dependencies = ready)
+                        LaunchedEffect(ready) {
+                            withFrameNanos { }
+                            Looper.myQueue().addIdleHandler {
+                                ready.warmCardRenderer()
+                                false
+                            }
+                        }
+                    }
                 }
             }
         }
