@@ -10,7 +10,7 @@ class MatchSortTest {
     }
 
     @Test
-    fun `exactly the five core sorts are offered`() {
+    fun `the five core sorts come first followed by location and both duration directions`() {
         assertEquals(
             listOf(
                 MatchSort.DATE_NEWEST,
@@ -18,6 +18,9 @@ class MatchSortTest {
                 MatchSort.RESULT_WINS_FIRST,
                 MatchSort.RESULT_LOSSES_FIRST,
                 MatchSort.OPPONENT_A_TO_Z,
+                MatchSort.LOCATION_A_TO_Z,
+                MatchSort.DURATION_SHORTEST,
+                MatchSort.DURATION_LONGEST,
             ),
             MatchSort.entries.toList(),
         )
