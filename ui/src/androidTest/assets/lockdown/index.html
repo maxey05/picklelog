@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://invalid.picklelog.test/style.css">
+</head>
+<body style="background: #ffffff;">
+<div id="probe">lockdown probe</div>
+<script>
+(function () {
+    "use strict";
+    var REMOTE = "https://invalid.picklelog.test/";
+
+    function settle(promise, milliseconds) {
+        return Promise.race([
+            promise,
+            new Promise(function (resolve) { setTimeout(function () { resolve("timeout"); }, milliseconds); })
+        ]);
+    }
+
+    function image() {
+        return new Promise(function (resolve) {
+            var img = new Image();
+            img.onload = function () { resolve("loaded"); };
+            img.onerror = function () { resolve("blocked"); };
+            img.src = REMOTE + "tracker.png";
+        });
+    }
+
+    function fetched() {
+        return fetch(REMOTE + "beacon").then(function (response) {
+            return response.ok ? "loaded" : "status-" + response.status;
+        }, function () {
+            return "blocked";
+        });
+    }
+
+    function xhr() {
+        return new Promise(function (resolve) {
+            var request = new XMLHttpRequest();
+            request.onload = function () { resolve(request.status === 200 ? "loaded" : "status-" + request.status); };
+            request.onerror = function () { resolve("blocked"); };
+            request.open("GET", REMOTE + "xhr");
+            request.send();
+        });
+    }
+
+    window.renderCard = function (data, token) {
+        Promise.all([settle(image(), 3000), settle(fetched(), 3000), settle(xhr(), 3000)]).then(function (results) {
+            window.PicklelogCard.onLayoutReady(token, JSON.stringify({
+                image: results[0],
+                fetch: results[1],
+                xhr: results[2]
+            }));
+        });
+    };
+})();
+</script>
+</body>
+</html>
