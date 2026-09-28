@@ -10,4 +10,5 @@ data class MatchDetailUiState(
     val endsNextDay: Boolean = false,
     val isConfirmingDelete: Boolean = false,
     val isGone: Boolean = false,
+    val photoPaths: List<String> = emptyList(),
 )
