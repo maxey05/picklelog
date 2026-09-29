@@ -2,7 +2,10 @@
     "use strict";
 
     var DESIGN_WIDTH = 1080;
-    var DESIGN_HEIGHT = 1920;
+    var DESIGN_HEIGHTS = { TALL: 1920, SQUARE: 1080 };
+    var designHeight = DESIGN_HEIGHTS.TALL;
+    var ratio = "TALL";
+    var theme = "DARK";
     var TEXT_FIELDS = ["brand", "name", "meta", "opponents", "partner", "score", "location", "streak"];
 
     function byId(id) {
@@ -61,7 +64,7 @@
             rects[id] = rect;
             texts[id] = element.textContent;
             var outside = rect.left < -1 || rect.top < -1 || rect.right > DESIGN_WIDTH + 1 ||
-                rect.bottom > DESIGN_HEIGHT + 1;
+                rect.bottom > designHeight + 1;
             var widerThanBox = element.scrollWidth > element.clientWidth + 1 &&
                 !element.classList.contains("single");
             if (outside || widerThanBox) {
@@ -77,6 +80,9 @@
             devicePixelRatio: window.devicePixelRatio,
             pageScale: window.visualViewport ? window.visualViewport.scale : 1,
             scale: scale,
+            ratio: ratio,
+            theme: theme,
+            designHeight: designHeight,
             photoShown: !byId("photo").hidden
         };
     }
@@ -84,6 +90,11 @@
     window.renderCard = function (data, token) {
         var card = byId("card");
         var photo = byId("photo");
+        ratio = data.ratio === "SQUARE" ? "SQUARE" : "TALL";
+        theme = data.theme === "LIGHT" ? "LIGHT" : "DARK";
+        designHeight = DESIGN_HEIGHTS[ratio];
+        card.classList.toggle("square", ratio === "SQUARE");
+        card.classList.toggle("light", theme === "LIGHT");
         setText("brand", data.brand);
         setText("name", data.displayName);
         setText("meta", data.meta);
