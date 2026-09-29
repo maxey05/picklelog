@@ -1,7 +1,13 @@
 package com.maxeydev.picklelog.data
 
+import android.app.Activity
 import android.content.Context
 import android.net.Uri
+import com.maxeydev.picklelog.data.billing.BillingClientWrapper
+import com.maxeydev.picklelog.data.billing.BillingStartupCheck
+import com.maxeydev.picklelog.data.billing.PlayEntitlementRepository
+import com.maxeydev.picklelog.data.billing.PlayProStore
+import com.maxeydev.picklelog.data.billing.PurchaseAcknowledger
 import com.maxeydev.picklelog.data.db.createPicklelogDatabase
 import com.maxeydev.picklelog.data.match.DataStoreLastUsedFormatStore
 import com.maxeydev.picklelog.data.match.DataStoreMatchSortStore
@@ -11,18 +17,24 @@ import com.maxeydev.picklelog.data.person.RoomPersonRepository
 import com.maxeydev.picklelog.data.photo.ImageCompressor
 import com.maxeydev.picklelog.data.photo.PhotoStore
 import com.maxeydev.picklelog.data.photo.QueuedPhotoImporter
+import com.maxeydev.picklelog.data.profile.DataStoreEntitlementRepository
 import com.maxeydev.picklelog.data.profile.DataStoreProfileRepository
 import com.maxeydev.picklelog.data.profile.createUserProfileDataStore
+import com.maxeydev.picklelog.data.share.DataStoreCardFormatStore
+import com.maxeydev.picklelog.domain.billing.ProStore
 import com.maxeydev.picklelog.domain.match.LastUsedFormatStore
 import com.maxeydev.picklelog.domain.match.MatchRepository
 import com.maxeydev.picklelog.domain.match.MatchSortStore
 import com.maxeydev.picklelog.domain.person.PersonRepository
 import com.maxeydev.picklelog.domain.photo.PhotoImportQueue
+import com.maxeydev.picklelog.domain.profile.EntitlementRepository
 import com.maxeydev.picklelog.domain.profile.ProfileRepository
+import com.maxeydev.picklelog.domain.share.CardFormatStore
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
+import kotlin.time.Clock
 
 const val ORPHAN_PHOTO_AGE_MILLIS = 24L * 60 * 60 * 1000
 
@@ -33,7 +45,11 @@ class DataLayer(
     val matchSortStore: MatchSortStore,
     val photoStore: PhotoStore,
     val profileRepository: ProfileRepository,
+    val entitlementRepository: EntitlementRepository,
+    val proStore: ProStore,
+    val billingStartupCheck: BillingStartupCheck,
     val photoImportQueue: PhotoImportQueue,
+    val cardFormatStore: CardFormatStore,
     private val ioDispatcher: CoroutineDispatcher,
 ) {
     val matchRepository: MatchRepository = roomMatchRepository
@@ -50,6 +66,7 @@ suspend fun createDataLayer(
     context: Context,
     applicationScope: CoroutineScope,
     ioDispatcher: CoroutineDispatcher,
+    currentActivity: () -> Activity?,
 ): DataLayer {
     val appContext = context.applicationContext
     val database = createPicklelogDatabase(appContext, ioDispatcher)
@@ -57,6 +74,14 @@ suspend fun createDataLayer(
     val photoStore = PhotoStore(appContext.filesDir)
     val profileStore = createUserProfileDataStore(appContext, applicationScope + ioDispatcher)
     val matchRepository = RoomMatchRepository(database, photoStore, ioDispatcher)
+    val billing = BillingClientWrapper(appContext)
+    val entitlements =
+        PlayEntitlementRepository(
+            local = DataStoreEntitlementRepository(profileStore),
+            gateway = billing,
+            acknowledger = PurchaseAcknowledger(billing),
+            clock = Clock.System,
+        )
     val resolver = appContext.contentResolver
     val importer =
         QueuedPhotoImporter(
@@ -74,7 +99,11 @@ suspend fun createDataLayer(
         matchSortStore = DataStoreMatchSortStore(preferences),
         photoStore = photoStore,
         profileRepository = DataStoreProfileRepository(profileStore),
+        entitlementRepository = entitlements,
+        proStore = PlayProStore(billing, entitlements) { currentActivity()?.let { billing.launchProPurchase(it) } },
+        billingStartupCheck = BillingStartupCheck(entitlements, billing, applicationScope),
         photoImportQueue = importer,
+        cardFormatStore = DataStoreCardFormatStore(preferences),
         ioDispatcher = ioDispatcher,
     )
 }
