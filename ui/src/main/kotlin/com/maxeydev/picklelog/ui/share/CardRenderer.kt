@@ -32,7 +32,7 @@ class CardRenderer(
         }
 
     private suspend fun renderOnMainThread(data: CardData): CardRenderResult {
-        val card = warmer.obtain()
+        val card = warmer.obtain(data.ratio)
         val loaded = withTimeoutOrNull(TEMPLATE_TIMEOUT_MILLIS) { runCatching { card.awaitTemplateLoaded() } }
         if (loaded == null || loaded.isFailure) {
             warmer.discard()
