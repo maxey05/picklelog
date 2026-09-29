@@ -2,6 +2,8 @@ package com.maxeydev.picklelog.ui.share
 
 import com.maxeydev.picklelog.domain.match.Match
 import com.maxeydev.picklelog.domain.match.MatchResult
+import com.maxeydev.picklelog.domain.share.CardFormat
+import com.maxeydev.picklelog.domain.share.CardLayout
 import com.maxeydev.picklelog.domain.streak.StreakResult
 
 fun buildCardData(
@@ -10,6 +12,7 @@ fun buildCardData(
     streak: StreakResult,
     photoDataUri: String?,
     labels: CardLabels,
+    format: CardFormat = CardFormat.DEFAULT,
 ): CardData =
     CardData(
         brand = labels.brand,
@@ -22,5 +25,7 @@ fun buildCardData(
         score = labels.score(match.games.sortedBy { it.gameNumber }),
         location = match.location?.trim()?.takeIf { it.isNotEmpty() },
         streak = labels.streak(streak.current),
-        photo = photoDataUri,
+        photo = photoDataUri?.takeIf { format.layoutFor(hasPhoto = true) == CardLayout.PHOTO },
+        ratio = format.ratio,
+        theme = format.theme,
     )
