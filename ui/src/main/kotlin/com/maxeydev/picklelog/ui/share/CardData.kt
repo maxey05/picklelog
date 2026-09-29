@@ -1,5 +1,7 @@
 package com.maxeydev.picklelog.ui.share
 
+import com.maxeydev.picklelog.domain.share.CardRatio
+import com.maxeydev.picklelog.domain.share.CardTheme
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -15,4 +17,6 @@ data class CardData(
     val location: String? = null,
     val streak: String? = null,
     val photo: String? = null,
+    val ratio: CardRatio = CardRatio.TALL,
+    val theme: CardTheme = CardTheme.DARK,
 )
