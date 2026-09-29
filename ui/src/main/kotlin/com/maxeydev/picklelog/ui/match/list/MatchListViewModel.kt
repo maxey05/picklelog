@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.maxeydev.picklelog.domain.entitlement.CapWarning
 import com.maxeydev.picklelog.domain.match.FilterKind
 import com.maxeydev.picklelog.domain.match.FilterState
 import com.maxeydev.picklelog.domain.match.FreeTextField
@@ -17,6 +18,7 @@ import com.maxeydev.picklelog.domain.match.MatchSort
 import com.maxeydev.picklelog.domain.match.MatchSortStore
 import com.maxeydev.picklelog.domain.match.SearchTerm
 import com.maxeydev.picklelog.domain.person.PersonRepository
+import com.maxeydev.picklelog.domain.profile.EntitlementRepository
 import com.maxeydev.picklelog.ui.PicklelogDependencies
 import com.maxeydev.picklelog.ui.navigation.JUST_SAVED_MATCH_ID_KEY
 import kotlinx.coroutines.CoroutineDispatcher
@@ -42,6 +44,7 @@ const val MATCH_LIST_PREFETCH_DISTANCE = 15
 const val SEARCH_DEBOUNCE_MILLIS = 300L
 const val FILTER_STATE_KEY = "match_list_filter"
 const val SEARCH_TEXT_KEY = "match_list_search"
+const val CAP_WARNING_DISMISSED_KEY = "cap_warning_dismissed"
 private const val STOP_TIMEOUT_MILLIS = 5_000L
 
 private data class ListQuery(
@@ -55,11 +58,17 @@ private data class FilterChoices(
     val locations: List<String>,
 )
 
+private data class CapBanner(
+    val warning: CapWarning,
+    val remainingFreeMatches: Int,
+)
+
 class MatchListViewModel(
     private val savedStateHandle: SavedStateHandle,
     private val matchRepository: MatchRepository,
     private val personRepository: PersonRepository,
     private val matchSortStore: MatchSortStore,
+    entitlementRepository: EntitlementRepository,
     private val photoFile: (String) -> File,
     defaultDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
@@ -104,16 +113,31 @@ class MatchListViewModel(
             )
         }.flowOn(defaultDispatcher)
 
+    private val capBanner: Flow<CapBanner> =
+        combine(
+            matchRepository.observeMatchCount(),
+            entitlementRepository.observeEntitlement(),
+            savedStateHandle.getStateFlow<String?>(CAP_WARNING_DISMISSED_KEY, null),
+        ) { savedMatches, entitlement, dismissedName ->
+            val warning = CapWarning.forCount(savedMatches, entitlement)
+            val dismissed = CapWarning.entries.firstOrNull { it.name == dismissedName }
+            val visible = if (dismissed != null && warning.ordinal <= dismissed.ordinal) CapWarning.NONE else warning
+            CapBanner(visible, CapWarning.remainingFreeMatches(savedMatches))
+        }.distinctUntilChanged()
+
     val uiState: StateFlow<MatchListUiState> =
         combine(
             listContent,
             filterChoices,
             savedStateHandle.getStateFlow<String?>(JUST_SAVED_MATCH_ID_KEY, null),
-        ) { state, choices, savedMatchId ->
+            capBanner,
+        ) { state, choices, savedMatchId, banner ->
             state.copy(
                 savedMatchId = savedMatchId,
                 opponentChoices = choices.opponents,
                 locationChoices = choices.locations,
+                capWarning = banner.warning,
+                remainingFreeMatches = banner.remainingFreeMatches,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), MatchListUiState())
 
@@ -126,6 +150,13 @@ class MatchListViewModel(
             return
         }
         pageLimit.compareAndSet(state.pageLimit, state.pageLimit + MATCH_LIST_PAGE_SIZE)
+    }
+
+    fun dismissCapWarning() {
+        val showing = uiState.value.capWarning
+        if (showing != CapWarning.NONE) {
+            savedStateHandle[CAP_WARNING_DISMISSED_KEY] = showing.name
+        }
     }
 
     fun dismissSavedConfirmation() {
@@ -182,6 +213,7 @@ class MatchListViewModel(
                         matchRepository = dependencies.matchRepository,
                         personRepository = dependencies.personRepository,
                         matchSortStore = dependencies.matchSortStore,
+                        entitlementRepository = dependencies.entitlementRepository,
                         photoFile = dependencies::photoFile,
                         defaultDispatcher = dependencies.defaultDispatcher,
                     )
