@@ -1,5 +1,7 @@
 package com.maxeydev.picklelog.ui.navigation
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -7,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -28,10 +31,16 @@ import com.maxeydev.picklelog.ui.match.edit.PhotoPickerActions
 import com.maxeydev.picklelog.ui.match.list.MatchListFilterActions
 import com.maxeydev.picklelog.ui.match.list.MatchListScreen
 import com.maxeydev.picklelog.ui.match.list.MatchListViewModel
+import com.maxeydev.picklelog.ui.paywall.CapWarningBanner
+import com.maxeydev.picklelog.ui.paywall.PaywallScreen
+import com.maxeydev.picklelog.ui.paywall.PaywallViewModel
+import com.maxeydev.picklelog.ui.settings.SettingsScreen
+import com.maxeydev.picklelog.ui.settings.SettingsViewModel
 import com.maxeydev.picklelog.ui.share.ResourceCardLabels
 import com.maxeydev.picklelog.ui.share.ShareIntentLauncher
 import com.maxeydev.picklelog.ui.share.SharePreviewScreen
 import com.maxeydev.picklelog.ui.share.SharePreviewViewModel
+import com.maxeydev.picklelog.ui.share.VariantPickerActions
 import kotlinx.coroutines.launch
 import java.io.IOException
 
@@ -52,10 +61,18 @@ fun PicklelogNavHost(
             MatchListScreen(
                 state = state,
                 dashboard = {
-                    DashboardHeader(
-                        state = dashboardState,
-                        onOpenStats = { navController.navigate(StatsRoute) },
-                    )
+                    Column {
+                        CapWarningBanner(
+                            warning = state.capWarning,
+                            remainingFreeMatches = state.remainingFreeMatches,
+                            onDismiss = viewModel::dismissCapWarning,
+                            modifier = Modifier.padding(horizontal = 16.dp).padding(top = 8.dp),
+                        )
+                        DashboardHeader(
+                            state = dashboardState,
+                            onOpenStats = { navController.navigate(StatsRoute) },
+                        )
+                    }
                 },
                 onNewMatch = { navController.navigate(MatchEditRoute()) },
                 onOpenMatch = { matchId -> navController.navigate(MatchDetailRoute(matchId)) },
@@ -65,6 +82,7 @@ fun PicklelogNavHost(
                     navController.navigate(MatchEditRoute(logAnotherFrom = savedMatchId))
                 },
                 onSavedConfirmationDismissed = viewModel::dismissSavedConfirmation,
+                onOpenSettings = { navController.navigate(SettingsRoute) },
                 filterActions =
                     remember(viewModel) {
                         MatchListFilterActions(
@@ -112,11 +130,51 @@ fun PicklelogNavHost(
                     }
                 },
                 onRetry = viewModel::retry,
+                variantActions =
+                    remember(viewModel) {
+                        VariantPickerActions(
+                            onRatioSelected = viewModel::selectRatio,
+                            onThemeSelected = viewModel::selectTheme,
+                            onLayoutSelected = viewModel::selectLayout,
+                        )
+                    },
+            )
+        }
+        composable<PaywallRoute> {
+            val viewModel: PaywallViewModel = viewModel(factory = PaywallViewModel.factory(dependencies))
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+            LaunchedEffect(state.isUnlocked) {
+                if (state.isUnlocked) {
+                    navController.popBackStack()
+                }
+            }
+            PaywallScreen(
+                state = state,
+                onBuy = viewModel::buy,
+                onRestore = viewModel::restore,
+                onRetryPrice = viewModel::retryPrice,
+                onClose = { navController.popBackStack() },
+            )
+        }
+        composable<SettingsRoute> {
+            val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.factory(dependencies))
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+            SettingsScreen(
+                state = state,
+                onBack = { navController.popBackStack() },
+                onSeePro = { navController.navigate(PaywallRoute) },
+                onRestore = viewModel::restore,
             )
         }
         composable<MatchEditRoute> {
             val viewModel: MatchEditViewModel = viewModel(factory = MatchEditViewModel.factory(dependencies))
             val state by viewModel.uiState.collectAsStateWithLifecycle()
+            LaunchedEffect(state.isPaywallRequested) {
+                if (state.isPaywallRequested) {
+                    viewModel.paywallOpened()
+                    navController.navigate(PaywallRoute)
+                }
+            }
             LaunchedEffect(state.isFinished) {
                 if (state.isFinished) {
                     state.savedNewMatchId?.let { savedMatchId ->
@@ -162,6 +220,11 @@ fun PicklelogNavHost(
                             ),
                         onSave = viewModel::save,
                         onClose = { navController.popBackStack() },
+                        onUpgradePromptDismissed = viewModel::dismissUpgradePrompt,
+                        onSeePro = {
+                            viewModel.dismissUpgradePrompt()
+                            navController.navigate(PaywallRoute)
+                        },
                     )
                 }
             MatchEditScreen(state = state, actions = actions)
