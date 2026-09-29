@@ -5,10 +5,13 @@ package com.maxeydev.picklelog.ui.match.edit
 import androidx.lifecycle.SavedStateHandle
 import com.maxeydev.picklelog.domain.datetime.AppDate
 import com.maxeydev.picklelog.domain.datetime.AppInstant
+import com.maxeydev.picklelog.domain.entitlement.CanAddMatch
+import com.maxeydev.picklelog.domain.entitlement.CanAddPhoto
 import com.maxeydev.picklelog.domain.match.Match
 import com.maxeydev.picklelog.domain.match.MatchFormat
 import com.maxeydev.picklelog.domain.match.MatchResult
 import com.maxeydev.picklelog.domain.person.Person
+import com.maxeydev.picklelog.ui.fakes.FakeEntitlementRepository
 import com.maxeydev.picklelog.ui.fakes.FakeLastUsedFormatStore
 import com.maxeydev.picklelog.ui.fakes.FakeMatchRepository
 import com.maxeydev.picklelog.ui.fakes.FakePersonRepository
@@ -37,6 +40,8 @@ import kotlin.uuid.Uuid
 private const val PAST_DEBOUNCE = SUGGESTION_DEBOUNCE_MILLIS + 50
 
 class MatchEditSuggestionsTest {
+    private val proEntitlement = FakeEntitlementRepository(isPro = true)
+
     private val dispatcher = UnconfinedTestDispatcher()
     private val clock = FixedClock(Instant.parse("2026-09-24T12:30:45Z"))
     private lateinit var matches: FakeMatchRepository
@@ -61,6 +66,8 @@ class MatchEditSuggestionsTest {
             personRepository = people,
             lastUsedFormatStore = FakeLastUsedFormatStore(),
             photoImportQueue = FakePhotoImportQueue(),
+            canAddMatch = CanAddMatch(matches, proEntitlement),
+            canAddPhoto = CanAddPhoto(proEntitlement),
             photoFile = { File("/files", it) },
             clock = clock,
             timeZone = { TimeZone.of("Asia/Manila") },
