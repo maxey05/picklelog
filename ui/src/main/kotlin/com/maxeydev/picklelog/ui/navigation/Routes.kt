@@ -26,6 +26,12 @@ data class MatchDetailRoute(
 data object StatsRoute
 
 @Serializable
+data object PaywallRoute
+
+@Serializable
+data object SettingsRoute
+
+@Serializable
 data class ShareRoute(
     val matchId: String,
 )
