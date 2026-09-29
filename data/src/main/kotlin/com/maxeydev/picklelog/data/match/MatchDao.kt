@@ -136,6 +136,9 @@ interface MatchDao {
     ): Flow<List<MatchStatRowEntity>>
 
     @Transaction
+    @Query("SELECT COUNT(*) FROM `match`")
+    fun observeMatchCount(): Flow<Int>
+
     @Query("SELECT * FROM `match` WHERE id = :id")
     fun observeById(id: String): Flow<MatchWithRelationsEntity?>
 
