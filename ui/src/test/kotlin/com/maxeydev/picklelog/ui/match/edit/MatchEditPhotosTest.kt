@@ -10,11 +10,14 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.maxeydev.picklelog.domain.datetime.AppDate
 import com.maxeydev.picklelog.domain.datetime.AppInstant
+import com.maxeydev.picklelog.domain.entitlement.CanAddMatch
+import com.maxeydev.picklelog.domain.entitlement.CanAddPhoto
 import com.maxeydev.picklelog.domain.match.Match
 import com.maxeydev.picklelog.domain.match.MatchFormat
 import com.maxeydev.picklelog.domain.match.MatchResult
 import com.maxeydev.picklelog.domain.photo.ImportedPhoto
 import com.maxeydev.picklelog.domain.photo.PhotoRef
+import com.maxeydev.picklelog.ui.fakes.FakeEntitlementRepository
 import com.maxeydev.picklelog.ui.fakes.FakeLastUsedFormatStore
 import com.maxeydev.picklelog.ui.fakes.FakeMatchRepository
 import com.maxeydev.picklelog.ui.fakes.FakePersonRepository
@@ -40,6 +43,8 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 class MatchEditPhotosTest {
+    private val proEntitlement = FakeEntitlementRepository(isPro = true)
+
     private val clock = FixedClock(Instant.parse("2026-09-24T12:30:45Z"))
     private val queue = FakePhotoImportQueue()
     private lateinit var matches: FakeMatchRepository
@@ -62,6 +67,8 @@ class MatchEditPhotosTest {
             personRepository = FakePersonRepository(),
             lastUsedFormatStore = FakeLastUsedFormatStore(),
             photoImportQueue = queue,
+            canAddMatch = CanAddMatch(matches, proEntitlement),
+            canAddPhoto = CanAddPhoto(proEntitlement),
             photoFile = { File("/files", it) },
             clock = clock,
             timeZone = { TimeZone.of("Asia/Manila") },
@@ -238,6 +245,8 @@ class MatchEditPhotosTest {
                 personRepository = FakePersonRepository(),
                 lastUsedFormatStore = FakeLastUsedFormatStore(),
                 photoImportQueue = restoredQueue,
+                canAddMatch = CanAddMatch(matches, proEntitlement),
+                canAddPhoto = CanAddPhoto(proEntitlement),
                 photoFile = { File("/files", it) },
                 clock = clock,
                 timeZone = { TimeZone.of("Asia/Manila") },
