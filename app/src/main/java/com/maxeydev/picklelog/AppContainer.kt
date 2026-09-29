@@ -4,12 +4,15 @@ import android.content.Context
 import androidx.annotation.MainThread
 import com.maxeydev.picklelog.data.DataLayer
 import com.maxeydev.picklelog.data.photo.PhotoStore
+import com.maxeydev.picklelog.domain.billing.ProStore
 import com.maxeydev.picklelog.domain.match.LastUsedFormatStore
 import com.maxeydev.picklelog.domain.match.MatchRepository
 import com.maxeydev.picklelog.domain.match.MatchSortStore
 import com.maxeydev.picklelog.domain.person.PersonRepository
 import com.maxeydev.picklelog.domain.photo.PhotoImportQueue
+import com.maxeydev.picklelog.domain.profile.EntitlementRepository
 import com.maxeydev.picklelog.domain.profile.ProfileRepository
+import com.maxeydev.picklelog.domain.share.CardFormatStore
 import com.maxeydev.picklelog.ui.PicklelogDependencies
 import com.maxeydev.picklelog.ui.common.createCaptureUri
 import com.maxeydev.picklelog.ui.share.CardRenderer
@@ -32,7 +35,10 @@ class AppContainer(
     override val lastUsedFormatStore: LastUsedFormatStore = dataLayer.lastUsedFormatStore
     override val matchSortStore: MatchSortStore = dataLayer.matchSortStore
     override val profileRepository: ProfileRepository = dataLayer.profileRepository
+    override val entitlementRepository: EntitlementRepository = dataLayer.entitlementRepository
+    override val proStore: ProStore = dataLayer.proStore
     override val photoImportQueue: PhotoImportQueue = dataLayer.photoImportQueue
+    override val cardFormatStore: CardFormatStore = dataLayer.cardFormatStore
     override val clock: Clock = Clock.System
     override val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
     override val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
