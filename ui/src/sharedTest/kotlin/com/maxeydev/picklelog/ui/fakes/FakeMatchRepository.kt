@@ -73,6 +73,8 @@ class FakeMatchRepository(
 
     override fun observeById(id: Uuid): Flow<Match?> = matches.map { byId -> byId[id] }
 
+    override fun observeMatchCount(): Flow<Int> = matches.map { byId -> byId.size }
+
     fun observeAllMatches(): Flow<List<Match>> = matches.map { byId -> byId.values.toList() }
 
     override fun observePriorValues(field: FreeTextField): Flow<List<FreeTextUsage>> =
