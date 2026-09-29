@@ -10,6 +10,7 @@ import android.webkit.CookieManager
 import android.webkit.WebSettings
 import android.webkit.WebView
 import androidx.annotation.MainThread
+import com.maxeydev.picklelog.domain.share.CardRatio
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
@@ -17,7 +18,8 @@ import kotlin.coroutines.resume
 
 const val CARD_TEMPLATE_URL = "file:///android_asset/card/index.html"
 const val CARD_WIDTH_PX = 1080
-const val CARD_HEIGHT_PX = 1920
+const val TALL_CARD_HEIGHT_PX = 1920
+const val SQUARE_CARD_HEIGHT_PX = 1080
 private const val FULL_TEXT_SIZE_PERCENT = 100
 private const val VISUAL_STATE_TIMEOUT_MILLIS = 1_000L
 
@@ -141,3 +143,10 @@ class CardWebView(
         }
     }
 }
+
+val CardRatio.heightPx: Int
+    get() =
+        when (this) {
+            CardRatio.TALL -> TALL_CARD_HEIGHT_PX
+            CardRatio.SQUARE -> SQUARE_CARD_HEIGHT_PX
+        }
