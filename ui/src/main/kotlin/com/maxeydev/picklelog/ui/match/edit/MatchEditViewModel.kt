@@ -11,6 +11,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.maxeydev.picklelog.domain.datetime.AppDate
 import com.maxeydev.picklelog.domain.datetime.AppTime
+import com.maxeydev.picklelog.domain.entitlement.CanAddMatch
+import com.maxeydev.picklelog.domain.entitlement.CanAddPhoto
 import com.maxeydev.picklelog.domain.match.FreeTextField
 import com.maxeydev.picklelog.domain.match.LastUsedFormatStore
 import com.maxeydev.picklelog.domain.match.Match
@@ -29,6 +31,7 @@ import com.maxeydev.picklelog.ui.PicklelogDependencies
 import com.maxeydev.picklelog.ui.common.SuggestionUiState
 import com.maxeydev.picklelog.ui.navigation.LOG_ANOTHER_FROM_ARGUMENT
 import com.maxeydev.picklelog.ui.navigation.MATCH_ID_ARGUMENT
+import com.maxeydev.picklelog.ui.paywall.UpgradeReason
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -58,6 +61,8 @@ import kotlin.uuid.Uuid
 
 private const val DRAFT_KEY = "match_edit_draft"
 
+private const val SAVE_AFTER_UNLOCK_KEY = "match_edit_save_after_unlock"
+
 private val draftJson = Json { ignoreUnknownKeys = true }
 
 const val SUGGESTION_DEBOUNCE_MILLIS = 150L
@@ -81,6 +86,8 @@ class MatchEditViewModel(
     private val personRepository: PersonRepository,
     private val lastUsedFormatStore: LastUsedFormatStore,
     private val photoImportQueue: PhotoImportQueue,
+    private val canAddMatch: CanAddMatch,
+    private val canAddPhoto: CanAddPhoto,
     private val photoFile: (String) -> File,
     private val clock: Clock,
     private val timeZone: () -> TimeZone,
@@ -96,6 +103,8 @@ class MatchEditViewModel(
     private val suggestionInput = MutableStateFlow<SuggestionInput?>(null)
     private var suggestionResult: SuggestionResult? = null
     private var hasPhotoError = false
+    private var upgradePrompt: UpgradeReason? = null
+    private var isPaywallRequested = false
     private val photoWatchers = mutableMapOf<String, Job>()
 
     private val mutableUiState = MutableStateFlow(renderState())
@@ -106,6 +115,15 @@ class MatchEditViewModel(
             viewModelScope.launch { loadInitialDraft() }
         } else {
             resumePendingPhotos()
+        }
+        viewModelScope.launch {
+            val waitingForUnlock = savedStateHandle.getStateFlow(SAVE_AFTER_UNLOCK_KEY, false)
+            combine(waitingForUnlock, canAddMatch.observe()) { waiting, allowed -> waiting && allowed }
+                .filter { it }
+                .collect {
+                    savedStateHandle[SAVE_AFTER_UNLOCK_KEY] = false
+                    save()
+                }
         }
         viewModelScope.launch {
             observeSuggestions().collect { result ->
@@ -219,6 +237,16 @@ class MatchEditViewModel(
         mutableUiState.value = renderState()
     }
 
+    fun dismissUpgradePrompt() {
+        upgradePrompt = null
+        mutableUiState.value = renderState()
+    }
+
+    fun paywallOpened() {
+        isPaywallRequested = false
+        mutableUiState.value = renderState()
+    }
+
     fun save() {
         val current = draft ?: return
         if (!current.canSave() || isSaving || isFinished) {
@@ -227,6 +255,13 @@ class MatchEditViewModel(
         isSaving = true
         mutableUiState.value = renderState()
         viewModelScope.launch {
+            if (current.isNew && !canAddMatch()) {
+                isSaving = false
+                isPaywallRequested = true
+                savedStateHandle[SAVE_AFTER_UNLOCK_KEY] = true
+                mutableUiState.value = renderState()
+                return@launch
+            }
             val matchId = Uuid.parse(current.matchId)
             matchRepository.saveMatch(
                 buildMatch(current),
@@ -284,13 +319,27 @@ class MatchEditViewModel(
     }
 
     private fun addPhotos(sources: List<PhotoSource>) {
-        val current = draft ?: return
-        if (isSaving || isFinished || sources.isEmpty()) {
+        if (sources.isEmpty()) {
             return
         }
-        val added = sources.map(PhotoDraft::importing)
-        publish(current.withPhotosAdded(added))
-        added.forEach(::startImport)
+        viewModelScope.launch {
+            val current = draft ?: return@launch
+            if (isSaving || isFinished) {
+                return@launch
+            }
+            val remaining = canAddPhoto.remainingFor(current.photos.size)
+            val accepted = sources.take(remaining)
+            if (accepted.size < sources.size) {
+                upgradePrompt = UpgradeReason.PHOTO_LIMIT
+            }
+            if (accepted.isEmpty()) {
+                mutableUiState.value = renderState()
+                return@launch
+            }
+            val added = accepted.map(PhotoDraft::importing)
+            publish(current.withPhotosAdded(added))
+            added.forEach(::startImport)
+        }
     }
 
     private fun resumePendingPhotos() {
@@ -366,6 +415,8 @@ class MatchEditViewModel(
             savedNewMatchId = savedNewMatchId,
             photoFilePath = { photoFile(it).path },
             hasPhotoError = hasPhotoError,
+            upgradePrompt = upgradePrompt,
+            isPaywallRequested = isPaywallRequested,
         ) ?: MatchEditUiState(isLoading = !isFinished, isFinished = isFinished)
 
     private fun visibleSuggestions(): List<SuggestionUiState> {
@@ -509,6 +560,8 @@ class MatchEditViewModel(
                         personRepository = dependencies.personRepository,
                         lastUsedFormatStore = dependencies.lastUsedFormatStore,
                         photoImportQueue = dependencies.photoImportQueue,
+                        canAddMatch = CanAddMatch(dependencies.matchRepository, dependencies.entitlementRepository),
+                        canAddPhoto = CanAddPhoto(dependencies.entitlementRepository),
                         photoFile = dependencies::photoFile,
                         clock = dependencies.clock,
                         timeZone = dependencies::currentTimeZone,
