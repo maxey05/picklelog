@@ -2,6 +2,7 @@
 
 package com.maxeydev.picklelog.ui.match.list
 
+import com.maxeydev.picklelog.domain.entitlement.CapWarning
 import com.maxeydev.picklelog.domain.match.FilterState
 import com.maxeydev.picklelog.domain.match.MatchSort
 import kotlin.uuid.ExperimentalUuidApi
@@ -22,6 +23,8 @@ data class MatchListUiState(
     val appliedSearch: String? = null,
     val opponentChoices: List<OpponentChoice> = emptyList(),
     val locationChoices: List<String> = emptyList(),
+    val capWarning: CapWarning = CapWarning.NONE,
+    val remainingFreeMatches: Int = 0,
 ) {
     val canLoadMore: Boolean
         get() = pageLimit > 0 && matches.size >= pageLimit
