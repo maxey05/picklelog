@@ -6,6 +6,7 @@ import com.maxeydev.picklelog.domain.match.MatchResult
 import com.maxeydev.picklelog.domain.match.MatchSort
 
 object MatchListTestTags {
+    const val SETTINGS = "match_list_settings"
     const val NEW_MATCH = "match_list_new_match"
     const val LIST = "match_list"
     const val EMPTY_STATE = "match_list_empty"
