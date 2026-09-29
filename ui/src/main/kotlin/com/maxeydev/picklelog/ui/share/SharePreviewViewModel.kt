@@ -14,14 +14,21 @@ import com.maxeydev.picklelog.domain.match.FilterState
 import com.maxeydev.picklelog.domain.match.MatchRepository
 import com.maxeydev.picklelog.domain.photo.primaryPhoto
 import com.maxeydev.picklelog.domain.profile.ProfileRepository
+import com.maxeydev.picklelog.domain.share.CardFormat
+import com.maxeydev.picklelog.domain.share.CardFormatStore
+import com.maxeydev.picklelog.domain.share.CardLayout
+import com.maxeydev.picklelog.domain.share.CardRatio
+import com.maxeydev.picklelog.domain.share.CardTheme
 import com.maxeydev.picklelog.domain.streak.StreakEngine
 import com.maxeydev.picklelog.ui.PicklelogDependencies
 import com.maxeydev.picklelog.ui.navigation.MATCH_ID_ARGUMENT
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -33,6 +40,7 @@ class SharePreviewViewModel(
     savedStateHandle: SavedStateHandle,
     private val matchRepository: MatchRepository,
     private val profileRepository: ProfileRepository,
+    private val formatStore: CardFormatStore,
     private val streakEngine: StreakEngine,
     private val photoFile: (String) -> File,
     private val renderer: CardRendering,
@@ -49,45 +57,83 @@ class SharePreviewViewModel(
     private val mutableUiState = MutableStateFlow(SharePreviewUiState())
     val uiState: StateFlow<SharePreviewUiState> = mutableUiState.asStateFlow()
 
+    private var renderJob: Job? = null
+
     init {
-        render()
+        viewModelScope.launch {
+            render(formatStore.observeFormat().first())
+        }
     }
 
     fun reportShareFailed() {
-        mutableUiState.value = mutableUiState.value.copy(hasShareFailed = true)
+        mutableUiState.update { it.copy(hasShareFailed = true) }
     }
 
     fun retry() {
         if (mutableUiState.value.isRendering) {
             return
         }
-        render()
+        render(mutableUiState.value.format)
     }
 
-    private fun render() {
-        mutableUiState.value = SharePreviewUiState(isRendering = true)
-        viewModelScope.launch {
-            val match = matchRepository.observeById(matchId).first()
-            if (match == null) {
-                mutableUiState.value = SharePreviewUiState(isRendering = false, isGone = true)
-                return@launch
-            }
-            val profile = profileRepository.observeProfile().first()
-            val history = matchRepository.observeStatLines(FilterState.NONE).first()
-            val streak = streakEngine.compute(history.map { it.date })
-            val photo = match.photos.primaryPhoto()?.let { loadPhotoDataUri(photoFile(it.relativePath)) }
-            val data = buildCardData(match, profile.displayName, streak, photo, labels)
-            mutableUiState.value =
-                when (val result = renderer.render(data)) {
-                    is CardRenderResult.Rendered ->
-                        SharePreviewUiState(
-                            isRendering = false,
-                            card = result.bitmap,
-                            cardDescription = describe(data),
-                        )
-                    is CardRenderResult.Failed -> SharePreviewUiState(isRendering = false, hasFailed = true)
-                }
+    fun selectRatio(ratio: CardRatio) {
+        changeFormat(mutableUiState.value.format.copy(ratio = ratio))
+    }
+
+    fun selectTheme(theme: CardTheme) {
+        changeFormat(mutableUiState.value.format.copy(theme = theme))
+    }
+
+    fun selectLayout(layout: CardLayout) {
+        val override = if (layout == CardLayout.NO_PHOTO) CardLayout.NO_PHOTO else null
+        changeFormat(mutableUiState.value.format.copy(layoutOverride = override))
+    }
+
+    private fun changeFormat(format: CardFormat) {
+        if (format == mutableUiState.value.format) {
+            return
         }
+        viewModelScope.launch { formatStore.saveFormat(format) }
+        render(format)
+    }
+
+    private fun render(format: CardFormat) {
+        renderJob?.cancel()
+        mutableUiState.update {
+            it.copy(isRendering = true, hasFailed = false, hasShareFailed = false, format = format)
+        }
+        renderJob =
+            viewModelScope.launch {
+                val match = matchRepository.observeById(matchId).first()
+                if (match == null) {
+                    mutableUiState.update { it.copy(isRendering = false, isGone = true) }
+                    return@launch
+                }
+                val profile = profileRepository.observeProfile().first()
+                val history = matchRepository.observeStatLines(FilterState.NONE).first()
+                val streak = streakEngine.compute(history.map { it.date })
+                val primary = match.photos.primaryPhoto()
+                val layout = format.layoutFor(hasPhoto = primary != null)
+                val photo =
+                    primary
+                        ?.takeIf { layout == CardLayout.PHOTO }
+                        ?.let { loadPhotoDataUri(photoFile(it.relativePath)) }
+                val data = buildCardData(match, profile.displayName, streak, photo, labels, format)
+                val result = renderer.render(data)
+                mutableUiState.update { current ->
+                    when (result) {
+                        is CardRenderResult.Rendered ->
+                            current.copy(
+                                isRendering = false,
+                                card = result.bitmap,
+                                cardDescription = describe(data),
+                                hasPhoto = primary != null,
+                            )
+                        is CardRenderResult.Failed ->
+                            current.copy(isRendering = false, card = null, hasFailed = true, hasPhoto = primary != null)
+                    }
+                }
+            }
     }
 
     private suspend fun loadPhotoDataUri(file: File): String? =
@@ -122,6 +168,7 @@ class SharePreviewViewModel(
                         savedStateHandle = createSavedStateHandle(),
                         matchRepository = dependencies.matchRepository,
                         profileRepository = dependencies.profileRepository,
+                        formatStore = dependencies.cardFormatStore,
                         streakEngine = StreakEngine(dependencies.clock, dependencies::currentTimeZone),
                         photoFile = dependencies::photoFile,
                         renderer = dependencies.cardRenderer,
