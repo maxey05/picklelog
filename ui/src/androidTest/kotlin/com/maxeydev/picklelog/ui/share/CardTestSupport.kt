@@ -6,6 +6,8 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.util.Base64
 import androidx.test.platform.app.InstrumentationRegistry
+import com.maxeydev.picklelog.domain.share.CardRatio
+import com.maxeydev.picklelog.domain.share.CardTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -53,6 +55,8 @@ internal fun sampleCard(
     location: String? = "Ayala Triangle Gardens",
     photo: String? = null,
     isWin: Boolean = true,
+    ratio: CardRatio = CardRatio.TALL,
+    theme: CardTheme = CardTheme.DARK,
 ): CardData =
     CardData(
         brand = "Picklelog",
@@ -66,6 +70,8 @@ internal fun sampleCard(
         location = location,
         streak = "3-week streak",
         photo = photo,
+        ratio = ratio,
+        theme = theme,
     )
 
 private fun channel(value: Int): Double {
@@ -78,12 +84,25 @@ internal fun luminance(pixel: Int): Double =
 
 internal fun contrastAgainstWhite(pixel: Int): Double = 1.05 / (luminance(pixel) + 0.05)
 
+internal fun contrastBetween(
+    first: Int,
+    second: Int,
+): Double {
+    val lighter = maxOf(luminance(first), luminance(second))
+    val darker = minOf(luminance(first), luminance(second))
+    return (lighter + 0.05) / (darker + 0.05)
+}
+
+internal val LIGHT_THEME_TEXT: Int = Color.rgb(0x14, 0x23, 0x1d)
+
+internal fun goldenDirectory(): File = File(targetContext.getExternalFilesDir(null), "card-goldens")
+
 internal fun JSONObject.rect(id: String): JSONObject = getJSONObject("rects").getJSONObject(id)
 
 internal fun saveForReview(
     name: String,
     bitmap: Bitmap,
 ) {
-    val directory = File(targetContext.getExternalFilesDir(null), "card-goldens").apply { mkdirs() }
+    val directory = goldenDirectory().apply { mkdirs() }
     File(directory, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
 }
