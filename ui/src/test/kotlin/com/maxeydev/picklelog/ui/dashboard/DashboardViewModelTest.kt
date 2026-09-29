@@ -12,6 +12,7 @@ import com.maxeydev.picklelog.domain.match.MatchFormat
 import com.maxeydev.picklelog.domain.match.MatchResult
 import com.maxeydev.picklelog.domain.person.Person
 import com.maxeydev.picklelog.domain.streak.StreakEngine
+import com.maxeydev.picklelog.ui.fakes.FakeEntitlementRepository
 import com.maxeydev.picklelog.ui.fakes.FakeMatchRepository
 import com.maxeydev.picklelog.ui.fakes.FakeMatchSortStore
 import com.maxeydev.picklelog.ui.fakes.FakePersonRepository
@@ -101,6 +102,7 @@ class DashboardViewModelTest {
                 matchRepository = dashboardMatches,
                 personRepository = people,
                 matchSortStore = FakeMatchSortStore(),
+                entitlementRepository = FakeEntitlementRepository(),
                 photoFile = { File(it) },
                 defaultDispatcher = UnconfinedTestDispatcher(testScheduler),
             )
