@@ -1,11 +1,14 @@
 package com.maxeydev.picklelog.ui
 
+import com.maxeydev.picklelog.domain.billing.ProStore
 import com.maxeydev.picklelog.domain.match.LastUsedFormatStore
 import com.maxeydev.picklelog.domain.match.MatchRepository
 import com.maxeydev.picklelog.domain.match.MatchSortStore
 import com.maxeydev.picklelog.domain.person.PersonRepository
 import com.maxeydev.picklelog.domain.photo.PhotoImportQueue
+import com.maxeydev.picklelog.domain.profile.EntitlementRepository
 import com.maxeydev.picklelog.domain.profile.ProfileRepository
+import com.maxeydev.picklelog.domain.share.CardFormatStore
 import com.maxeydev.picklelog.ui.share.CardRendering
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.datetime.TimeZone
@@ -18,8 +21,11 @@ interface PicklelogDependencies {
     val lastUsedFormatStore: LastUsedFormatStore
     val matchSortStore: MatchSortStore
     val profileRepository: ProfileRepository
+    val entitlementRepository: EntitlementRepository
+    val proStore: ProStore
     val photoImportQueue: PhotoImportQueue
     val cardRenderer: CardRendering
+    val cardFormatStore: CardFormatStore
     val clock: Clock
     val defaultDispatcher: CoroutineDispatcher
     val ioDispatcher: CoroutineDispatcher
