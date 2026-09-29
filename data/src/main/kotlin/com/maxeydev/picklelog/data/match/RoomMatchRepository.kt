@@ -102,6 +102,8 @@ class RoomMatchRepository(
             .map { row -> row?.toDomain() }
             .flowOn(ioDispatcher)
 
+    override fun observeMatchCount(): Flow<Int> = matchDao.observeMatchCount().flowOn(ioDispatcher)
+
     override fun observePriorValues(field: FreeTextField): Flow<List<FreeTextUsage>> {
         val rows =
             when (field) {
