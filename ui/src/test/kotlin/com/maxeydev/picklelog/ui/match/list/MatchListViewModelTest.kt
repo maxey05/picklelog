@@ -5,6 +5,7 @@ package com.maxeydev.picklelog.ui.match.list
 import androidx.lifecycle.SavedStateHandle
 import com.maxeydev.picklelog.domain.datetime.AppDate
 import com.maxeydev.picklelog.domain.datetime.AppInstant
+import com.maxeydev.picklelog.domain.entitlement.CapWarning
 import com.maxeydev.picklelog.domain.match.FilterKind
 import com.maxeydev.picklelog.domain.match.FilterState
 import com.maxeydev.picklelog.domain.match.Match
@@ -14,6 +15,7 @@ import com.maxeydev.picklelog.domain.match.MatchSort
 import com.maxeydev.picklelog.domain.match.SearchTerm
 import com.maxeydev.picklelog.domain.person.Person
 import com.maxeydev.picklelog.domain.photo.PhotoRef
+import com.maxeydev.picklelog.ui.fakes.FakeEntitlementRepository
 import com.maxeydev.picklelog.ui.fakes.FakeMatchRepository
 import com.maxeydev.picklelog.ui.fakes.FakeMatchSortStore
 import com.maxeydev.picklelog.ui.fakes.FakePersonRepository
@@ -87,6 +89,7 @@ class MatchListViewModelTest {
     private fun TestScope.subscribedViewModel(
         stored: List<Match>,
         knownPeople: List<Person> = emptyList(),
+        entitlements: FakeEntitlementRepository = FakeEntitlementRepository(),
     ): MatchListViewModel {
         matches = FakeMatchRepository(stored)
         people = FakePersonRepository(initial = knownPeople)
@@ -96,6 +99,7 @@ class MatchListViewModelTest {
                 matchRepository = matches,
                 personRepository = people,
                 matchSortStore = sorts,
+                entitlementRepository = entitlements,
                 photoFile = { relativePath -> File(photoRoot, relativePath) },
                 defaultDispatcher = UnconfinedTestDispatcher(testScheduler),
             )
@@ -456,5 +460,47 @@ class MatchListViewModelTest {
 
             assertEquals(listOf(OpponentChoice(ana.id, "Ana"), OpponentChoice(ben.id, "Ben")), state.opponentChoices)
             assertEquals(listOf("Alabang", "Ayala", "bgc"), state.locationChoices)
+        }
+
+    @Test
+    fun `thirty nine matches show no cap warning`() =
+        runTest {
+            val viewModel = subscribedViewModel(List(39) { match(it) })
+
+            assertEquals(CapWarning.NONE, viewModel.uiState.value.capWarning)
+        }
+
+    @Test
+    fun `forty matches show that ten remain and dismissing hides it`() =
+        runTest {
+            val viewModel = subscribedViewModel(List(40) { match(it) })
+
+            assertEquals(CapWarning.APPROACHING, viewModel.uiState.value.capWarning)
+            assertEquals(10, viewModel.uiState.value.remainingFreeMatches)
+
+            viewModel.dismissCapWarning()
+
+            assertEquals(CapWarning.NONE, viewModel.uiState.value.capWarning)
+        }
+
+    @Test
+    fun `a dismissed first warning comes back more prominent at forty eight`() =
+        runTest {
+            val viewModel = subscribedViewModel(List(47) { match(it) })
+            viewModel.dismissCapWarning()
+
+            matches.saveMatch(match(100))
+
+            assertEquals(CapWarning.IMMINENT, viewModel.uiState.value.capWarning)
+            assertEquals(2, viewModel.uiState.value.remainingFreeMatches)
+        }
+
+    @Test
+    fun `pro never sees the cap warning`() =
+        runTest {
+            val viewModel =
+                subscribedViewModel(List(49) { match(it) }, entitlements = FakeEntitlementRepository(isPro = true))
+
+            assertEquals(CapWarning.NONE, viewModel.uiState.value.capWarning)
         }
 }
