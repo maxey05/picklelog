@@ -148,3 +148,90 @@ body {
 [hidden] {
     display: none !important;
 }
+
+#card.square {
+    height: 1080px;
+}
+
+#card.square #top-scrim {
+    display: none;
+}
+
+#card.square #bottom-scrim {
+    height: 100%;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.8) 60%, rgba(0, 0, 0, 0.62) 100%);
+}
+
+#card.square #top {
+    left: 64px;
+    right: 64px;
+    top: 64px;
+}
+
+#card.square #brand {
+    font-size: 36px;
+}
+
+#card.square #name {
+    margin-top: 8px;
+    font-size: 44px;
+}
+
+#card.square #details {
+    left: 64px;
+    right: 64px;
+    bottom: 64px;
+}
+
+#card.square .badge {
+    gap: 12px;
+    padding: 10px 26px;
+    font-size: 44px;
+}
+
+#card.square #meta {
+    margin-top: 24px;
+    font-size: 38px;
+}
+
+#card.square #opponents {
+    margin-top: 16px;
+    font-size: 68px;
+}
+
+#card.square .clamp {
+    -webkit-line-clamp: 2;
+}
+
+#card.square #partner,
+#card.square #location,
+#card.square #streak {
+    margin-top: 12px;
+    font-size: 40px;
+}
+
+#card.square #score {
+    margin-top: 12px;
+    font-size: 48px;
+}
+
+#card.light {
+    color: #14231d;
+    background: linear-gradient(160deg, #f6f3ea 0%, #dcece3 70%);
+}
+
+#card.light #top-scrim {
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.8) 55%, rgba(255, 255, 255, 0) 100%);
+}
+
+#card.light #bottom-scrim {
+    background: linear-gradient(to top, rgba(255, 255, 255, 0.84) 0%, rgba(255, 255, 255, 0.84) 85%, rgba(255, 255, 255, 0) 100%);
+}
+
+#card.light.square #bottom-scrim {
+    background: linear-gradient(to top, rgba(255, 255, 255, 0.84) 0%, rgba(255, 255, 255, 0.84) 60%, rgba(255, 255, 255, 0.66) 100%);
+}
+
+#card.light .badge {
+    border-color: transparent;
+}
