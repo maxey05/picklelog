@@ -40,6 +40,7 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
 
+    implementation(libs.billing.ktx)
     implementation(libs.datastore)
     implementation(libs.datastore.preferences)
     implementation(libs.kotlinx.serialization.json)
