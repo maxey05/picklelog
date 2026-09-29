@@ -24,4 +24,6 @@ class MatchEditActions(
     val photoActions: PhotoPickerActions,
     val onSave: () -> Unit,
     val onClose: () -> Unit,
+    val onUpgradePromptDismissed: () -> Unit = {},
+    val onSeePro: (() -> Unit)? = null,
 )
