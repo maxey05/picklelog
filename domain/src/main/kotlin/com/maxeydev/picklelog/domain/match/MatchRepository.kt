@@ -20,6 +20,8 @@ interface MatchRepository {
 
     fun observeById(id: Uuid): Flow<Match?>
 
+    fun observeMatchCount(): Flow<Int>
+
     fun observePriorValues(field: FreeTextField): Flow<List<FreeTextUsage>>
 
     suspend fun saveMatch(
