@@ -2,12 +2,12 @@ package com.maxeydev.picklelog.ui.share
 
 import android.content.Context
 import androidx.annotation.MainThread
+import com.maxeydev.picklelog.domain.share.CardRatio
 
 class WebViewWarmer(
     context: Context,
     private val templateUrl: String = CARD_TEMPLATE_URL,
-    private val width: Int = CARD_WIDTH_PX,
-    private val height: Int = CARD_HEIGHT_PX,
+    private val warmRatio: CardRatio = CardRatio.TALL,
 ) {
     private val appContext = context.applicationContext
     private var instance: CardWebView? = null
@@ -17,14 +17,15 @@ class WebViewWarmer(
 
     @MainThread
     fun warm() {
-        obtain()
+        obtain(warmRatio)
     }
 
     @MainThread
-    fun obtain(): CardWebView {
-        instance?.takeIf { it.isAlive }?.let { return it }
+    fun obtain(ratio: CardRatio = warmRatio): CardWebView {
+        val height = ratio.heightPx
+        instance?.takeIf { it.isAlive && it.height == height }?.let { return it }
         instance?.destroy()
-        return CardWebView(appContext, templateUrl, width, height).also { instance = it }
+        return CardWebView(appContext, templateUrl, CARD_WIDTH_PX, height).also { instance = it }
     }
 
     @MainThread
