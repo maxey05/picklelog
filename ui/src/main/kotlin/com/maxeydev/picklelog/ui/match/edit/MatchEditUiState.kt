@@ -9,6 +9,7 @@ import com.maxeydev.picklelog.domain.match.crossesMidnight
 import com.maxeydev.picklelog.domain.match.deriveDuration
 import com.maxeydev.picklelog.domain.match.resultAdvisory
 import com.maxeydev.picklelog.ui.common.SuggestionUiState
+import com.maxeydev.picklelog.ui.paywall.UpgradeReason
 import kotlin.time.Duration
 
 data class MatchEditUiState(
@@ -36,6 +37,8 @@ data class MatchEditUiState(
     val savedNewMatchId: String? = null,
     val photos: List<PhotoUiState> = emptyList(),
     val hasPhotoError: Boolean = false,
+    val upgradePrompt: UpgradeReason? = null,
+    val isPaywallRequested: Boolean = false,
 ) {
     fun suggestionsFor(target: SuggestionTarget): List<SuggestionUiState> =
         if (target == suggestionTarget) {
@@ -53,6 +56,8 @@ fun MatchDraft.toUiState(
     savedNewMatchId: String? = null,
     photoFilePath: (String) -> String = { it },
     hasPhotoError: Boolean = false,
+    upgradePrompt: UpgradeReason? = null,
+    isPaywallRequested: Boolean = false,
 ): MatchEditUiState {
     val start = startTime?.let(AppTime::parse)
     val end = endTime?.let(AppTime::parse)
@@ -90,5 +95,7 @@ fun MatchDraft.toUiState(
         savedNewMatchId = savedNewMatchId,
         photos = photos.map { PhotoUiState(key = it.key, filePath = it.relativePath?.let(photoFilePath)) },
         hasPhotoError = hasPhotoError,
+        upgradePrompt = upgradePrompt,
+        isPaywallRequested = isPaywallRequested,
     )
 }
