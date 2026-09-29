@@ -42,6 +42,7 @@ fun SharePreviewScreen(
     onBack: () -> Unit,
     onShare: () -> Unit,
     onRetry: () -> Unit,
+    variantActions: VariantPickerActions,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -109,6 +110,12 @@ fun SharePreviewScreen(
                         )
                 }
             }
+            VariantPicker(
+                format = state.format,
+                layout = state.layout,
+                hasPhoto = state.hasPhoto,
+                actions = variantActions,
+            )
             if (state.hasShareFailed) {
                 Text(
                     text = stringResource(R.string.share_send_failed),
@@ -118,7 +125,7 @@ fun SharePreviewScreen(
             }
             Button(
                 onClick = onShare,
-                enabled = state.card != null,
+                enabled = state.canShare,
                 modifier = Modifier.fillMaxWidth().testTag(ShareTestTags.SHARE),
             ) {
                 Icon(painter = painterResource(R.drawable.ic_share), contentDescription = null)
