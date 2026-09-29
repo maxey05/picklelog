@@ -21,6 +21,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -75,6 +76,7 @@ fun MatchListScreen(
     filterActions: MatchListFilterActions,
     modifier: Modifier = Modifier,
     dashboard: @Composable () -> Unit = {},
+    onOpenSettings: (() -> Unit)? = null,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     var searchText by rememberSaveable { mutableStateOf("") }
@@ -86,7 +88,21 @@ fun MatchListScreen(
     )
     Scaffold(
         modifier = modifier.semantics { testTagsAsResourceId = true },
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.home_title)) }) },
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.home_title)) },
+                actions = {
+                    if (onOpenSettings != null) {
+                        IconButton(onClick = onOpenSettings, modifier = Modifier.testTag(MatchListTestTags.SETTINGS)) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_more_vert),
+                                contentDescription = stringResource(R.string.settings_open),
+                            )
+                        }
+                    }
+                },
+            )
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(
