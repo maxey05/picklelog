@@ -55,6 +55,7 @@ import com.maxeydev.picklelog.ui.match.formatMatchDate
 import com.maxeydev.picklelog.ui.match.resultLabel
 import com.maxeydev.picklelog.ui.match.toUtcEpochMillis
 import com.maxeydev.picklelog.ui.match.utcEpochMillisToAppDate
+import com.maxeydev.picklelog.ui.paywall.UpgradePrompt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -109,6 +110,13 @@ fun MatchEditScreen(
                     Modifier
                         .padding(innerPadding)
                         .consumeWindowInsets(innerPadding),
+            )
+        }
+        state.upgradePrompt?.let { reason ->
+            UpgradePrompt(
+                reason = reason,
+                onDismiss = actions.onUpgradePromptDismissed,
+                onSeePro = actions.onSeePro,
             )
         }
     }
