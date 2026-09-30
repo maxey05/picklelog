@@ -11,13 +11,14 @@ import kotlinx.coroutines.flow.update
 class FakeProfileRepository(
     displayName: String = "",
     isPro: Boolean = false,
+    proSince: AppInstant? = null,
 ) : ProfileRepository {
     private val profile =
         MutableStateFlow(
             UserProfile(
                 displayName = displayName,
                 createdAt = AppInstant.fromEpochMilliseconds(0),
-                entitlement = Entitlement(isPro = isPro),
+                entitlement = Entitlement(isPro = isPro, proSince = proSince),
             ),
         )
 
