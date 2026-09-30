@@ -14,6 +14,8 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertDoesNotExist
+import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -32,6 +34,8 @@ import com.maxeydev.picklelog.domain.match.FilterState
 import com.maxeydev.picklelog.domain.match.Match
 import com.maxeydev.picklelog.domain.match.MatchFormat
 import com.maxeydev.picklelog.domain.match.MatchResult
+import com.maxeydev.picklelog.domain.stats.AdvancedMatchLine
+import com.maxeydev.picklelog.domain.stats.AdvancedStats
 import com.maxeydev.picklelog.domain.stats.BasicStats
 import com.maxeydev.picklelog.domain.stats.WinLoss
 import com.maxeydev.picklelog.domain.streak.StreakResult
@@ -39,6 +43,7 @@ import com.maxeydev.picklelog.ui.fakes.FakeDependencies
 import com.maxeydev.picklelog.ui.fakes.FakeMatchRepository
 import com.maxeydev.picklelog.ui.fakes.FakeProfileRepository
 import com.maxeydev.picklelog.ui.navigation.PicklelogNavHost
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -68,6 +73,10 @@ class DashboardUiTest {
         displayName: String = "Matty",
         stats: BasicStats = record,
         hasAnyMatches: Boolean = true,
+        isPro: Boolean = false,
+        advanced: AdvancedStats = AdvancedStats.EMPTY,
+        peopleNames: Map<Uuid, String> = emptyMap(),
+        skipsHeld: Int = 0,
     ): DashboardUiState =
         DashboardUiState(
             isLoading = false,
@@ -76,7 +85,30 @@ class DashboardUiTest {
             streak = streak,
             hasAnyMatches = hasAnyMatches,
             filter = filter,
+            isPro = isPro,
+            advanced = advanced,
+            peopleNames = peopleNames,
+            skipsHeld = skipsHeld,
         )
+
+    private val dave = Uuid.random()
+    private val casey = Uuid.random()
+    private val names = mapOf(dave to "Dave", casey to "Casey")
+
+    private fun line(
+        date: String,
+        result: MatchResult,
+        vararg opponents: Uuid,
+    ): AdvancedMatchLine =
+        AdvancedMatchLine(
+            date = AppDate.parse(date),
+            format = MatchFormat.SINGLES,
+            result = result,
+            opponentIds = opponents.toList(),
+        )
+
+    private fun advancedOf(vararg lines: AdvancedMatchLine): AdvancedStats =
+        AdvancedStats.from(lines.toList(), AppDate.parse("2026-09-30"))
 
     private fun showHeader(
         state: DashboardUiState,
@@ -209,6 +241,7 @@ class DashboardUiTest {
                 ExpandedStatsScreen(
                     state = state(streak = StreakResult(current = 4, longest = 4)),
                     onBack = {},
+                    onSeePro = {},
                 )
             }
         }
@@ -221,7 +254,7 @@ class DashboardUiTest {
     fun the_stats_screen_shows_a_dash_for_a_format_with_no_matches_and_locked_pro_rows() {
         compose.setContent {
             MaterialTheme {
-                ExpandedStatsScreen(state = state(), onBack = {})
+                ExpandedStatsScreen(state = state(), onBack = {}, onSeePro = {})
             }
         }
 
@@ -231,6 +264,142 @@ class DashboardUiTest {
         compose.onNodeWithTag(DashboardTestTags.STATS_CURRENT_STREAK).assert(hasText("3 weeks", substring = true))
         compose.onNodeWithTag(DashboardTestTags.STATS_LONGEST_STREAK).assert(hasText("5 weeks", substring = true))
         compose.onNodeWithTag(DashboardTestTags.proRow(0)).performScrollToAndAssertLocked()
+    }
+
+    @Test
+    fun a_free_user_sees_a_locked_preview_naming_the_top_opponent_without_the_record() {
+        var openedPro = 0
+        val advanced =
+            advancedOf(
+                line("2026-09-01", MatchResult.WIN, dave),
+                line("2026-09-08", MatchResult.WIN, dave),
+                line("2026-09-15", MatchResult.WIN, dave),
+                line("2026-09-16", MatchResult.LOSS, casey),
+            )
+        compose.setContent {
+            MaterialTheme {
+                ExpandedStatsScreen(
+                    state = state(advanced = advanced, peopleNames = names),
+                    onBack = {},
+                    onSeePro = { openedPro++ },
+                )
+            }
+        }
+
+        compose.onNodeWithTag(DashboardTestTags.STATS_LOCKED_PREVIEW).assertIsDisplayed()
+        val name = compose.onNodeWithTag(DashboardTestTags.STATS_LOCKED_PREVIEW_NAME, useUnmergedTree = true)
+        name.assert(hasText("Your record against Dave"))
+        compose.onNodeWithText("3–0", substring = true, useUnmergedTree = true).assertDoesNotExist()
+        compose.onNodeWithText("100%", substring = true, useUnmergedTree = true).assertDoesNotExist()
+        compose.onNodeWithTag(DashboardTestTags.STATS_LOCKED_PREVIEW).performClick()
+        assertEquals(1, openedPro)
+    }
+
+    @Test
+    fun a_free_user_with_no_named_opponent_sees_no_preview_card() {
+        compose.setContent {
+            MaterialTheme {
+                ExpandedStatsScreen(state = state(), onBack = {}, onSeePro = {})
+            }
+        }
+
+        compose.onAllNodesWithTag(DashboardTestTags.STATS_LOCKED_PREVIEW).assertCountEquals(0)
+        compose.onNodeWithTag(DashboardTestTags.STATS_PRO_SECTION).assertExists()
+    }
+
+    @Test
+    fun a_pro_user_sees_small_samples_as_raw_tallies_and_larger_ones_as_percentages() {
+        val advanced =
+            advancedOf(
+                line("2026-09-01", MatchResult.WIN, dave),
+                line("2026-09-02", MatchResult.WIN, casey),
+                line("2026-09-03", MatchResult.WIN, casey),
+                line("2026-09-04", MatchResult.LOSS, casey),
+            )
+        compose.setContent {
+            MaterialTheme {
+                ExpandedStatsScreen(
+                    state = state(isPro = true, advanced = advanced, peopleNames = names),
+                    onBack = {},
+                    onSeePro = {},
+                )
+            }
+        }
+
+        val group = DashboardTestTags.GROUP_HEAD_TO_HEAD
+        val first = compose.onNodeWithTag(DashboardTestTags.advancedRow(group, 0))
+        first.performScrollTo()
+        first.assert(hasText("Casey", substring = true))
+        first.assert(hasText("67%", substring = true))
+        val second = compose.onNodeWithTag(DashboardTestTags.advancedRow(group, 1))
+        second.performScrollTo()
+        second.assert(hasText("Dave", substring = true))
+        second.assert(hasText("1–0", substring = true))
+        second.assert(hasText("Too few matches", substring = true))
+        compose.onNodeWithText("100%", substring = true, useUnmergedTree = true).assertDoesNotExist()
+        compose.onAllNodesWithTag(DashboardTestTags.STATS_PRO_SECTION).assertCountEquals(0)
+    }
+
+    @Test
+    fun a_pro_user_with_no_matches_sees_one_empty_state_instead_of_empty_charts() {
+        compose.setContent {
+            MaterialTheme {
+                ExpandedStatsScreen(state = state(isPro = true), onBack = {}, onSeePro = {})
+            }
+        }
+
+        compose.onNodeWithTag(DashboardTestTags.STATS_ADVANCED_EMPTY).performScrollTo().assertIsDisplayed()
+        val headToHeadRows = DashboardTestTags.advancedRow(DashboardTestTags.GROUP_HEAD_TO_HEAD, 0)
+        val monthRows = DashboardTestTags.advancedRow(DashboardTestTags.GROUP_MONTH, 0)
+        compose.onAllNodesWithTag(headToHeadRows).assertCountEquals(0)
+        compose.onAllNodesWithTag(monthRows).assertCountEquals(0)
+    }
+
+    @Test
+    fun a_month_with_no_matches_is_a_gap_not_a_zero() {
+        val advanced =
+            advancedOf(
+                line("2026-07-10", MatchResult.WIN, dave),
+                line("2026-09-10", MatchResult.WIN, dave),
+            )
+        compose.setContent {
+            MaterialTheme {
+                ExpandedStatsScreen(
+                    state = state(isPro = true, advanced = advanced, peopleNames = names),
+                    onBack = {},
+                    onSeePro = {},
+                )
+            }
+        }
+
+        val gap = compose.onNodeWithTag(DashboardTestTags.advancedRow(DashboardTestTags.GROUP_MONTH, 1))
+        gap.performScrollTo()
+        gap.assert(hasText("No matches", substring = true))
+        gap.assert(hasText("—", substring = true))
+    }
+
+    @Test
+    fun a_pro_user_sees_how_many_skips_are_held() {
+        compose.setContent {
+            MaterialTheme {
+                ExpandedStatsScreen(state = state(isPro = true, skipsHeld = 1), onBack = {}, onSeePro = {})
+            }
+        }
+
+        val skips = compose.onNodeWithTag(DashboardTestTags.STATS_SKIPS_HELD)
+        skips.performScrollTo()
+        skips.assert(hasText("1 held", substring = true))
+    }
+
+    @Test
+    fun a_free_user_is_not_shown_a_skip_balance() {
+        compose.setContent {
+            MaterialTheme {
+                ExpandedStatsScreen(state = state(), onBack = {}, onSeePro = {})
+            }
+        }
+
+        compose.onAllNodesWithTag(DashboardTestTags.STATS_SKIPS_HELD).assertCountEquals(0)
     }
 
     private fun SemanticsNodeInteraction.performScrollToAndAssertLocked() {
