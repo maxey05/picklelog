@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.annotation.MainThread
 import com.maxeydev.picklelog.data.DataLayer
 import com.maxeydev.picklelog.data.photo.PhotoStore
+import com.maxeydev.picklelog.domain.backup.BackupRepository
 import com.maxeydev.picklelog.domain.billing.ProStore
 import com.maxeydev.picklelog.domain.match.LastUsedFormatStore
 import com.maxeydev.picklelog.domain.match.MatchRepository
@@ -39,6 +40,7 @@ class AppContainer(
     override val proStore: ProStore = dataLayer.proStore
     override val photoImportQueue: PhotoImportQueue = dataLayer.photoImportQueue
     override val cardFormatStore: CardFormatStore = dataLayer.cardFormatStore
+    override val backupRepository: BackupRepository = dataLayer.backupRepository
     override val clock: Clock = Clock.System
     override val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
     override val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
