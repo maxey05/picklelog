@@ -8,4 +8,5 @@ data class SettingsUiState(
     val isRestoring: Boolean = false,
     val restoreMessage: StoreMessage? = null,
     val lastExportAt: AppInstant? = null,
+    val reminderEnabled: Boolean = false,
 )
