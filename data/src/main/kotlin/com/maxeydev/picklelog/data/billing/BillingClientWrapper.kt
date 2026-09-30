@@ -209,6 +209,7 @@ class BillingClientWrapper(
                     else -> PlayPurchaseState.UNSPECIFIED
                 },
             isAcknowledged = purchase.isAcknowledged,
+            purchasedAtMillis = purchase.purchaseTime,
         )
 }
 
