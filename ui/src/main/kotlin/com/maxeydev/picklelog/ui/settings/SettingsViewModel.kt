@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.maxeydev.picklelog.domain.backup.BackupRepository
 import com.maxeydev.picklelog.domain.billing.ProStore
 import com.maxeydev.picklelog.domain.profile.EntitlementRepository
 import com.maxeydev.picklelog.ui.PicklelogDependencies
@@ -18,6 +19,7 @@ import kotlinx.coroutines.launch
 class SettingsViewModel(
     private val proStore: ProStore,
     entitlementRepository: EntitlementRepository,
+    backupRepository: BackupRepository,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = mutableUiState.asStateFlow()
@@ -26,6 +28,11 @@ class SettingsViewModel(
         viewModelScope.launch {
             entitlementRepository.observeEntitlement().collect { entitlement ->
                 mutableUiState.update { it.copy(hasPro = entitlement.isPro) }
+            }
+        }
+        viewModelScope.launch {
+            backupRepository.observeStatus().collect { status ->
+                mutableUiState.update { it.copy(lastExportAt = status.lastExportAt) }
             }
         }
     }
@@ -48,6 +55,7 @@ class SettingsViewModel(
                     SettingsViewModel(
                         proStore = dependencies.proStore,
                         entitlementRepository = dependencies.entitlementRepository,
+                        backupRepository = dependencies.backupRepository,
                     )
                 }
             }
