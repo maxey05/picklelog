@@ -8,6 +8,8 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.maxeydev.picklelog.domain.backup.BackupRepository
 import com.maxeydev.picklelog.domain.billing.ProStore
 import com.maxeydev.picklelog.domain.profile.EntitlementRepository
+import com.maxeydev.picklelog.domain.reminder.ReminderStore
+import com.maxeydev.picklelog.domain.reminder.StreakReminder
 import com.maxeydev.picklelog.ui.PicklelogDependencies
 import com.maxeydev.picklelog.ui.paywall.PaywallViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +22,8 @@ class SettingsViewModel(
     private val proStore: ProStore,
     entitlementRepository: EntitlementRepository,
     backupRepository: BackupRepository,
+    reminderStore: ReminderStore,
+    private val streakReminder: StreakReminder,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = mutableUiState.asStateFlow()
@@ -35,6 +39,19 @@ class SettingsViewModel(
                 mutableUiState.update { it.copy(lastExportAt = status.lastExportAt) }
             }
         }
+        viewModelScope.launch {
+            reminderStore.observe().collect { state ->
+                mutableUiState.update { it.copy(reminderEnabled = state.enabled) }
+            }
+        }
+    }
+
+    fun enableReminder() {
+        viewModelScope.launch { streakReminder.enable() }
+    }
+
+    fun disableReminder() {
+        viewModelScope.launch { streakReminder.disable() }
     }
 
     fun restore() {
@@ -56,6 +73,8 @@ class SettingsViewModel(
                         proStore = dependencies.proStore,
                         entitlementRepository = dependencies.entitlementRepository,
                         backupRepository = dependencies.backupRepository,
+                        reminderStore = dependencies.reminderStore,
+                        streakReminder = dependencies.streakReminder,
                     )
                 }
             }
