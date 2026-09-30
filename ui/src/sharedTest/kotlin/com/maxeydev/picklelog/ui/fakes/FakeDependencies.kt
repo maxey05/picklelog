@@ -18,6 +18,7 @@ class FakeDependencies(
     override val photoImportQueue: FakePhotoImportQueue = FakePhotoImportQueue(),
     override val cardRenderer: FakeCardRenderer = FakeCardRenderer(),
     override val cardFormatStore: FakeCardFormatStore = FakeCardFormatStore(),
+    override val backupRepository: FakeBackupRepository = FakeBackupRepository(),
     override val clock: Clock = Clock.System,
     override val defaultDispatcher: CoroutineDispatcher = Dispatchers.Unconfined,
     override val ioDispatcher: CoroutineDispatcher = Dispatchers.Unconfined,
