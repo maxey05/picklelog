@@ -13,9 +13,10 @@ fun buildCardData(
     photoDataUri: String?,
     labels: CardLabels,
     format: CardFormat = CardFormat.DEFAULT,
+    showWordmark: Boolean = true,
 ): CardData =
     CardData(
-        brand = labels.brand,
+        brand = if (showWordmark) labels.brand else "",
         displayName = displayName.trim(),
         meta = labels.meta(match.format, match.date),
         result = labels.result(match.result),
