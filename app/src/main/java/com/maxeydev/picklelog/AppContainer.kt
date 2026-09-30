@@ -2,10 +2,13 @@ package com.maxeydev.picklelog
 
 import android.content.Context
 import androidx.annotation.MainThread
+import androidx.work.WorkManager
 import com.maxeydev.picklelog.data.DataLayer
 import com.maxeydev.picklelog.data.photo.PhotoStore
+import com.maxeydev.picklelog.data.reminder.ReminderScheduler
 import com.maxeydev.picklelog.domain.backup.BackupRepository
 import com.maxeydev.picklelog.domain.billing.ProStore
+import com.maxeydev.picklelog.domain.match.FilterState
 import com.maxeydev.picklelog.domain.match.LastUsedFormatStore
 import com.maxeydev.picklelog.domain.match.MatchRepository
 import com.maxeydev.picklelog.domain.match.MatchSortStore
@@ -13,14 +16,21 @@ import com.maxeydev.picklelog.domain.person.PersonRepository
 import com.maxeydev.picklelog.domain.photo.PhotoImportQueue
 import com.maxeydev.picklelog.domain.profile.EntitlementRepository
 import com.maxeydev.picklelog.domain.profile.ProfileRepository
+import com.maxeydev.picklelog.domain.reminder.ReminderStore
+import com.maxeydev.picklelog.domain.reminder.StreakReminder
 import com.maxeydev.picklelog.domain.share.CardFormatStore
+import com.maxeydev.picklelog.domain.streak.InsuredStreakEngine
+import com.maxeydev.picklelog.domain.streak.StreakNoticeStore
+import com.maxeydev.picklelog.domain.streak.streakInsuranceStart
 import com.maxeydev.picklelog.ui.PicklelogDependencies
 import com.maxeydev.picklelog.ui.common.createCaptureUri
+import com.maxeydev.picklelog.ui.notification.StreakReminderNotifier
 import com.maxeydev.picklelog.ui.share.CardRenderer
 import com.maxeydev.picklelog.ui.share.CardRendering
 import com.maxeydev.picklelog.ui.share.WebViewWarmer
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.datetime.TimeZone
 import java.io.File
 import kotlin.time.Clock
@@ -41,9 +51,33 @@ class AppContainer(
     override val photoImportQueue: PhotoImportQueue = dataLayer.photoImportQueue
     override val cardFormatStore: CardFormatStore = dataLayer.cardFormatStore
     override val backupRepository: BackupRepository = dataLayer.backupRepository
+    override val streakNoticeStore: StreakNoticeStore = dataLayer.streakNoticeStore
+    override val reminderStore: ReminderStore = dataLayer.reminderStore
     override val clock: Clock = Clock.System
     override val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
     override val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    override val streakReminder: StreakReminder =
+        StreakReminder(
+            store = dataLayer.reminderStore,
+            matchDates = {
+                dataLayer.matchRepository
+                    .observeStatLines(FilterState.NONE)
+                    .first()
+                    .map { it.date }
+            },
+            insuranceStart = {
+                dataLayer.profileRepository
+                    .observeProfile()
+                    .first()
+                    .entitlement
+                    .streakInsuranceStart()
+            },
+            engine = InsuredStreakEngine(clock) { currentTimeZone() },
+            scheduling = ReminderScheduler(WorkManager.getInstance(context), clock),
+            notifier = StreakReminderNotifier(context),
+            clock = clock,
+            timeZone = { currentTimeZone() },
+        )
     private val cardWarmer = WebViewWarmer(context)
     override val cardRenderer: CardRendering = CardRenderer(cardWarmer)
 
