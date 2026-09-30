@@ -20,6 +20,26 @@ object DashboardTestTags {
     const val STATS_SINGLES = "stats_singles"
     const val STATS_DOUBLES = "stats_doubles"
     const val STATS_PRO_SECTION = "stats_pro_section"
+    const val STATS_SKIPS_HELD = "stats_skips_held"
+    const val STATS_ADVANCED_SECTION = "stats_advanced_section"
+    const val STATS_ADVANCED_EMPTY = "stats_advanced_empty"
+    const val STATS_LOCKED_PREVIEW = "stats_locked_preview"
+    const val STATS_LOCKED_PREVIEW_NAME = "stats_locked_preview_name"
+    const val STATS_LOCKED_PREVIEW_RECORD = "stats_locked_preview_record"
+    const val GROUP_HEAD_TO_HEAD = "head_to_head"
+    const val GROUP_PARTNER = "partner"
+    const val GROUP_LOCATION = "location"
+    const val GROUP_PADDLE = "paddle"
+    const val GROUP_MONTH = "month"
 
     fun proRow(index: Int): String = "stats_pro_row_$index"
+
+    fun advancedRow(
+        group: String,
+        index: Int,
+    ): String = "stats_advanced_${group}_$index"
+
+    fun advancedEmpty(group: String): String = "stats_advanced_${group}_empty"
+
+    fun advancedToggle(group: String): String = "stats_advanced_${group}_toggle"
 }
