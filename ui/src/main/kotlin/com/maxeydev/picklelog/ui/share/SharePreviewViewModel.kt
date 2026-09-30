@@ -19,9 +19,11 @@ import com.maxeydev.picklelog.domain.share.CardFormatStore
 import com.maxeydev.picklelog.domain.share.CardLayout
 import com.maxeydev.picklelog.domain.share.CardRatio
 import com.maxeydev.picklelog.domain.share.CardTheme
-import com.maxeydev.picklelog.domain.streak.StreakEngine
+import com.maxeydev.picklelog.domain.streak.InsuredStreakEngine
+import com.maxeydev.picklelog.domain.streak.streakInsuranceStart
 import com.maxeydev.picklelog.ui.PicklelogDependencies
 import com.maxeydev.picklelog.ui.navigation.MATCH_ID_ARGUMENT
+import com.maxeydev.picklelog.ui.paywall.UpgradeReason
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,7 +43,7 @@ class SharePreviewViewModel(
     private val matchRepository: MatchRepository,
     private val profileRepository: ProfileRepository,
     private val formatStore: CardFormatStore,
-    private val streakEngine: StreakEngine,
+    private val streakEngine: InsuredStreakEngine,
     private val photoFile: (String) -> File,
     private val renderer: CardRendering,
     private val labels: CardLabels,
@@ -81,7 +83,18 @@ class SharePreviewViewModel(
     }
 
     fun selectTheme(theme: CardTheme) {
-        changeFormat(mutableUiState.value.format.copy(theme = theme))
+        viewModelScope.launch {
+            val isPro = profileRepository.observeProfile().first().entitlement.isPro
+            if (theme.requiresPro && !isPro) {
+                mutableUiState.update { it.copy(upgradeReason = UpgradeReason.PRO_THEME) }
+            } else {
+                changeFormat(mutableUiState.value.format.copy(theme = theme))
+            }
+        }
+    }
+
+    fun dismissUpgrade() {
+        mutableUiState.update { it.copy(upgradeReason = null) }
     }
 
     fun selectLayout(layout: CardLayout) {
@@ -111,26 +124,39 @@ class SharePreviewViewModel(
                 }
                 val profile = profileRepository.observeProfile().first()
                 val history = matchRepository.observeStatLines(FilterState.NONE).first()
-                val streak = streakEngine.compute(history.map { it.date })
+                val isPro = profile.entitlement.isPro
+                val shown = format.forEntitlement(isPro)
+                val insuranceStart = profile.entitlement.streakInsuranceStart()
+                val streak = streakEngine.compute(history.map { it.date }, insuranceStart).streak
                 val primary = match.photos.primaryPhoto()
-                val layout = format.layoutFor(hasPhoto = primary != null)
+                val layout = shown.layoutFor(hasPhoto = primary != null)
                 val photo =
                     primary
                         ?.takeIf { layout == CardLayout.PHOTO }
                         ?.let { loadPhotoDataUri(photoFile(it.relativePath)) }
-                val data = buildCardData(match, profile.displayName, streak, photo, labels, format)
+                val data =
+                    buildCardData(match, profile.displayName, streak, photo, labels, shown, showWordmark = !isPro)
                 val result = renderer.render(data)
                 mutableUiState.update { current ->
                     when (result) {
                         is CardRenderResult.Rendered ->
                             current.copy(
                                 isRendering = false,
+                                format = shown,
+                                isPro = isPro,
                                 card = result.bitmap,
                                 cardDescription = describe(data),
                                 hasPhoto = primary != null,
                             )
                         is CardRenderResult.Failed ->
-                            current.copy(isRendering = false, card = null, hasFailed = true, hasPhoto = primary != null)
+                            current.copy(
+                                isRendering = false,
+                                card = null,
+                                hasFailed = true,
+                                hasPhoto = primary != null,
+                                format = shown,
+                                isPro = isPro,
+                            )
                     }
                 }
             }
@@ -169,7 +195,7 @@ class SharePreviewViewModel(
                         matchRepository = dependencies.matchRepository,
                         profileRepository = dependencies.profileRepository,
                         formatStore = dependencies.cardFormatStore,
-                        streakEngine = StreakEngine(dependencies.clock, dependencies::currentTimeZone),
+                        streakEngine = InsuredStreakEngine(dependencies.clock, dependencies::currentTimeZone),
                         photoFile = dependencies::photoFile,
                         renderer = dependencies.cardRenderer,
                         labels = labels,
