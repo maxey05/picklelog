@@ -31,6 +31,7 @@ internal data class EntitlementJson(
     val isPro: Boolean,
     val purchaseToken: String?,
     val lastVerifiedAt: Long?,
+    val proSince: Long? = null,
 )
 
 internal fun UserProfileJson.toDomain(): UserProfile =
@@ -42,6 +43,7 @@ internal fun UserProfileJson.toDomain(): UserProfile =
                 isPro = entitlement.isPro,
                 purchaseToken = entitlement.purchaseToken,
                 lastVerifiedAt = entitlement.lastVerifiedAt?.let(Instant::fromEpochMilliseconds),
+                proSince = entitlement.proSince?.let(Instant::fromEpochMilliseconds),
             ),
     )
 
@@ -54,6 +56,7 @@ internal fun UserProfile.toJson(): UserProfileJson =
                 isPro = entitlement.isPro,
                 purchaseToken = entitlement.purchaseToken,
                 lastVerifiedAt = entitlement.lastVerifiedAt?.toEpochMilliseconds(),
+                proSince = entitlement.proSince?.toEpochMilliseconds(),
             ),
     )
 
