@@ -13,6 +13,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -34,6 +35,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onSeePro: () -> Unit,
     onRestore: () -> Unit,
+    onOpenBackup: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -88,6 +90,22 @@ fun SettingsScreen(
                 message = state.restoreMessage,
                 onRestore = onRestore,
             )
+            Text(
+                text = stringResource(R.string.settings_backup_heading),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(top = 12.dp).semantics { heading() },
+            )
+            Text(
+                text = stringResource(R.string.backup_honesty),
+                modifier = Modifier.testTag(BackupTestTags.HONESTY),
+            )
+            LastExportText(lastExportAt = state.lastExportAt)
+            OutlinedButton(
+                onClick = onOpenBackup,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(BackupTestTags.OPEN_BACKUP),
+            ) {
+                Text(stringResource(R.string.settings_backup_open))
+            }
         }
     }
 }
