@@ -1,8 +1,15 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package com.maxeydev.picklelog.ui.dashboard
 
 import com.maxeydev.picklelog.domain.match.FilterState
+import com.maxeydev.picklelog.domain.stats.AdvancedStats
 import com.maxeydev.picklelog.domain.stats.BasicStats
+import com.maxeydev.picklelog.domain.streak.MissedSkipOpportunity
 import com.maxeydev.picklelog.domain.streak.StreakResult
+import com.maxeydev.picklelog.domain.streak.WeekKey
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 data class DashboardUiState(
     val isLoading: Boolean = true,
@@ -13,6 +20,11 @@ data class DashboardUiState(
     val filter: FilterState = FilterState.NONE,
     val filteredOpponentName: String? = null,
     val isPro: Boolean = false,
+    val advanced: AdvancedStats = AdvancedStats.EMPTY,
+    val peopleNames: Map<Uuid, String> = emptyMap(),
+    val skipsHeld: Int = 0,
+    val usedSkipWeek: WeekKey? = null,
+    val missedOpportunity: MissedSkipOpportunity? = null,
 ) {
     val isFiltered: Boolean
         get() = filter.isActive
@@ -22,4 +34,6 @@ data class DashboardUiState(
 
     val hasNoFilteredMatches: Boolean
         get() = hasAnyMatches && stats.totalMatches == 0
+
+    fun nameOf(personId: Uuid): String? = peopleNames[personId]
 }
