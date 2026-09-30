@@ -13,6 +13,7 @@ data class PlayPurchase(
     val productIds: List<String>,
     val state: PlayPurchaseState,
     val isAcknowledged: Boolean,
+    val purchasedAtMillis: Long? = null,
 ) {
     val isPro: Boolean
         get() = PRO_PRODUCT_ID in productIds
