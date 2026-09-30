@@ -16,9 +16,11 @@ import com.maxeydev.picklelog.domain.match.MatchSort
 import com.maxeydev.picklelog.domain.match.SearchTerm
 import com.maxeydev.picklelog.domain.match.requireValidRoster
 import com.maxeydev.picklelog.domain.photo.ImportedPhoto
+import com.maxeydev.picklelog.domain.stats.AdvancedMatchLine
 import com.maxeydev.picklelog.domain.stats.MatchStatLine
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -95,6 +97,32 @@ class RoomMatchRepository(
                 namePattern = null,
             ).map { rows -> rows.map { it.toDomain() } }
             .flowOn(ioDispatcher)
+
+    override fun observeAdvancedLines(filter: FilterState): Flow<List<AdvancedMatchLine>> {
+        val rows =
+            matchDao.observeAdvancedRows(
+                format = filter.format?.name,
+                result = filter.result?.name,
+                fromDate = filter.fromDate,
+                toDate = filter.toDate,
+                opponentId = filter.opponentId?.toString(),
+                location = filter.location,
+                textPattern = null,
+                namePattern = null,
+            )
+        val people =
+            matchDao.observeAdvancedPeople(
+                format = filter.format?.name,
+                result = filter.result?.name,
+                fromDate = filter.fromDate,
+                toDate = filter.toDate,
+                opponentId = filter.opponentId?.toString(),
+                location = filter.location,
+                textPattern = null,
+                namePattern = null,
+            )
+        return combine(rows, people, ::toAdvancedLines).flowOn(ioDispatcher)
+    }
 
     override fun observeById(id: Uuid): Flow<Match?> =
         matchDao
