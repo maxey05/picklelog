@@ -23,6 +23,7 @@ fun UpgradePrompt(
             Text(
                 when (reason) {
                     UpgradeReason.PHOTO_LIMIT -> stringResource(R.string.upgrade_photo_limit_title)
+                    UpgradeReason.PRO_THEME -> stringResource(R.string.upgrade_pro_theme_title)
                 },
             )
         },
@@ -30,6 +31,7 @@ fun UpgradePrompt(
             Text(
                 when (reason) {
                     UpgradeReason.PHOTO_LIMIT -> stringResource(R.string.upgrade_photo_limit_body)
+                    UpgradeReason.PRO_THEME -> stringResource(R.string.upgrade_pro_theme_body)
                 },
             )
         },
