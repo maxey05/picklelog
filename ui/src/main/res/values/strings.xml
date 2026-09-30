@@ -276,4 +276,53 @@
 
     <string name="delete_match_title">Delete this match?</string>
     <string name="delete_match_body">The match and its photos will be permanently deleted. This can\'t be undone.</string>
+
+    <string name="settings_backup_heading">Backup</string>
+    <string name="settings_backup_open">Export or import matches</string>
+    <string name="backup_honesty">Picklelog keeps your matches on this device only. Android may also back them up to your Google account, but that depends on your Google storage and may not be running. Exporting your matches now and then is the way to be sure.</string>
+    <string name="backup_last_export">Last export: %1$s</string>
+    <string name="backup_never_exported">You haven\'t exported your matches yet.</string>
+    <string name="backup_title">Backup and restore</string>
+    <string name="backup_export_heading">Export</string>
+    <string name="backup_export_body">Save all your matches as a file you can keep or send to yourself. Export is always free, at any number of matches.</string>
+    <string name="backup_export_button">Export matches</string>
+    <string name="backup_export_working">Preparing your export\u2026</string>
+    <string name="backup_photos_not_included">Photos are not included in the export. Only your matches, opponents and scores are saved. Your photos stay on this device.</string>
+    <string name="backup_export_dialog_title">Export your matches?</string>
+    <string name="backup_export_dialog_confirm">Export</string>
+    <string name="backup_dialog_cancel">Cancel</string>
+    <string name="backup_import_heading">Import</string>
+    <string name="backup_import_body">Bring matches back from a Picklelog export file. Matches already in Picklelog are skipped, so importing the same file twice is safe.</string>
+    <string name="backup_import_free_note">On the free version, Picklelog imports the newest matches first, up to the %1$d-match limit.</string>
+    <string name="backup_import_button">Import from a file</string>
+    <string name="backup_import_working">Importing\u2026</string>
+    <string name="backup_result_ok">OK</string>
+    <string name="backup_share_chooser_title">Save your export</string>
+    <plurals name="backup_import_added">
+        <item quantity="one">Added %1$d match.</item>
+        <item quantity="other">Added %1$d matches.</item>
+    </plurals>
+    <plurals name="backup_import_skipped">
+        <item quantity="one">%1$d match was already in Picklelog and was skipped.</item>
+        <item quantity="other">%1$d matches were already in Picklelog and were skipped.</item>
+    </plurals>
+    <plurals name="backup_import_held_back">
+        <item quantity="one">%1$d older match was held back because the free version holds %2$d matches. Upgrade to Pro, then import the same file again to add it.</item>
+        <item quantity="other">%1$d older matches were held back because the free version holds %2$d matches. Upgrade to Pro, then import the same file again to add them.</item>
+    </plurals>
+    <plurals name="backup_import_photos_missing">
+        <item quantity="one">%1$d photo could not be restored because its file isn\'t on this device.</item>
+        <item quantity="other">%1$d photos could not be restored because their files aren\'t on this device.</item>
+    </plurals>
+    <string name="backup_error_export">Couldn\'t create the export file. Check that your device has free storage, then try again.</string>
+    <string name="backup_error_not_readable">Couldn\'t read that file. It may be incomplete, or it may not be a Picklelog export. Nothing was changed.</string>
+    <string name="backup_error_not_export">That file isn\'t a Picklelog export. Nothing was changed.</string>
+    <string name="backup_error_newer">That export was made by a newer version of Picklelog. Update the app and try again. Nothing was changed.</string>
+    <string name="backup_error_corrupt">That export file is damaged or has been edited, so it wasn\'t imported. Nothing was changed.</string>
+    <string name="backup_error_too_large">That file is too large to be a Picklelog export. Nothing was changed.</string>
+    <string name="backup_error_write">Couldn\'t save the imported matches. Nothing was changed. Check your device\'s free storage, then try again.</string>
+    <string name="export_prompt_matches_added">You\'ve logged 25 or more matches since your last backup. Export a copy so they\'re safe.</string>
+    <string name="export_prompt_periodic">It\'s been a while since your last backup. Export a copy of your matches to keep them safe.</string>
+    <string name="export_prompt_action">Export now</string>
+    <string name="export_prompt_dismiss">Dismiss backup reminder</string>
 </resources>
