@@ -6,6 +6,7 @@
     var designHeight = DESIGN_HEIGHTS.TALL;
     var ratio = "TALL";
     var theme = "DARK";
+    var THEME_CLASSES = { LIGHT: "light", COURT: "court", SUNSET: "sunset" };
     var TEXT_FIELDS = ["brand", "name", "meta", "opponents", "partner", "score", "location", "streak"];
 
     function byId(id) {
@@ -91,10 +92,12 @@
         var card = byId("card");
         var photo = byId("photo");
         ratio = data.ratio === "SQUARE" ? "SQUARE" : "TALL";
-        theme = data.theme === "LIGHT" ? "LIGHT" : "DARK";
+        theme = Object.prototype.hasOwnProperty.call(THEME_CLASSES, data.theme) ? data.theme : "DARK";
         designHeight = DESIGN_HEIGHTS[ratio];
         card.classList.toggle("square", ratio === "SQUARE");
-        card.classList.toggle("light", theme === "LIGHT");
+        Object.keys(THEME_CLASSES).forEach(function (key) {
+            card.classList.toggle(THEME_CLASSES[key], key === theme);
+        });
         setText("brand", data.brand);
         setText("name", data.displayName);
         setText("meta", data.meta);
