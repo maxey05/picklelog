@@ -1,5 +1,6 @@
 package com.maxeydev.picklelog
 
+import android.content.Intent
 import android.os.Bundle
 import android.os.Looper
 import androidx.activity.ComponentActivity
@@ -10,15 +11,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import com.maxeydev.picklelog.ui.navigation.PicklelogNavHost
+import com.maxeydev.picklelog.ui.notification.StreakNotification
 
 class MainActivity : ComponentActivity() {
+    private var openLogging by mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        openLogging = StreakNotification.wantsLogging(intent)
         val container = (application as PicklelogApplication).container
         setContent {
             MaterialTheme {
@@ -30,7 +37,14 @@ class MainActivity : ComponentActivity() {
                         value = container.await()
                     }
                     dependencies?.let { ready ->
-                        PicklelogNavHost(dependencies = ready)
+                        PicklelogNavHost(
+                            dependencies = ready,
+                            openLogging = openLogging,
+                            onOpenLoggingHandled = {
+                                openLogging = false
+                                intent.removeExtra(StreakNotification.EXTRA_OPEN_LOGGING)
+                            },
+                        )
                         LaunchedEffect(ready) {
                             withFrameNanos { }
                             Looper.myQueue().addIdleHandler {
@@ -42,5 +56,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        openLogging = StreakNotification.wantsLogging(intent)
     }
 }
