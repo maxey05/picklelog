@@ -29,10 +29,11 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.maxeydev.picklelog.domain.stats.WinLoss
+import com.maxeydev.picklelog.domain.streak.StreakInsurance
 import com.maxeydev.picklelog.ui.R
 
 private val LOCK_ICON_SIZE = 20.dp
-private val MIN_ROW_HEIGHT = 48.dp
+internal val MIN_ROW_HEIGHT = 48.dp
 
 private val PRO_SECTIONS =
     listOf(
@@ -48,6 +49,7 @@ private val PRO_SECTIONS =
 fun ExpandedStatsScreen(
     state: DashboardUiState,
     onBack: () -> Unit,
+    onSeePro: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -80,7 +82,10 @@ fun ExpandedStatsScreen(
                 RecordSection(state)
                 StreakSection(state)
                 FormatSection(state)
-                if (!state.isPro) {
+                if (state.isPro) {
+                    AdvancedStatsSection(state)
+                } else {
+                    LockedPreview(state = state, onSeePro = onSeePro)
                     LockedProSection()
                 }
             }
@@ -89,7 +94,7 @@ fun ExpandedStatsScreen(
 }
 
 @Composable
-private fun SectionTitle(text: String) {
+internal fun SectionTitle(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.titleMedium,
@@ -98,7 +103,7 @@ private fun SectionTitle(text: String) {
 }
 
 @Composable
-private fun StatRow(
+internal fun StatRow(
     label: String,
     value: String,
     testTag: String,
@@ -129,7 +134,7 @@ private fun StatRow(
 }
 
 @Composable
-private fun percentText(record: WinLoss): String =
+internal fun percentText(record: WinLoss): String =
     record.winPercent?.let { stringResource(R.string.stats_percent, it) } ?: stringResource(R.string.stats_no_value)
 
 @Composable
@@ -192,6 +197,19 @@ private fun StreakSection(state: DashboardUiState) {
                 label = stringResource(R.string.stats_longest_streak),
                 value = weeksText(streak.longest),
                 testTag = DashboardTestTags.STATS_LONGEST_STREAK,
+            )
+        }
+        if (state.isPro) {
+            StatRow(
+                label = stringResource(R.string.stats_skips_label),
+                value =
+                    if (state.skipsHeld > 0) {
+                        pluralStringResource(R.plurals.stats_skips_held, state.skipsHeld, state.skipsHeld)
+                    } else {
+                        stringResource(R.string.stats_skips_none)
+                    },
+                supporting = stringResource(R.string.stats_skips_explainer, StreakInsurance.MAX_HELD),
+                testTag = DashboardTestTags.STATS_SKIPS_HELD,
             )
         }
     }
