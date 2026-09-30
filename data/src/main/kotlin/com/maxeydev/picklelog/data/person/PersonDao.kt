@@ -29,4 +29,7 @@ interface PersonDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertIgnoringDuplicate(person: PersonEntity)
+
+    @Query("SELECT * FROM person ORDER BY created_at ASC, id ASC")
+    suspend fun all(): List<PersonEntity>
 }
