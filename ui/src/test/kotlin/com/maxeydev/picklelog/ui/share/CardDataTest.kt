@@ -70,6 +70,16 @@ class CardDataTest {
     }
 
     @Test
+    fun `the wordmark is on the card unless it is switched off`() {
+        val shown = buildCardData(match(), "Matty", StreakResult.NONE, null, FakeCardLabels())
+        val hidden = buildCardData(match(), "Matty", StreakResult.NONE, null, FakeCardLabels(), showWordmark = false)
+
+        assertEquals("Picklelog", shown.brand)
+        assertEquals("", hidden.brand)
+        assertEquals(shown.copy(brand = ""), hidden)
+    }
+
+    @Test
     fun `optional fields are absent rather than blank placeholders`() {
         val data =
             buildCardData(
