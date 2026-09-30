@@ -36,6 +36,8 @@ fun SettingsScreen(
     onSeePro: () -> Unit,
     onRestore: () -> Unit,
     onOpenBackup: () -> Unit,
+    onEnableReminder: () -> Unit,
+    onDisableReminder: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -89,6 +91,16 @@ fun SettingsScreen(
                 isRestoring = state.isRestoring,
                 message = state.restoreMessage,
                 onRestore = onRestore,
+            )
+            Text(
+                text = stringResource(R.string.settings_reminder_heading),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(top = 12.dp).semantics { heading() },
+            )
+            ReminderToggle(
+                enabled = state.reminderEnabled,
+                onEnable = onEnableReminder,
+                onDisable = onDisableReminder,
             )
             Text(
                 text = stringResource(R.string.settings_backup_heading),
