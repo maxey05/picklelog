@@ -27,6 +27,7 @@ fun VariantPicker(
     format: CardFormat,
     layout: CardLayout,
     hasPhoto: Boolean,
+    isPro: Boolean,
     actions: VariantPickerActions,
     modifier: Modifier = Modifier,
 ) {
@@ -38,7 +39,7 @@ fun VariantPicker(
             title = R.string.card_ratio_label,
             options = CardRatio.entries,
             selected = format.ratio,
-            label = ::ratioLabel,
+            label = { stringResource(ratioLabel(it)) },
             tag = ShareTestTags::ratio,
             onSelected = actions.onRatioSelected,
         )
@@ -46,7 +47,7 @@ fun VariantPicker(
             title = R.string.card_theme_label,
             options = CardTheme.entries,
             selected = format.theme,
-            label = ::themeLabel,
+            label = { themeText(it, isPro) },
             tag = ShareTestTags::theme,
             onSelected = actions.onThemeSelected,
         )
@@ -55,7 +56,7 @@ fun VariantPicker(
                 title = R.string.card_layout_label,
                 options = CardLayout.entries,
                 selected = layout,
-                label = ::layoutLabel,
+                label = { stringResource(layoutLabel(it)) },
                 tag = ShareTestTags::layout,
                 onSelected = actions.onLayoutSelected,
             )
@@ -69,7 +70,7 @@ private fun <T> OptionRow(
     @StringRes title: Int,
     options: List<T>,
     selected: T,
-    label: (T) -> Int,
+    label: @Composable (T) -> String,
     tag: (T) -> String,
     onSelected: (T) -> Unit,
 ) {
@@ -83,7 +84,7 @@ private fun <T> OptionRow(
             FilterChip(
                 selected = option == selected,
                 onClick = { onSelected(option) },
-                label = { Text(stringResource(label(option))) },
+                label = { Text(label(option)) },
                 modifier = Modifier.testTag(tag(option)),
             )
         }
@@ -100,7 +101,18 @@ private fun themeLabel(theme: CardTheme): Int =
     when (theme) {
         CardTheme.DARK -> R.string.card_theme_dark
         CardTheme.LIGHT -> R.string.card_theme_light
+        CardTheme.COURT -> R.string.card_theme_court
+        CardTheme.SUNSET -> R.string.card_theme_sunset
     }
+
+@Composable
+private fun themeText(
+    theme: CardTheme,
+    isPro: Boolean,
+): String {
+    val name = stringResource(themeLabel(theme))
+    return if (theme.requiresPro && !isPro) stringResource(R.string.card_theme_pro_locked, name) else name
+}
 
 private fun layoutLabel(layout: CardLayout): Int =
     when (layout) {
