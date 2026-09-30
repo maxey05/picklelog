@@ -6,4 +6,5 @@ data class Entitlement(
     val isPro: Boolean,
     val purchaseToken: String? = null,
     val lastVerifiedAt: AppInstant? = null,
+    val proSince: AppInstant? = null,
 )
