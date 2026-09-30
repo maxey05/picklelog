@@ -46,6 +46,8 @@ import com.maxeydev.picklelog.ui.share.ShareIntentLauncher
 import com.maxeydev.picklelog.ui.share.SharePreviewScreen
 import com.maxeydev.picklelog.ui.share.SharePreviewViewModel
 import com.maxeydev.picklelog.ui.share.VariantPickerActions
+import com.maxeydev.picklelog.ui.streak.MissedSkipNotice
+import com.maxeydev.picklelog.ui.streak.SkipUsedNotice
 import kotlinx.coroutines.launch
 import java.io.IOException
 
@@ -54,6 +56,8 @@ fun PicklelogNavHost(
     dependencies: PicklelogDependencies,
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
+    openLogging: Boolean = false,
+    onOpenLoggingHandled: () -> Unit = {},
 ) {
     NavHost(navController = navController, startDestination = HomeRoute, modifier = modifier) {
         composable<HomeRoute> { backStackEntry ->
@@ -83,6 +87,18 @@ fun PicklelogNavHost(
                                 navController.navigate(BackupRoute)
                             },
                             onDismiss = exportPromptViewModel::dismiss,
+                            modifier = Modifier.padding(horizontal = 16.dp).padding(top = 8.dp),
+                        )
+                        SkipUsedNotice(
+                            skippedWeek = dashboardState.usedSkipWeek,
+                            skipsHeld = dashboardState.skipsHeld,
+                            onDismiss = dashboardViewModel::dismissUsedSkip,
+                            modifier = Modifier.padding(horizontal = 16.dp).padding(top = 8.dp),
+                        )
+                        MissedSkipNotice(
+                            opportunity = dashboardState.missedOpportunity,
+                            onSeePro = { navController.navigate(PaywallRoute) },
+                            onDismiss = dashboardViewModel::dismissMissedOpportunity,
                             modifier = Modifier.padding(horizontal = 16.dp).padding(top = 8.dp),
                         )
                         DashboardHeader(
@@ -117,7 +133,11 @@ fun PicklelogNavHost(
             val viewModel: DashboardViewModel =
                 viewModel(factory = DashboardViewModel.factory(dependencies, homeEntry.savedStateHandle))
             val state by viewModel.uiState.collectAsStateWithLifecycle()
-            ExpandedStatsScreen(state = state, onBack = { navController.popBackStack() })
+            ExpandedStatsScreen(
+                state = state,
+                onBack = { navController.popBackStack() },
+                onSeePro = { navController.navigate(PaywallRoute) },
+            )
         }
         composable<ShareRoute> {
             val context = LocalContext.current
@@ -147,6 +167,11 @@ fun PicklelogNavHost(
                     }
                 },
                 onRetry = viewModel::retry,
+                onDismissUpgrade = viewModel::dismissUpgrade,
+                onSeePro = {
+                    viewModel.dismissUpgrade()
+                    navController.navigate(PaywallRoute)
+                },
                 variantActions =
                     remember(viewModel) {
                         VariantPickerActions(
@@ -182,6 +207,8 @@ fun PicklelogNavHost(
                 onSeePro = { navController.navigate(PaywallRoute) },
                 onRestore = viewModel::restore,
                 onOpenBackup = { navController.navigate(BackupRoute) },
+                onEnableReminder = viewModel::enableReminder,
+                onDisableReminder = viewModel::disableReminder,
             )
         }
         composable<BackupRoute> {
@@ -284,6 +311,12 @@ fun PicklelogNavHost(
                 onDeleteConfirmed = viewModel::confirmDelete,
                 onDeleteDismissed = viewModel::dismissDelete,
             )
+        }
+    }
+    LaunchedEffect(openLogging) {
+        if (openLogging) {
+            navController.navigate(MatchEditRoute()) { launchSingleTop = true }
+            onOpenLoggingHandled()
         }
     }
 }
