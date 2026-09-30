@@ -3,12 +3,15 @@ package com.maxeydev.picklelog
 import android.app.Application
 import android.util.Log
 import androidx.work.Configuration
+import androidx.work.DelegatingWorkerFactory
 import androidx.work.WorkManager
 import com.maxeydev.picklelog.data.DataLayer
 import com.maxeydev.picklelog.data.backup.ExportPromptScheduler
 import com.maxeydev.picklelog.data.backup.ExportPromptWorkerFactory
 import com.maxeydev.picklelog.data.billing.ForegroundActivity
 import com.maxeydev.picklelog.data.createDataLayer
+import com.maxeydev.picklelog.data.reminder.StreakReminderWorkerFactory
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -33,8 +36,12 @@ class PicklelogApplication :
         get() =
             Configuration
                 .Builder()
-                .setWorkerFactory(ExportPromptWorkerFactory { container.await().backupRepository })
-                .build()
+                .setWorkerFactory(
+                    DelegatingWorkerFactory().apply {
+                        addFactory(ExportPromptWorkerFactory { container.await().backupRepository })
+                        addFactory(StreakReminderWorkerFactory { container.await().streakReminder })
+                    },
+                ).build()
 
     override fun onCreate() {
         super.onCreate()
@@ -48,8 +55,20 @@ class PicklelogApplication :
                 applicationScope.launch { dataLayer.sweepOrphanPhotos(System.currentTimeMillis()) }
                 dataLayer.billingStartupCheck.start()
                 scheduleExportPrompts(dataLayer)
-                AppContainer(this@PicklelogApplication, dataLayer)
+                AppContainer(this@PicklelogApplication, dataLayer).also { rearmStreakReminder(it) }
             }
+    }
+
+    private fun rearmStreakReminder(appContainer: AppContainer) {
+        applicationScope.launch {
+            try {
+                appContainer.streakReminder.ensureArmed()
+            } catch (failure: CancellationException) {
+                throw failure
+            } catch (failure: Exception) {
+                Log.w(LOG_TAG, "Streak reminder could not be re-armed: ${failure.javaClass.simpleName}")
+            }
+        }
     }
 
     private fun scheduleExportPrompts(dataLayer: DataLayer) {
