@@ -3,6 +3,7 @@
 package com.maxeydev.picklelog.domain.match
 
 import com.maxeydev.picklelog.domain.photo.ImportedPhoto
+import com.maxeydev.picklelog.domain.stats.AdvancedMatchLine
 import com.maxeydev.picklelog.domain.stats.MatchStatLine
 import kotlinx.coroutines.flow.Flow
 import kotlin.uuid.ExperimentalUuidApi
@@ -17,6 +18,8 @@ interface MatchRepository {
     ): Flow<List<MatchListItem>>
 
     fun observeStatLines(filter: FilterState = FilterState.NONE): Flow<List<MatchStatLine>>
+
+    fun observeAdvancedLines(filter: FilterState = FilterState.NONE): Flow<List<AdvancedMatchLine>>
 
     fun observeById(id: Uuid): Flow<Match?>
 
