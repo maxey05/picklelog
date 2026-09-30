@@ -135,6 +135,30 @@ interface MatchDao {
         namePattern: String?,
     ): Flow<List<MatchStatRowEntity>>
 
+    @Query("$ADVANCED_MATCH_SELECT $MATCH_LIST_FILTER")
+    fun observeAdvancedRows(
+        format: String?,
+        result: String?,
+        fromDate: LocalDate?,
+        toDate: LocalDate?,
+        opponentId: String?,
+        location: String?,
+        textPattern: String?,
+        namePattern: String?,
+    ): Flow<List<AdvancedMatchRowEntity>>
+
+    @Query(MATCH_PEOPLE_FOR_FILTER)
+    fun observeAdvancedPeople(
+        format: String?,
+        result: String?,
+        fromDate: LocalDate?,
+        toDate: LocalDate?,
+        opponentId: String?,
+        location: String?,
+        textPattern: String?,
+        namePattern: String?,
+    ): Flow<List<MatchPersonRefEntity>>
+
     @Transaction
     @Query("SELECT COUNT(*) FROM `match`")
     fun observeMatchCount(): Flow<Int>
