@@ -3,6 +3,8 @@ package com.maxeydev.picklelog.data
 import android.app.Activity
 import android.content.Context
 import android.net.Uri
+import com.maxeydev.picklelog.data.backup.DataStoreExportPromptStore
+import com.maxeydev.picklelog.data.backup.RoomBackupRepository
 import com.maxeydev.picklelog.data.billing.BillingClientWrapper
 import com.maxeydev.picklelog.data.billing.BillingStartupCheck
 import com.maxeydev.picklelog.data.billing.PlayEntitlementRepository
@@ -21,6 +23,7 @@ import com.maxeydev.picklelog.data.profile.DataStoreEntitlementRepository
 import com.maxeydev.picklelog.data.profile.DataStoreProfileRepository
 import com.maxeydev.picklelog.data.profile.createUserProfileDataStore
 import com.maxeydev.picklelog.data.share.DataStoreCardFormatStore
+import com.maxeydev.picklelog.domain.backup.BackupRepository
 import com.maxeydev.picklelog.domain.billing.ProStore
 import com.maxeydev.picklelog.domain.match.LastUsedFormatStore
 import com.maxeydev.picklelog.domain.match.MatchRepository
@@ -34,7 +37,10 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
+import java.io.File
 import kotlin.time.Clock
+
+const val EXPORT_CACHE_DIRECTORY = "exports"
 
 const val ORPHAN_PHOTO_AGE_MILLIS = 24L * 60 * 60 * 1000
 
@@ -50,6 +56,7 @@ class DataLayer(
     val billingStartupCheck: BillingStartupCheck,
     val photoImportQueue: PhotoImportQueue,
     val cardFormatStore: CardFormatStore,
+    val backupRepository: BackupRepository,
     private val ioDispatcher: CoroutineDispatcher,
 ) {
     val matchRepository: MatchRepository = roomMatchRepository
@@ -92,6 +99,17 @@ suspend fun createDataLayer(
             matchRepository = matchRepository,
             deleteTemporaryCapture = { uri -> resolver.delete(Uri.parse(uri), null, null) },
         )
+    val backupRepository =
+        RoomBackupRepository(
+            database = database,
+            photoStore = photoStore,
+            entitlements = entitlements,
+            promptStore = DataStoreExportPromptStore(preferences),
+            exportDirectory = File(appContext.cacheDir, EXPORT_CACHE_DIRECTORY),
+            openSource = { uri -> resolver.openInputStream(Uri.parse(uri)) },
+            clock = Clock.System,
+            ioDispatcher = ioDispatcher,
+        )
     return DataLayer(
         roomMatchRepository = matchRepository,
         personRepository = RoomPersonRepository(database, ioDispatcher),
@@ -104,6 +122,7 @@ suspend fun createDataLayer(
         billingStartupCheck = BillingStartupCheck(entitlements, billing, applicationScope),
         photoImportQueue = importer,
         cardFormatStore = DataStoreCardFormatStore(preferences),
+        backupRepository = backupRepository,
         ioDispatcher = ioDispatcher,
     )
 }
