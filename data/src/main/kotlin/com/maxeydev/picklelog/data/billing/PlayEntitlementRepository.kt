@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.time.Clock
+import kotlin.time.Instant
 
 class PlayEntitlementRepository(
     private val local: EntitlementRepository,
@@ -45,7 +46,14 @@ class PlayEntitlementRepository(
                 verified.isNotEmpty() -> {
                     var allAcknowledged = true
                     verified.forEach { purchase ->
-                        record(EntitlementSignal.PurchaseVerified(purchase.purchaseToken, clock.now()))
+                        val now = clock.now()
+                        record(
+                            EntitlementSignal.PurchaseVerified(
+                                purchaseToken = purchase.purchaseToken,
+                                verifiedAt = now,
+                                purchasedAt = purchase.purchasedAtMillis?.let(Instant::fromEpochMilliseconds) ?: now,
+                            ),
+                        )
                         if (acknowledger.acknowledgeIfNeeded(purchase) != BillingResponse.OK) {
                             allAcknowledged = false
                         }
