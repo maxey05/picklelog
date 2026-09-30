@@ -34,6 +34,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.paywall.UpgradePrompt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,8 +44,13 @@ fun SharePreviewScreen(
     onShare: () -> Unit,
     onRetry: () -> Unit,
     variantActions: VariantPickerActions,
+    onDismissUpgrade: () -> Unit,
+    onSeePro: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    state.upgradeReason?.let { reason ->
+        UpgradePrompt(reason = reason, onDismiss = onDismissUpgrade, onSeePro = onSeePro)
+    }
     Scaffold(
         modifier = modifier.testTag(ShareTestTags.SCREEN),
         topBar = {
@@ -114,6 +120,7 @@ fun SharePreviewScreen(
                 format = state.format,
                 layout = state.layout,
                 hasPhoto = state.hasPhoto,
+                isPro = state.isPro,
                 actions = variantActions,
             )
             if (state.hasShareFailed) {
