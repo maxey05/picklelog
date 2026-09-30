@@ -1,0 +1,159 @@
+package com.maxeydev.picklelog.ui.settings
+
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.provider.Settings
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationManagerCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.common.PermissionPrompt
+import com.maxeydev.picklelog.ui.common.PermissionRationale
+import com.maxeydev.picklelog.ui.common.PermissionSettingsRedirect
+import com.maxeydev.picklelog.ui.common.PermissionState
+import com.maxeydev.picklelog.ui.common.rememberPermissionState
+import com.maxeydev.picklelog.ui.notification.StreakNotification
+
+@Composable
+fun ReminderToggle(
+    enabled: Boolean,
+    onEnable: () -> Unit,
+    onDisable: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    var allowed by remember { mutableStateOf(notificationsAllowed(context)) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { allowed = notificationsAllowed(context) }
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        if (StreakNotification.requiresRuntimePermission()) {
+            val (permission, prompt) = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS, onEnable)
+            ReminderSwitchRow(checked = enabled && allowed, onTurnOn = permission::request, onTurnOff = onDisable)
+            RuntimePermissionDialogs(prompt = prompt, permission = permission)
+        } else {
+            var showSettings by rememberSaveable { mutableStateOf(false) }
+            ReminderSwitchRow(
+                checked = enabled && allowed,
+                onTurnOn = { if (allowed) onEnable() else showSettings = true },
+                onTurnOff = onDisable,
+            )
+            if (showSettings) {
+                PermissionSettingsRedirect(
+                    title = stringResource(R.string.reminder_settings_title),
+                    body = stringResource(R.string.reminder_settings_body),
+                    onOpenSettings = {
+                        showSettings = false
+                        context.startActivity(notificationSettingsIntent(context))
+                    },
+                    onDismiss = { showSettings = false },
+                )
+            }
+        }
+        if (enabled && !allowed) {
+            BlockedNotice(onOpenSettings = { context.startActivity(notificationSettingsIntent(context)) })
+        }
+    }
+}
+
+@Composable
+private fun ReminderSwitchRow(
+    checked: Boolean,
+    onTurnOn: () -> Unit,
+    onTurnOff: () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .toggleable(
+                    value = checked,
+                    role = Role.Switch,
+                    onValueChange = { wantsOn -> if (wantsOn) onTurnOn() else onTurnOff() },
+                ).testTag(SettingsTestTags.REMINDER_TOGGLE),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = stringResource(R.string.settings_reminder_label), style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = stringResource(R.string.settings_reminder_description),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(checked = checked, onCheckedChange = null)
+    }
+}
+
+@Composable
+private fun RuntimePermissionDialogs(
+    prompt: PermissionPrompt,
+    permission: PermissionState,
+) {
+    when (prompt) {
+        PermissionPrompt.NONE -> Unit
+        PermissionPrompt.RATIONALE ->
+            PermissionRationale(
+                title = stringResource(R.string.reminder_permission_title),
+                body = stringResource(R.string.reminder_permission_body),
+                onContinue = permission::continueFromRationale,
+                onDismiss = permission::dismiss,
+            )
+        PermissionPrompt.SETTINGS ->
+            PermissionSettingsRedirect(
+                title = stringResource(R.string.reminder_settings_title),
+                body = stringResource(R.string.reminder_settings_body),
+                onOpenSettings = permission::openAppSettings,
+                onDismiss = permission::dismiss,
+            )
+    }
+}
+
+@Composable
+private fun BlockedNotice(onOpenSettings: () -> Unit) {
+    Column(modifier = Modifier.testTag(SettingsTestTags.REMINDER_BLOCKED)) {
+        Text(
+            text = stringResource(R.string.settings_reminder_blocked),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
+        TextButton(
+            onClick = onOpenSettings,
+            modifier = Modifier.heightIn(min = 48.dp).testTag(SettingsTestTags.REMINDER_OPEN_SETTINGS),
+        ) {
+            Text(stringResource(R.string.settings_reminder_open_settings))
+        }
+    }
+}
+
+private fun notificationsAllowed(context: Context): Boolean =
+    NotificationManagerCompat.from(context).areNotificationsEnabled()
+
+private fun notificationSettingsIntent(context: Context): Intent =
+    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
