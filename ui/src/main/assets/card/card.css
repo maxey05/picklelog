@@ -235,3 +235,44 @@ body {
 #card.light .badge {
     border-color: transparent;
 }
+
+#card.court {
+    background: linear-gradient(160deg, #1d5fa8 0%, #0a2a4d 70%);
+}
+
+#card.court.no-photo::after {
+    content: "";
+    position: absolute;
+    inset: 36px;
+    border: 6px solid rgba(255, 255, 255, 0.32);
+    border-radius: 12px;
+    pointer-events: none;
+}
+
+#card.court #top-scrim {
+    background: linear-gradient(to bottom, rgba(6, 30, 58, 0.72) 0%, rgba(6, 30, 58, 0.72) 55%, rgba(6, 30, 58, 0) 100%);
+}
+
+#card.court #bottom-scrim {
+    background: linear-gradient(to top, rgba(6, 30, 58, 0.78) 0%, rgba(6, 30, 58, 0.78) 85%, rgba(6, 30, 58, 0) 100%);
+}
+
+#card.court.square #bottom-scrim {
+    background: linear-gradient(to top, rgba(6, 30, 58, 0.8) 0%, rgba(6, 30, 58, 0.8) 60%, rgba(6, 30, 58, 0.62) 100%);
+}
+
+#card.sunset {
+    background: linear-gradient(160deg, #b8431f 0%, #8e1f4f 55%, #2f1046 100%);
+}
+
+#card.sunset #top-scrim {
+    background: linear-gradient(to bottom, rgba(40, 10, 40, 0.72) 0%, rgba(40, 10, 40, 0.72) 55%, rgba(40, 10, 40, 0) 100%);
+}
+
+#card.sunset #bottom-scrim {
+    background: linear-gradient(to top, rgba(40, 10, 40, 0.78) 0%, rgba(40, 10, 40, 0.78) 85%, rgba(40, 10, 40, 0) 100%);
+}
+
+#card.sunset.square #bottom-scrim {
+    background: linear-gradient(to top, rgba(40, 10, 40, 0.8) 0%, rgba(40, 10, 40, 0.8) 60%, rgba(40, 10, 40, 0.62) 100%);
+}
