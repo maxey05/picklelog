@@ -22,7 +22,9 @@ import com.maxeydev.picklelog.data.photo.QueuedPhotoImporter
 import com.maxeydev.picklelog.data.profile.DataStoreEntitlementRepository
 import com.maxeydev.picklelog.data.profile.DataStoreProfileRepository
 import com.maxeydev.picklelog.data.profile.createUserProfileDataStore
+import com.maxeydev.picklelog.data.reminder.DataStoreReminderStore
 import com.maxeydev.picklelog.data.share.DataStoreCardFormatStore
+import com.maxeydev.picklelog.data.streak.DataStoreStreakNoticeStore
 import com.maxeydev.picklelog.domain.backup.BackupRepository
 import com.maxeydev.picklelog.domain.billing.ProStore
 import com.maxeydev.picklelog.domain.match.LastUsedFormatStore
@@ -32,7 +34,9 @@ import com.maxeydev.picklelog.domain.person.PersonRepository
 import com.maxeydev.picklelog.domain.photo.PhotoImportQueue
 import com.maxeydev.picklelog.domain.profile.EntitlementRepository
 import com.maxeydev.picklelog.domain.profile.ProfileRepository
+import com.maxeydev.picklelog.domain.reminder.ReminderStore
 import com.maxeydev.picklelog.domain.share.CardFormatStore
+import com.maxeydev.picklelog.domain.streak.StreakNoticeStore
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.plus
@@ -57,6 +61,8 @@ class DataLayer(
     val photoImportQueue: PhotoImportQueue,
     val cardFormatStore: CardFormatStore,
     val backupRepository: BackupRepository,
+    val streakNoticeStore: StreakNoticeStore,
+    val reminderStore: ReminderStore,
     private val ioDispatcher: CoroutineDispatcher,
 ) {
     val matchRepository: MatchRepository = roomMatchRepository
@@ -123,6 +129,8 @@ suspend fun createDataLayer(
         photoImportQueue = importer,
         cardFormatStore = DataStoreCardFormatStore(preferences),
         backupRepository = backupRepository,
+        streakNoticeStore = DataStoreStreakNoticeStore(preferences),
+        reminderStore = DataStoreReminderStore(preferences),
         ioDispatcher = ioDispatcher,
     )
 }
