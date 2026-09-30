@@ -34,6 +34,11 @@ import com.maxeydev.picklelog.ui.match.list.MatchListViewModel
 import com.maxeydev.picklelog.ui.paywall.CapWarningBanner
 import com.maxeydev.picklelog.ui.paywall.PaywallScreen
 import com.maxeydev.picklelog.ui.paywall.PaywallViewModel
+import com.maxeydev.picklelog.ui.settings.BackupActions
+import com.maxeydev.picklelog.ui.settings.BackupSettingsScreen
+import com.maxeydev.picklelog.ui.settings.BackupViewModel
+import com.maxeydev.picklelog.ui.settings.ExportPromptBanner
+import com.maxeydev.picklelog.ui.settings.ExportPromptViewModel
 import com.maxeydev.picklelog.ui.settings.SettingsScreen
 import com.maxeydev.picklelog.ui.settings.SettingsViewModel
 import com.maxeydev.picklelog.ui.share.ResourceCardLabels
@@ -58,6 +63,9 @@ fun PicklelogNavHost(
             val dashboardViewModel: DashboardViewModel =
                 viewModel(factory = DashboardViewModel.factory(dependencies, backStackEntry.savedStateHandle))
             val dashboardState by dashboardViewModel.uiState.collectAsStateWithLifecycle()
+            val exportPromptViewModel: ExportPromptViewModel =
+                viewModel(factory = ExportPromptViewModel.factory(dependencies))
+            val exportPromptState by exportPromptViewModel.uiState.collectAsStateWithLifecycle()
             MatchListScreen(
                 state = state,
                 dashboard = {
@@ -66,6 +74,15 @@ fun PicklelogNavHost(
                             warning = state.capWarning,
                             remainingFreeMatches = state.remainingFreeMatches,
                             onDismiss = viewModel::dismissCapWarning,
+                            modifier = Modifier.padding(horizontal = 16.dp).padding(top = 8.dp),
+                        )
+                        ExportPromptBanner(
+                            reason = exportPromptState.reason,
+                            onExport = {
+                                exportPromptViewModel.dismiss()
+                                navController.navigate(BackupRoute)
+                            },
+                            onDismiss = exportPromptViewModel::dismiss,
                             modifier = Modifier.padding(horizontal = 16.dp).padding(top = 8.dp),
                         )
                         DashboardHeader(
@@ -164,7 +181,27 @@ fun PicklelogNavHost(
                 onBack = { navController.popBackStack() },
                 onSeePro = { navController.navigate(PaywallRoute) },
                 onRestore = viewModel::restore,
+                onOpenBackup = { navController.navigate(BackupRoute) },
             )
+        }
+        composable<BackupRoute> {
+            val viewModel: BackupViewModel = viewModel(factory = BackupViewModel.factory(dependencies))
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+            val actions =
+                remember(viewModel) {
+                    BackupActions(
+                        onBack = { navController.popBackStack() },
+                        onExportRequested = viewModel::requestExport,
+                        onExportConfirmed = viewModel::confirmExport,
+                        onExportDialogDismissed = viewModel::dismissExportDialog,
+                        onShareLaunched = viewModel::shareLaunched,
+                        onShareFailed = viewModel::shareFailed,
+                        onImportPicked = viewModel::importPicked,
+                        onImportSummaryDismissed = viewModel::dismissImportSummary,
+                        onMessageDismissed = viewModel::dismissMessage,
+                    )
+                }
+            BackupSettingsScreen(state = state, actions = actions)
         }
         composable<MatchEditRoute> {
             val viewModel: MatchEditViewModel = viewModel(factory = MatchEditViewModel.factory(dependencies))
