@@ -50,6 +50,7 @@ internal fun photoDataUri(
 }
 
 internal fun sampleCard(
+    brand: String = "Picklelog",
     displayName: String = "Matty",
     opponents: String? = "vs Ana & Ben",
     location: String? = "Ayala Triangle Gardens",
@@ -59,7 +60,7 @@ internal fun sampleCard(
     theme: CardTheme = CardTheme.DARK,
 ): CardData =
     CardData(
-        brand = "Picklelog",
+        brand = brand,
         displayName = displayName,
         meta = "Doubles · Sep 20, 2026",
         result = if (isWin) "Win" else "Loss",
