@@ -1,5 +1,6 @@
 package com.maxeydev.picklelog.ui
 
+import com.maxeydev.picklelog.domain.backup.BackupRepository
 import com.maxeydev.picklelog.domain.billing.ProStore
 import com.maxeydev.picklelog.domain.match.LastUsedFormatStore
 import com.maxeydev.picklelog.domain.match.MatchRepository
@@ -26,6 +27,7 @@ interface PicklelogDependencies {
     val photoImportQueue: PhotoImportQueue
     val cardRenderer: CardRendering
     val cardFormatStore: CardFormatStore
+    val backupRepository: BackupRepository
     val clock: Clock
     val defaultDispatcher: CoroutineDispatcher
     val ioDispatcher: CoroutineDispatcher
