@@ -13,6 +13,7 @@ object EntitlementRules {
                     isPro = true,
                     purchaseToken = signal.purchaseToken,
                     lastVerifiedAt = signal.verifiedAt,
+                    proSince = signal.purchasedAt,
                 )
             is EntitlementSignal.RefundConfirmed -> revokedBy(current, signal)
             EntitlementSignal.NoPurchaseFound -> current
