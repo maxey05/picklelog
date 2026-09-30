@@ -1,3 +1,5 @@
+import org.w3c.dom.Element
+
 fun sourceTree(): Sequence<File> {
     val self = rootDir.resolve("gradle/rule-checks.gradle.kts").canonicalFile
     return rootDir.walkTopDown()
@@ -239,6 +241,91 @@ val checkSchemaJsonCommitted by tasks.registering {
     }
 }
 
+fun rulesRoot(file: File): Element =
+    javax.xml.parsers.DocumentBuilderFactory
+        .newInstance()
+        .newDocumentBuilder()
+        .parse(file)
+        .documentElement
+
+fun Element.childElements(name: String): List<Element> =
+    (0 until childNodes.length)
+        .map { childNodes.item(it) }
+        .filterIsInstance<Element>()
+        .filter { it.tagName == name }
+
+fun Element.excludes(
+    domain: String,
+    path: String,
+): Boolean =
+    childElements("exclude").any {
+        it.getAttribute("domain") == domain && it.getAttribute("path").trimEnd('/') == path
+    }
+
+val checkBackupRules by tasks.registering {
+    group = "verification"
+    description = "Fails unless both Auto Backup rules files keep photos out of cloud backup (F48, AC-14.19)."
+    doLast {
+        val xmlDirectory = rootDir.resolve("app/src/main/res/xml")
+        val extraction = xmlDirectory.resolve("data_extraction_rules.xml")
+        val legacy = xmlDirectory.resolve("full_backup_content.xml")
+        val manifest = rootDir.resolve("app/src/main/AndroidManifest.xml")
+        val problems = mutableListOf<String>()
+
+        if (!extraction.exists()) {
+            problems += "app/src/main/res/xml/data_extraction_rules.xml is missing (the API 31+ file)"
+        } else {
+            val root = rulesRoot(extraction)
+            val cloud = root.childElements("cloud-backup").singleOrNull()
+            val transfer = root.childElements("device-transfer").singleOrNull()
+            if (cloud == null) {
+                problems += "data_extraction_rules.xml has no <cloud-backup> section"
+            } else {
+                if (!cloud.excludes("file", "photos")) {
+                    problems += "data_extraction_rules.xml does not exclude photos/ from <cloud-backup>"
+                }
+            }
+            if (transfer == null) {
+                problems += "data_extraction_rules.xml has no <device-transfer> section"
+            } else if (transfer.excludes("file", "photos")) {
+                problems += "data_extraction_rules.xml excludes photos/ from <device-transfer>; it must keep them"
+            }
+        }
+
+        if (!legacy.exists()) {
+            problems += "app/src/main/res/xml/full_backup_content.xml is missing (the API 30 and below file)"
+        } else {
+            val root = rulesRoot(legacy)
+            if (!root.excludes("file", "photos")) {
+                problems += "full_backup_content.xml does not exclude photos/"
+            }
+        }
+
+        val databaseBackup = rootDir.resolve("data/src/main/kotlin/com/maxeydev/picklelog/data/db/DatabaseBackup.kt")
+        if (!databaseBackup.exists() || !databaseBackup.readText().contains("context.noBackupFilesDir")) {
+            problems += "DatabaseBackup.kt must keep the pre-migration copy under noBackupFilesDir, which Auto Backup " +
+                "never includes (AC-14.18)"
+        }
+
+        val manifestText = manifest.readText().replace(Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL), "")
+        if (!manifestText.contains("android:dataExtractionRules=\"@xml/data_extraction_rules\"")) {
+            problems += "AndroidManifest.xml does not reference @xml/data_extraction_rules"
+        }
+        if (!manifestText.contains("android:fullBackupContent=\"@xml/full_backup_content\"")) {
+            problems += "AndroidManifest.xml does not reference @xml/full_backup_content"
+        }
+
+        report(
+            "checkBackupRules",
+            "F48 / AC-14.16 to AC-14.19",
+            problems,
+            "Both rules files are required. Shipping only one silently does nothing on the other API\n" +
+                "branch, and photos left in cloud backup can push it past the 25 MB quota, which makes\n" +
+                "Android skip the whole backup, database included (R37, R38).",
+        )
+    }
+}
+
 tasks.register("checkRules") {
     group = "verification"
     description = "Runs every mechanically-enforceable RULES.md check (R113)."
@@ -250,5 +337,6 @@ tasks.register("checkRules") {
         checkNoKeystoreCommitted,
         checkDomainDateTimeIndirection,
         checkSchemaJsonCommitted,
+        checkBackupRules,
     )
 }
