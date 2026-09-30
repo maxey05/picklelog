@@ -9,7 +9,10 @@ import com.maxeydev.picklelog.domain.person.PersonRepository
 import com.maxeydev.picklelog.domain.photo.PhotoImportQueue
 import com.maxeydev.picklelog.domain.profile.EntitlementRepository
 import com.maxeydev.picklelog.domain.profile.ProfileRepository
+import com.maxeydev.picklelog.domain.reminder.ReminderStore
+import com.maxeydev.picklelog.domain.reminder.StreakReminder
 import com.maxeydev.picklelog.domain.share.CardFormatStore
+import com.maxeydev.picklelog.domain.streak.StreakNoticeStore
 import com.maxeydev.picklelog.ui.share.CardRendering
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.datetime.TimeZone
@@ -28,6 +31,9 @@ interface PicklelogDependencies {
     val cardRenderer: CardRendering
     val cardFormatStore: CardFormatStore
     val backupRepository: BackupRepository
+    val streakNoticeStore: StreakNoticeStore
+    val reminderStore: ReminderStore
+    val streakReminder: StreakReminder
     val clock: Clock
     val defaultDispatcher: CoroutineDispatcher
     val ioDispatcher: CoroutineDispatcher
