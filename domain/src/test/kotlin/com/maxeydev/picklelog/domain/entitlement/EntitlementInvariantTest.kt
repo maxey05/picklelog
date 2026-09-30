@@ -74,7 +74,7 @@ class EntitlementInvariantTest {
     fun `a verified purchase grants pro and records the token`() {
         val after = EntitlementRules.next(FREE, EntitlementSignal.PurchaseVerified(TOKEN, VERIFIED_AT))
 
-        assertEquals(PRO, after)
+        assertEquals(PRO.copy(proSince = VERIFIED_AT), after)
     }
 
     @Test
