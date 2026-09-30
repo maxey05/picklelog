@@ -15,6 +15,7 @@ import com.maxeydev.picklelog.domain.match.deriveDuration
 import com.maxeydev.picklelog.domain.match.requireValidRoster
 import com.maxeydev.picklelog.domain.person.normalizePersonName
 import com.maxeydev.picklelog.domain.photo.ImportedPhoto
+import com.maxeydev.picklelog.domain.stats.AdvancedMatchLine
 import com.maxeydev.picklelog.domain.stats.MatchStatLine
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -69,6 +70,23 @@ class FakeMatchRepository(
             byId.values
                 .filter { it.passes(filter) }
                 .map { MatchStatLine(date = it.date, format = it.format, result = it.result) }
+        }
+
+    override fun observeAdvancedLines(filter: FilterState): Flow<List<AdvancedMatchLine>> =
+        matches.map { byId ->
+            byId.values
+                .filter { it.passes(filter) }
+                .map { match ->
+                    AdvancedMatchLine(
+                        date = match.date,
+                        format = match.format,
+                        result = match.result,
+                        opponentIds = match.opponents.map { it.id },
+                        partnerId = match.partner?.id,
+                        location = match.location,
+                        paddle = match.paddle,
+                    )
+                }
         }
 
     override fun observeById(id: Uuid): Flow<Match?> = matches.map { byId -> byId[id] }
