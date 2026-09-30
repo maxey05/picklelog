@@ -56,7 +56,7 @@ class CardGoldenTest {
         background: Int,
     ): Double =
         when (theme) {
-            CardTheme.DARK -> contrastAgainstWhite(background)
+            CardTheme.DARK, CardTheme.COURT, CardTheme.SUNSET -> contrastAgainstWhite(background)
             CardTheme.LIGHT -> contrastBetween(background, LIGHT_THEME_TEXT)
         }
 
@@ -208,13 +208,19 @@ class CardGoldenTest {
         val photo =
             if (golden.layout == CardLayout.PHOTO) {
                 when (golden.theme) {
-                    CardTheme.DARK -> photoDataUri(base = 245, spread = 10)
+                    CardTheme.DARK, CardTheme.COURT, CardTheme.SUNSET -> photoDataUri(base = 245, spread = 10)
                     CardTheme.LIGHT -> photoDataUri(base = 12, spread = 10)
                 }
             } else {
                 null
             }
-        val base = sampleCard(photo = photo, ratio = golden.ratio, theme = golden.theme)
+        val base =
+            sampleCard(
+                brand = if (golden.theme.requiresPro) "" else "Picklelog",
+                photo = photo,
+                ratio = golden.ratio,
+                theme = golden.theme,
+            )
         return when (golden.content) {
             GoldenContent.STANDARD -> base
             GoldenContent.LONG_NAMES ->
@@ -248,7 +254,7 @@ class CardGoldenTest {
     }
 
     @Test
-    fun both_ratios_and_both_themes_stay_legible_over_very_dark_and_very_light_photos() {
+    fun every_ratio_and_theme_stays_legible_over_very_dark_and_very_light_photos() {
         listOf(12, 245).forEach { base ->
             CardRatio.entries.forEach { ratio ->
                 CardTheme.entries.forEach { theme ->
@@ -261,6 +267,56 @@ class CardGoldenTest {
                 }
             }
         }
+    }
+
+    @Test
+    fun a_pro_card_with_the_wordmark_removed_shows_no_brand_and_still_fits() {
+        val (bitmap, diagnostics) = render(sampleCard(brand = "", theme = CardTheme.COURT))
+
+        assertFalse(diagnostics.getJSONObject("texts").has("brand"))
+        assertTrue(diagnostics.getJSONObject("texts").has("name"))
+        assertLegible(bitmap, diagnostics, CardTheme.COURT)
+    }
+
+    @Test
+    fun the_free_card_keeps_its_wordmark() {
+        val (_, diagnostics) = render(sampleCard())
+
+        assertEquals("Picklelog", diagnostics.getJSONObject("texts").getString("brand"))
+    }
+
+    @Test
+    fun a_pro_card_with_no_wordmark_and_no_name_leaves_the_header_empty_without_overflow() {
+        val (_, diagnostics) = render(sampleCard(brand = "", displayName = "", theme = CardTheme.SUNSET))
+
+        assertFalse(diagnostics.getJSONObject("texts").has("brand"))
+        assertFalse(diagnostics.getJSONObject("texts").has("name"))
+        assertEquals(0, diagnostics.getJSONArray("overflowing").length())
+    }
+
+    @Test
+    fun each_pro_theme_paints_its_own_background_not_the_dark_one() {
+        val court = render(sampleCard(brand = "", theme = CardTheme.COURT)).first
+        val sunset = render(sampleCard(brand = "", theme = CardTheme.SUNSET)).first
+        val dark = render(sampleCard(theme = CardTheme.DARK)).first
+
+        val courtPixel = court.getPixel(CORNER_SAMPLE, CORNER_SAMPLE)
+        val sunsetPixel = sunset.getPixel(CORNER_SAMPLE, CORNER_SAMPLE)
+        val darkPixel = dark.getPixel(CORNER_SAMPLE, CORNER_SAMPLE)
+        assertTrue(
+            "court is not blue: #${Integer.toHexString(courtPixel)}",
+            Color.blue(courtPixel) > Color.red(courtPixel) + HUE_MARGIN &&
+                Color.blue(courtPixel) > Color.green(courtPixel) + HUE_MARGIN,
+        )
+        assertTrue(
+            "sunset is not warm: #${Integer.toHexString(sunsetPixel)}",
+            Color.red(sunsetPixel) > Color.green(sunsetPixel) + HUE_MARGIN &&
+                Color.red(sunsetPixel) > Color.blue(sunsetPixel) + HUE_MARGIN,
+        )
+        assertTrue(
+            "dark is not green: #${Integer.toHexString(darkPixel)}",
+            Color.green(darkPixel) > Color.blue(darkPixel) + DARK_GREEN_MARGIN,
+        )
     }
 
     @Test
@@ -313,6 +369,9 @@ class CardGoldenTest {
     }
 }
 
+private const val CORNER_SAMPLE = 24
+private const val HUE_MARGIN = 40
+private const val DARK_GREEN_MARGIN = 10
 private const val MINIMUM_TEXT_KEPT = 0.7
 private const val SQUARE_DETAILS_MUST_START_ABOVE = 540.0
 private const val LONG_NAME = "Maximiliano Alejandro de la Cruz-Villanueva y Santisteban"
