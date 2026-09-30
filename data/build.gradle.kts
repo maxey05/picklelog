@@ -20,6 +20,8 @@ android {
     // test APK's assets. Without this the harness fails at runtime, not at compile time.
     sourceSets {
         getByName("androidTest").assets.srcDir(layout.projectDirectory.dir("schemas"))
+        getByName("test").java.srcDir("src/sharedTest/kotlin")
+        getByName("androidTest").java.srcDir("src/sharedTest/kotlin")
     }
 }
 
@@ -43,6 +45,7 @@ dependencies {
     implementation(libs.billing.ktx)
     implementation(libs.datastore)
     implementation(libs.datastore.preferences)
+    implementation(libs.work.runtime.ktx)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.datetime)
