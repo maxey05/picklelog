@@ -23,6 +23,7 @@ class UserProfileSerializerTest {
                     isPro = true,
                     purchaseToken = "token",
                     lastVerifiedAt = Instant.fromEpochMilliseconds(1_700_000_001_000),
+                    proSince = Instant.fromEpochMilliseconds(1_699_000_000_000),
                 ),
         )
 
@@ -48,14 +49,14 @@ class UserProfileSerializerTest {
     }
 
     @Test
-    fun `the entitlement object carries only its three declared fields`() {
+    fun `the entitlement object carries only its four declared fields`() {
         val entitlement =
             Json
                 .parseToJsonElement(write(profile))
                 .jsonObject["entitlement"]
                 ?.jsonObject
                 ?.keys
-        assertEquals(setOf("isPro", "purchaseToken", "lastVerifiedAt"), entitlement)
+        assertEquals(setOf("isPro", "purchaseToken", "lastVerifiedAt", "proSince"), entitlement)
     }
 
     @Test
@@ -64,6 +65,19 @@ class UserProfileSerializerTest {
             val encoded = write(profile)
             val restored = UserProfileSerializer().readFrom(ByteArrayInputStream(encoded.encodeToByteArray()))
             assertEquals(profile, restored)
+        }
+
+    @Test
+    fun `a profile saved before the pro start date existed still reads`() =
+        runTest {
+            val legacy =
+                """{"displayName":"Matthew","createdAt":1700000000000,""" +
+                    """"entitlement":{"isPro":true,"purchaseToken":"token","lastVerifiedAt":1700000001000}}"""
+
+            val restored = UserProfileSerializer().readFrom(ByteArrayInputStream(legacy.encodeToByteArray()))
+
+            assertEquals(true, restored.entitlement.isPro)
+            assertEquals(null, restored.entitlement.proSince)
         }
 
     @Test
