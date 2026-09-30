@@ -51,6 +51,14 @@ internal const val MATCH_LIST_FILTER =
 
 internal const val MATCH_STAT_SELECT = "SELECT m.date AS date, m.format AS format, m.result AS result FROM `match` m"
 
+internal const val ADVANCED_MATCH_SELECT =
+    "SELECT m.id AS id, m.date AS date, m.format AS format, m.result AS result, " +
+        "m.location AS location, m.paddle AS paddle FROM `match` m"
+
+internal const val MATCH_PEOPLE_FOR_FILTER =
+    "SELECT mp.match_id AS match_id, mp.person_id AS person_id, mp.role AS role FROM match_person mp " +
+        "WHERE mp.match_id IN (SELECT m.id FROM `match` m $MATCH_LIST_FILTER)"
+
 internal const val FILTERED_MATCH_LIST = "$MATCH_LIST_SELECT $MATCH_LIST_FILTER"
 
 private const val START_SECONDS = "CAST(strftime('%s', m.start_time) AS INTEGER)"
