@@ -32,6 +32,9 @@ data object PaywallRoute
 data object SettingsRoute
 
 @Serializable
+data object BackupRoute
+
+@Serializable
 data class ShareRoute(
     val matchId: String,
 )
