@@ -1,8 +1,13 @@
 package com.maxeydev.picklelog.ui.fakes
 
+import com.maxeydev.picklelog.domain.match.FilterState
+import com.maxeydev.picklelog.domain.reminder.StreakReminder
+import com.maxeydev.picklelog.domain.streak.InsuredStreakEngine
+import com.maxeydev.picklelog.domain.streak.streakInsuranceStart
 import com.maxeydev.picklelog.ui.PicklelogDependencies
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.datetime.TimeZone
 import java.io.File
 import kotlin.time.Clock
@@ -19,10 +24,25 @@ class FakeDependencies(
     override val cardRenderer: FakeCardRenderer = FakeCardRenderer(),
     override val cardFormatStore: FakeCardFormatStore = FakeCardFormatStore(),
     override val backupRepository: FakeBackupRepository = FakeBackupRepository(),
+    override val streakNoticeStore: FakeStreakNoticeStore = FakeStreakNoticeStore(),
+    override val reminderStore: FakeReminderStore = FakeReminderStore(),
+    val reminderScheduling: FakeReminderScheduling = FakeReminderScheduling(),
+    val reminderNotifier: FakeReminderNotifier = FakeReminderNotifier(),
     override val clock: Clock = Clock.System,
     override val defaultDispatcher: CoroutineDispatcher = Dispatchers.Unconfined,
     override val ioDispatcher: CoroutineDispatcher = Dispatchers.Unconfined,
     private val timeZone: TimeZone = TimeZone.currentSystemDefault(),
+    override val streakReminder: StreakReminder =
+        StreakReminder(
+            store = reminderStore,
+            matchDates = { matchRepository.observeStatLines(FilterState.NONE).first().map { it.date } },
+            insuranceStart = { profileRepository.observeProfile().first().entitlement.streakInsuranceStart() },
+            engine = InsuredStreakEngine(clock) { timeZone },
+            scheduling = reminderScheduling,
+            notifier = reminderNotifier,
+            clock = clock,
+            timeZone = { timeZone },
+        ),
     private val photoRoot: File = File(System.getProperty("java.io.tmpdir"), "picklelog-fake-photos"),
 ) : PicklelogDependencies {
     override fun currentTimeZone(): TimeZone = timeZone
