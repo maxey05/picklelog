@@ -6,6 +6,7 @@ sealed interface EntitlementSignal {
     data class PurchaseVerified(
         val purchaseToken: String,
         val verifiedAt: AppInstant,
+        val purchasedAt: AppInstant = verifiedAt,
     ) : EntitlementSignal
 
     data class RefundConfirmed(
