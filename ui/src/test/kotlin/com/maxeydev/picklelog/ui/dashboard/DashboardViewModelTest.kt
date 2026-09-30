@@ -11,12 +11,15 @@ import com.maxeydev.picklelog.domain.match.Match
 import com.maxeydev.picklelog.domain.match.MatchFormat
 import com.maxeydev.picklelog.domain.match.MatchResult
 import com.maxeydev.picklelog.domain.person.Person
-import com.maxeydev.picklelog.domain.streak.StreakEngine
+import com.maxeydev.picklelog.domain.streak.InsuredStreakEngine
+import com.maxeydev.picklelog.domain.streak.StreakNoticeState
+import com.maxeydev.picklelog.domain.streak.WeekKey
 import com.maxeydev.picklelog.ui.fakes.FakeEntitlementRepository
 import com.maxeydev.picklelog.ui.fakes.FakeMatchRepository
 import com.maxeydev.picklelog.ui.fakes.FakeMatchSortStore
 import com.maxeydev.picklelog.ui.fakes.FakePersonRepository
 import com.maxeydev.picklelog.ui.fakes.FakeProfileRepository
+import com.maxeydev.picklelog.ui.fakes.FakeStreakNoticeStore
 import com.maxeydev.picklelog.ui.fakes.FixedClock
 import com.maxeydev.picklelog.ui.match.list.MatchListViewModel
 import kotlinx.coroutines.Dispatchers
@@ -46,6 +49,7 @@ class DashboardViewModelTest {
     private lateinit var matches: FakeMatchRepository
     private lateinit var people: FakePersonRepository
     private lateinit var profile: FakeProfileRepository
+    private lateinit var notices: FakeStreakNoticeStore
     private val dave = Person(Uuid.random(), "Dave", AppInstant.fromEpochMilliseconds(0))
 
     @Before
@@ -78,17 +82,22 @@ class DashboardViewModelTest {
     private fun TestScope.dashboard(
         stored: List<Match>,
         displayName: String = "",
+        isPro: Boolean = false,
+        proSince: AppInstant? = null,
+        acknowledged: StreakNoticeState = StreakNoticeState(),
     ): DashboardViewModel {
         matches = FakeMatchRepository(stored)
         people = FakePersonRepository(initial = listOf(dave))
-        profile = FakeProfileRepository(displayName = displayName)
+        profile = FakeProfileRepository(displayName = displayName, isPro = isPro, proSince = proSince)
+        notices = FakeStreakNoticeStore(acknowledged)
         val viewModel =
             DashboardViewModel(
                 homeEntryState = handle,
                 matchRepository = matches,
                 personRepository = people,
                 profileRepository = profile,
-                streakEngine = StreakEngine(FixedClock(wednesday)) { TimeZone.UTC },
+                streakEngine = InsuredStreakEngine(FixedClock(wednesday)) { TimeZone.UTC },
+                streakNoticeStore = notices,
                 defaultDispatcher = UnconfinedTestDispatcher(testScheduler),
             )
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
@@ -279,5 +288,96 @@ class DashboardViewModelTest {
 
             assertTrue(state.streak.isCurrentTheLongest)
             assertEquals(2, state.streak.longest)
+        }
+
+    private val proSinceFebruary = AppInstant.parse("2026-02-01T00:00:00Z")
+    private val skippedWeek = WeekKey.of(AppDate.parse("2026-02-23"))
+
+    private fun streakBrokenLastWeek(): List<Match> =
+        listOf(match("2026-02-03"), match("2026-02-10"), match("2026-02-17"))
+
+    @Test
+    fun `the advanced breakdowns are grouped by person and follow the home filter`() =
+        runTest {
+            val viewModel =
+                dashboard(
+                    listOf(
+                        match("2026-03-02", result = MatchResult.WIN, opponents = listOf(dave)),
+                        match("2026-02-20", result = MatchResult.LOSS, opponents = listOf(dave)),
+                    ),
+                )
+            assertEquals(2, viewModel.uiState.value.advanced.headToHead.single().record.total)
+
+            listFor(matches).changeFilter(FilterState(fromDate = AppDate.parse("2026-03-01")))
+
+            val record = viewModel.uiState.value.advanced.headToHead.single()
+            assertEquals(dave.id, record.personId)
+            assertEquals(1, record.record.wins)
+            assertEquals(0, record.record.losses)
+        }
+
+    @Test
+    fun `people names are exposed so a breakdown can name the opponent`() =
+        runTest {
+            val state = dashboard(listOf(match("2026-03-02", opponents = listOf(dave)))).uiState.value
+
+            assertEquals("Dave", state.nameOf(dave.id))
+            assertNull(state.nameOf(Uuid.random()))
+        }
+
+    @Test
+    fun `a pro user whose streak was bridged sees the skip notice and the held count`() =
+        runTest {
+            val state =
+                dashboard(streakBrokenLastWeek(), isPro = true, proSince = proSinceFebruary).uiState.value
+
+            assertEquals(3, state.streak.current)
+            assertEquals(skippedWeek, state.usedSkipWeek)
+            assertEquals(1, state.skipsHeld)
+            assertNull(state.missedOpportunity)
+        }
+
+    @Test
+    fun `dismissing the skip notice stores the week and hides it`() =
+        runTest {
+            val viewModel = dashboard(streakBrokenLastWeek(), isPro = true, proSince = proSinceFebruary)
+
+            viewModel.dismissUsedSkip()
+
+            assertEquals(skippedWeek.ordinal, notices.current.acknowledgedSkipWeek)
+            assertNull(viewModel.uiState.value.usedSkipWeek)
+        }
+
+    @Test
+    fun `an already acknowledged skip is not shown again`() =
+        runTest {
+            val state =
+                dashboard(
+                    streakBrokenLastWeek(),
+                    isPro = true,
+                    proSince = proSinceFebruary,
+                    acknowledged = StreakNoticeState(acknowledgedSkipWeek = skippedWeek.ordinal),
+                ).uiState.value
+
+            assertNull(state.usedSkipWeek)
+            assertEquals(3, state.streak.current)
+        }
+
+    @Test
+    fun `a free user whose streak just broke is told a skip would have saved it`() =
+        runTest {
+            val viewModel = dashboard(streakBrokenLastWeek())
+
+            val state = viewModel.uiState.value
+            assertEquals(0, state.streak.current)
+            assertEquals(skippedWeek, state.missedOpportunity?.missedWeek)
+            assertEquals(3, state.missedOpportunity?.brokenStreakWeeks)
+            assertNull(state.usedSkipWeek)
+            assertEquals(0, state.skipsHeld)
+
+            viewModel.dismissMissedOpportunity()
+
+            assertEquals(skippedWeek.ordinal, notices.current.acknowledgedMissedWeek)
+            assertNull(viewModel.uiState.value.missedOpportunity)
         }
 }
