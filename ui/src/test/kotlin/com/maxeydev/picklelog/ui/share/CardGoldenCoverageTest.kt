@@ -27,8 +27,8 @@ class CardGoldenCoverageTest {
     }
 
     @Test
-    fun `the golden set is the deliberate ten and every name is unique`() {
-        assertEquals(10, CARD_GOLDENS.size)
+    fun `the golden set is the deliberate eighteen and every name is unique`() {
+        assertEquals(18, CARD_GOLDENS.size)
         assertEquals(CARD_GOLDENS.size, CARD_GOLDENS.map { it.name }.toSet().size)
     }
 
