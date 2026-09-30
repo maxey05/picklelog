@@ -200,4 +200,17 @@ interface MatchDao {
 
     @Query("DELETE FROM `match` WHERE id = :id")
     suspend fun deleteMatch(id: String)
+
+    @Transaction
+    @Query("SELECT * FROM `match` ORDER BY date ASC, created_at ASC, id ASC")
+    suspend fun allWithRelations(): List<MatchWithRelationsEntity>
+
+    @Query("SELECT id FROM `match`")
+    suspend fun allMatchIds(): List<String>
+
+    @Query("SELECT COUNT(*) FROM `match`")
+    suspend fun matchCount(): Int
+
+    @Query("SELECT id FROM photo")
+    suspend fun allPhotoIds(): List<String>
 }
