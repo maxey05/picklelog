@@ -5,31 +5,48 @@
     <string name="new_match">Log a match</string>
 
     <string name="list_empty_title">No matches yet</string>
-    <string name="list_empty_body">Tap + to log your first match. It only takes a few taps.</string>
+    <string name="list_empty_body">Welcome to Picklelog! Start by logging a match.</string>
+    <string name="list_empty_action">Log your first match</string>
     <string name="list_versus_one">vs %1$s</string>
     <string name="list_versus_two">vs %1$s &amp; %2$s</string>
     <string name="list_format_and_date">%1$s · %2$s</string>
+    <string name="list_format_with_partner">%1$s · with %2$s</string>
+    <string name="list_match_untitled">%1$s match</string>
+    <string name="list_date_today">Today</string>
+    <string name="result_letter_win">W</string>
+    <string name="result_letter_loss">L</string>
+    <plurals name="list_match_word">
+        <item quantity="one">match</item>
+        <item quantity="other">matches</item>
+    </plurals>
+    <plurals name="list_count_of_total">
+        <item quantity="one">of %1$d match</item>
+        <item quantity="other">of %1$d matches</item>
+    </plurals>
+    <plurals name="list_count_a11y_filtered">
+        <item quantity="one">%1$d of %2$d match</item>
+        <item quantity="other">%1$d of %2$d matches</item>
+    </plurals>
     <string name="list_score">%1$d–%2$d</string>
     <string name="open_match_details">Open match details</string>
 
     <string name="sort_button">Sort: %1$s</string>
-    <string name="sort_date_newest">Date — newest first</string>
-    <string name="sort_date_oldest">Date — oldest first</string>
-    <string name="sort_result_wins_first">Result — wins first</string>
-    <string name="sort_result_losses_first">Result — losses first</string>
-    <string name="sort_opponent_a_to_z">Opponent A–Z — by first opponent</string>
+    <string name="sort_date_newest">Newest first</string>
+    <string name="sort_date_oldest">Oldest first</string>
+    <string name="sort_result_wins_first">Wins first</string>
+    <string name="sort_result_losses_first">Losses first</string>
+    <string name="sort_opponent_a_to_z">Opponent A–Z</string>
     <string name="sort_location_a_to_z">Location A–Z</string>
-    <string name="sort_duration_shortest">Duration — shortest first</string>
-    <string name="sort_duration_longest">Duration — longest first</string>
+    <string name="sort_duration_shortest">Shortest first</string>
+    <string name="sort_duration_longest">Longest first</string>
 
     <string name="search_label">Search matches</string>
-    <string name="search_placeholder">Opponent, partner, place, paddle or notes</string>
+    <string name="search_placeholder">Search opponents, places, notes</string>
     <string name="search_clear">Clear search</string>
 
     <string name="filter_button">Filters</string>
     <string name="filter_button_active">Filters (%1$d)</string>
-    <string name="filter_sheet_title">Filter matches</string>
-    <string name="filter_any">Any</string>
+    <string name="filter_sheet_title">Filters</string>
     <string name="filter_wins">Wins</string>
     <string name="filter_losses">Losses</string>
     <string name="filter_any_date">Any date</string>
@@ -47,7 +64,13 @@
     <string name="filter_choose_dates">Choose dates</string>
     <string name="filter_remove">Remove filter: %1$s</string>
     <string name="filter_clear_all">Clear all</string>
-    <string name="filter_done">Done</string>
+    <string name="filter_done">Show matches</string>
+    <string name="filter_reset">Reset</string>
+    <string name="filter_all">All</string>
+    <string name="filter_date_this_month">This month</string>
+    <string name="filter_date_last_three_months">Last 3 months</string>
+    <string name="filter_date_this_year">This year</string>
+    <string name="filter_date_custom">Custom range…</string>
     <string name="filter_reset_notice">Filters reset each time you reopen Picklelog.</string>
     <string name="filter_picker_description">%1$s, %2$s. Change</string>
 
@@ -61,27 +84,22 @@
     <string name="a11y_scores">scores %1$s</string>
     <string name="a11y_score">%1$d to %2$d</string>
     <string name="a11y_with_photo">with photo</string>
+    <string name="a11y_with_partner">with %1$s</string>
+    <string name="a11y_at_location">at %1$s</string>
 
     <plurals name="dashboard_match_count">
         <item quantity="one">%1$d match</item>
         <item quantity="other">%1$d matches</item>
     </plurals>
-    <string name="dashboard_record">%1$d W · %2$d L</string>
-    <string name="dashboard_win_percent">%1$d%% won</string>
-    <string name="dashboard_win_percent_none">— won</string>
     <plurals name="dashboard_streak_weeks">
         <item quantity="one">%1$d-week streak</item>
         <item quantity="other">%1$d-week streak</item>
     </plurals>
     <string name="dashboard_no_streak">No active streak</string>
-    <string name="dashboard_streak_scope">%1$s · all matches</string>
-    <string name="dashboard_empty">No matches yet. Your record starts with the first one.</string>
-    <string name="dashboard_filtered_empty">No matches with these filters.</string>
     <string name="dashboard_filtered">Filtered: %1$s</string>
     <string name="dashboard_filter_separator">" · "</string>
     <string name="dashboard_a11y_record">%1$d won, %2$d lost</string>
     <string name="dashboard_a11y_percent">%1$d percent won</string>
-    <string name="dashboard_a11y_no_percent">no win percentage yet</string>
     <plurals name="dashboard_a11y_streak">
         <item quantity="one">current streak %1$d week, counting all matches</item>
         <item quantity="other">current streak %1$d weeks, counting all matches</item>
@@ -89,6 +107,14 @@
     <string name="dashboard_a11y_no_streak">no active streak, counting all matches</string>
     <string name="dashboard_a11y_filtered">figures filtered by %1$s</string>
     <string name="dashboard_a11y_open">Open full stats</string>
+    <string name="dashboard_record_compact">%1$dW – %2$dL</string>
+    <string name="dashboard_win_rate_label">WR</string>
+    <string name="dashboard_last_matches">Last %1$d</string>
+    <string name="dashboard_win_percent_short">%1$d%%</string>
+    <string name="dashboard_streak_compact">%1$d wk</string>
+    <string name="dashboard_no_streak_compact">No streak</string>
+    <string name="dashboard_a11y_last_five">last %1$d matches, oldest first: %2$s</string>
+    <string name="dashboard_a11y_header_separator">", "</string>
 
     <string name="stats_title">Your stats</string>
     <string name="stats_record">Record</string>
@@ -149,7 +175,7 @@
     <string name="streak_notice_dismiss">Dismiss</string>
     <string name="settings_reminder_heading">Reminders</string>
     <string name="settings_reminder_label">Streak reminder</string>
-    <string name="settings_reminder_description">One notification late on Friday if you haven\'t played this week and your streak is at risk. Never more than one a week.</string>
+    <string name="settings_reminder_description">One notification on Friday, at the time you choose, if you haven\'t played this week and your streak is at risk. Never more than one a week.</string>
     <string name="settings_reminder_blocked">Notifications are turned off for Picklelog in system settings, so no reminder can arrive.</string>
     <string name="settings_reminder_open_settings">Open notification settings</string>
     <string name="reminder_permission_title">Allow streak reminders?</string>
@@ -381,4 +407,35 @@
     <string name="export_prompt_periodic">It\'s been a while since your last backup. Export a copy of your matches to keep them safe.</string>
     <string name="export_prompt_action">Export now</string>
     <string name="export_prompt_dismiss">Dismiss backup reminder</string>
+    <string name="name_field_label">Your name</string>
+    <string name="name_field_required">A name is required.</string>
+    <string name="name_field_hint">Shown on your dashboard and shared match cards. Up to %1$d characters.</string>
+    <string name="onboarding_title">Welcome to Picklelog</string>
+    <string name="onboarding_body">Log your pickleball matches in seconds. Everything stays on this phone, with no account and no sign-in.</string>
+    <string name="onboarding_continue">Get started</string>
+    <string name="onboarding_save_failed">Couldn\'t save your name. Try again.</string>
+    <string name="settings_profile_heading">Profile</string>
+    <string name="settings_name_save">Save name</string>
+    <string name="settings_appearance_heading">Appearance</string>
+    <string name="settings_dark_mode_label">Dark mode</string>
+    <string name="settings_dark_mode_description">Matches your phone\'s setting until you change it here.</string>
+    <string name="settings_reminder_time_label">Reminder time</string>
+    <string name="settings_reminder_time_description">When the Friday reminder arrives.</string>
+    <string name="settings_reminder_time_button">Reminder time %1$s. Change</string>
+    <string name="settings_about_open">About Picklelog</string>
+    <string name="settings_data_heading">Your data</string>
+    <string name="settings_erase_description">Removes every match, photo, opponent name, your name and your reminder settings from this device. A Pro purchase is not affected.</string>
+    <string name="settings_erase_open">Erase all data</string>
+    <string name="settings_erase_dialog_title">Erase all data?</string>
+    <string name="settings_erase_dialog_body">This permanently deletes your matches, photos and name from this device. It can\'t be undone, and a backup in your Google account may not cover it. Your Pro purchase is kept.</string>
+    <string name="settings_erase_export_first">Export my matches first</string>
+    <string name="settings_erase_type_prompt">Type %1$s to confirm</string>
+    <string name="settings_erase_confirm_word">ERASE</string>
+    <string name="settings_erase_confirm">Erase everything</string>
+    <string name="settings_erase_failed">Couldn\'t erase everything. Some data may remain. Try again.</string>
+    <string name="about_title">About</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_privacy_heading">Privacy</string>
+    <string name="about_privacy_body">Picklelog has no account and no server. Your matches, photos and name stay on this device. It has no analytics and no ads. The only network activity is Google Play checking your Pro purchase. The camera and notifications are used only if you turn them on.</string>
+    <string name="about_licences_heading">Open-source software</string>
 </resources>
