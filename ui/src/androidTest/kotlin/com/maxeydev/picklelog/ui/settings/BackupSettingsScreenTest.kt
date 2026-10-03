@@ -6,8 +6,8 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.maxeydev.picklelog.domain.backup.ExportPromptReason
 import com.maxeydev.picklelog.domain.backup.ImportSummary
@@ -53,21 +53,21 @@ class BackupSettingsScreenTest {
     fun it_says_when_nothing_has_ever_been_exported() {
         show(BackupUiState(lastExportAt = null))
 
-        compose.onNodeWithTag(BackupTestTags.LAST_EXPORT).assertIsDisplayed()
+        compose.onNodeWithTag(BackupTestTags.LAST_EXPORT, useUnmergedTree = true).assertIsDisplayed()
     }
 
     @Test
     fun it_shows_the_last_export_date_once_there_is_one() {
         show(BackupUiState(lastExportAt = AppInstant.parse("2026-09-30T04:00:00Z")))
 
-        compose.onNodeWithTag(BackupTestTags.LAST_EXPORT).assertIsDisplayed()
+        compose.onNodeWithTag(BackupTestTags.LAST_EXPORT, useUnmergedTree = true).assertIsDisplayed()
     }
 
     @Test
     fun tapping_export_asks_for_confirmation_through_the_view_model() {
         show(BackupUiState())
 
-        compose.onNodeWithTag(BackupTestTags.EXPORT).performScrollTo().performClick()
+        compose.onNodeWithTag(BackupTestTags.EXPORT).performClick()
 
         assertEquals(1, exportRequests)
         assertEquals(0, exportConfirmations)
@@ -84,10 +84,10 @@ class BackupSettingsScreenTest {
     }
 
     @Test
-    fun the_import_note_states_that_the_newest_matches_come_first() {
+    fun the_screen_says_photos_are_not_included_before_any_export() {
         show(BackupUiState())
 
-        compose.onNodeWithTag(BackupTestTags.IMPORT_FREE_NOTE).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Photos aren't included").assertIsDisplayed()
     }
 
     @Test
@@ -112,7 +112,7 @@ class BackupSettingsScreenTest {
         show(BackupUiState(isExporting = true))
 
         compose.onNodeWithTag(BackupTestTags.EXPORT).assertIsNotEnabled()
-        compose.onNodeWithTag(BackupTestTags.IMPORT).performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag(BackupTestTags.IMPORT).assertIsNotEnabled()
     }
 
     @Test
