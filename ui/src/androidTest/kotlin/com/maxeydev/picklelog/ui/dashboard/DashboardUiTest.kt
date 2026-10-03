@@ -14,8 +14,6 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.assertDoesNotExist
-import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -72,6 +70,8 @@ class DashboardUiTest {
         streak: StreakResult = StreakResult(current = 3, longest = 5),
         displayName: String = "Matty",
         stats: BasicStats = record,
+        overallStats: BasicStats = record,
+        recentResults: List<MatchResult> = emptyList(),
         hasAnyMatches: Boolean = true,
         isPro: Boolean = false,
         advanced: AdvancedStats = AdvancedStats.EMPTY,
@@ -82,6 +82,8 @@ class DashboardUiTest {
             isLoading = false,
             displayName = displayName,
             stats = stats,
+            overallStats = overallStats,
+            recentResults = recentResults,
             streak = streak,
             hasAnyMatches = hasAnyMatches,
             filter = filter,
@@ -113,13 +115,14 @@ class DashboardUiTest {
     private fun showHeader(
         state: DashboardUiState,
         fontScale: Float = 1f,
+        isCollapsed: Boolean = false,
     ) {
         compose.setContent {
             val density = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
                 MaterialTheme {
                     Box(modifier = Modifier.width(360.dp)) {
-                        DashboardHeader(state = state, onOpenStats = {})
+                        DashboardHeader(state = state, isCollapsed = isCollapsed, onOpenStats = {})
                     }
                 }
             }
@@ -149,41 +152,73 @@ class DashboardUiTest {
         assertTrue("$measured escapes the header $header", bounds.right <= header.right + PIXEL_TOLERANCE)
     }
 
-    @Test
-    fun the_header_shows_name_count_record_percentage_and_streak() {
-        showHeader(state())
-
-        compose.onNodeWithTag(DashboardTestTags.NAME, useUnmergedTree = true).assertIsDisplayed()
-        compose.onNodeWithText("12 matches", useUnmergedTree = true).assertIsDisplayed()
-        compose.onNodeWithText("8 W · 4 L", useUnmergedTree = true).assertIsDisplayed()
-        compose.onNodeWithText("67% won", useUnmergedTree = true).assertIsDisplayed()
-        compose.onNodeWithText("3-week streak · all matches", useUnmergedTree = true).assertIsDisplayed()
+    private fun SemanticsNodeInteraction.assertInsideHeader() {
+        val header = compose.onNodeWithTag(DashboardTestTags.HEADER).fetchSemanticsNode().boundsInRoot
+        val bounds = fetchSemanticsNode().boundsInRoot
+        assertTrue("$bounds escapes the header $header", bounds.bottom <= header.bottom + PIXEL_TOLERANCE)
+        assertTrue("$bounds escapes the header $header", bounds.right <= header.right + PIXEL_TOLERANCE)
     }
 
     @Test
-    fun with_no_filter_there_is_no_filter_indicator_at_all() {
+    fun the_header_shows_name_record_win_rate_and_streak() {
         showHeader(state())
 
+        compose.onNodeWithTag(DashboardTestTags.NAME, useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithText("8W – 4L", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithText("67%", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithText("WR", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithText("3-week streak", useUnmergedTree = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun a_zero_streak_says_so_in_words() {
+        showHeader(state(streak = StreakResult.NONE))
+
+        compose.onNodeWithText("No active streak", useUnmergedTree = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun the_header_figures_ignore_the_active_filter() {
+        val filteredRecord =
+            BasicStats(
+                overall = WinLoss(wins = 1, losses = 0),
+                singles = WinLoss(wins = 1, losses = 0),
+                doubles = WinLoss.NONE,
+            )
+        showHeader(
+            state(
+                filter = FilterState(format = MatchFormat.SINGLES, result = MatchResult.WIN),
+                stats = filteredRecord,
+            ),
+        )
+
+        compose.onNodeWithText("8W – 4L", useUnmergedTree = true).assertIsDisplayed()
         compose.onAllNodesWithTag(DashboardTestTags.FILTER_INDICATOR, useUnmergedTree = true).assertCountEquals(0)
         assertFalse(spokenHeader().contains("filtered"))
     }
 
     @Test
-    fun an_active_filter_is_named_in_words_next_to_an_icon() {
-        showHeader(state(filter = FilterState(format = MatchFormat.SINGLES, result = MatchResult.WIN)))
+    fun the_collapsed_header_keeps_the_name_streak_win_rate_and_record() {
+        showHeader(state(), isCollapsed = true)
 
-        compose
-            .onNodeWithTag(DashboardTestTags.FILTER_INDICATOR, useUnmergedTree = true)
-            .assertIsDisplayed()
-        compose.onNodeWithText("Filtered: Singles · Wins", useUnmergedTree = true).assertIsDisplayed()
-        assertTrue(spokenHeader().contains("figures filtered by Singles · Wins"))
+        compose.onNodeWithTag(DashboardTestTags.NAME, useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithText("3 wk", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithText("67%", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithText("8W – 4L", useUnmergedTree = true).assertIsDisplayed()
     }
 
     @Test
-    fun zero_matches_show_an_empty_message_not_zero_figures() {
-        showHeader(state(stats = BasicStats.EMPTY, streak = StreakResult.NONE, hasAnyMatches = false))
+    fun the_last_matches_show_only_when_there_are_some() {
+        showHeader(state(recentResults = listOf(MatchResult.WIN, MatchResult.LOSS, MatchResult.WIN)))
 
-        compose.onNodeWithTag(DashboardTestTags.EMPTY, useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithText("Last 3", useUnmergedTree = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun zero_matches_show_no_header_at_all() {
+        showHeader(state(stats = BasicStats.EMPTY, overallStats = BasicStats.EMPTY, hasAnyMatches = false))
+
+        compose.onAllNodesWithTag(DashboardTestTags.HEADER, useUnmergedTree = true).assertCountEquals(0)
         compose.onAllNodesWithTag(DashboardTestTags.WIN_PERCENT, useUnmergedTree = true).assertCountEquals(0)
         compose.onAllNodes(hasText("0%", substring = true), useUnmergedTree = true).assertCountEquals(0)
         compose.onAllNodes(hasText("NaN", substring = true), useUnmergedTree = true).assertCountEquals(0)
@@ -199,16 +234,15 @@ class DashboardUiTest {
 
     @Test
     fun the_header_reads_as_one_sentence_for_talkback() {
-        showHeader(state(filter = FilterState(format = MatchFormat.SINGLES)))
+        showHeader(state(recentResults = listOf(MatchResult.WIN, MatchResult.LOSS, MatchResult.WIN)))
 
         val spoken = spokenHeader()
         listOf(
             "Matty",
-            "12 matches",
             "8 won, 4 lost",
             "67 percent won",
             "current streak 3 weeks, counting all matches",
-            "figures filtered by Singles",
+            "last 3 matches, oldest first: Win, Loss, Win",
         ).forEach { part -> assertTrue("missing '$part' in: $spoken", spoken.contains(part)) }
     }
 
@@ -222,16 +256,12 @@ class DashboardUiTest {
             fontScale = 2f,
         )
 
-        listOf(
-            DashboardTestTags.NAME,
-            DashboardTestTags.MATCH_COUNT,
-            DashboardTestTags.RECORD,
-            DashboardTestTags.WIN_PERCENT,
-            DashboardTestTags.STREAK,
-        ).forEach { tag ->
+        listOf(DashboardTestTags.NAME, DashboardTestTags.RECORD).forEach { tag ->
             compose.onNodeWithTag(tag, useUnmergedTree = true).assertIsDisplayed().assertTextFits()
         }
-        compose.onNodeWithText("Filtered:", substring = true, useUnmergedTree = true).assertTextFits()
+        listOf(DashboardTestTags.WIN_PERCENT, DashboardTestTags.STREAK).forEach { tag ->
+            compose.onNodeWithTag(tag, useUnmergedTree = true).assertIsDisplayed().assertInsideHeader()
+        }
     }
 
     @Test
