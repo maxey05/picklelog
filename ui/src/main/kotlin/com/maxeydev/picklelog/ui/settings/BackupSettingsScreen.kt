@@ -3,13 +3,20 @@ package com.maxeydev.picklelog.ui.settings
 import android.content.ActivityNotFoundException
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -34,7 +41,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -42,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import com.maxeydev.picklelog.domain.backup.ImportSummary
 import com.maxeydev.picklelog.domain.entitlement.FreeTier
 import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.theme.PicklelogTheme
 
 private val IMPORT_MIME_TYPES = arrayOf("*/*")
 
@@ -81,6 +88,13 @@ fun BackupSettingsScreen(
                 },
             )
         },
+        bottomBar = {
+            BackupButtons(
+                state = state,
+                onExport = actions.onExportRequested,
+                onImport = { picker.launch(IMPORT_MIME_TYPES) },
+            )
+        },
     ) { innerPadding ->
         Column(
             modifier =
@@ -88,18 +102,30 @@ fun BackupSettingsScreen(
                     .padding(innerPadding)
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            LastExportCard(state = state)
             Text(
-                text = stringResource(R.string.backup_honesty),
-                modifier = Modifier.testTag(BackupTestTags.HONESTY),
+                text = stringResource(R.string.backup_intro),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            LastExportText(lastExportAt = state.lastExportAt)
+            SettingsCard {
+                SettingsRow(
+                    icon = R.drawable.ic_info,
+                    label = stringResource(R.string.backup_photos_not_included_short),
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                SettingsRow(
+                    icon = R.drawable.ic_info,
+                    label = stringResource(R.string.backup_auto_backup_short),
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag(BackupTestTags.HONESTY),
+                )
+            }
             state.message?.let { MessageCard(message = it, onDismiss = actions.onMessageDismissed) }
             state.importSummary?.let { ImportSummaryCard(summary = it, onDismiss = actions.onImportSummaryDismissed) }
-            ExportSection(state = state, onExport = actions.onExportRequested)
-            ImportSection(state = state, onImport = { picker.launch(IMPORT_MIME_TYPES) })
         }
     }
     if (state.isExportDialogVisible) {
@@ -108,60 +134,85 @@ fun BackupSettingsScreen(
 }
 
 @Composable
-private fun ExportSection(
+private fun LastExportCard(state: BackupUiState) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = PicklelogTheme.colors.header,
+        contentColor = PicklelogTheme.colors.onHeader,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp).semantics(mergeDescendants = true) { },
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.backup_last_export_label),
+                style = MaterialTheme.typography.labelLarge,
+                color = PicklelogTheme.colors.onHeaderMuted,
+            )
+            LastExportText(
+                lastExportAt = state.lastExportAt,
+                style = MaterialTheme.typography.headlineSmall,
+                color = PicklelogTheme.colors.onHeader,
+            )
+            Text(
+                text = stringResource(R.string.backup_on_device_only),
+                style = MaterialTheme.typography.bodyMedium,
+                color = PicklelogTheme.colors.onHeaderMuted,
+            )
+        }
+    }
+}
+
+@Composable
+private fun BackupButtons(
     state: BackupUiState,
     onExport: () -> Unit,
-) {
-    SectionHeading(R.string.backup_export_heading)
-    Text(stringResource(R.string.backup_export_body))
-    Text(
-        text = stringResource(R.string.backup_photos_not_included),
-        fontWeight = FontWeight.SemiBold,
-    )
-    Button(
-        onClick = onExport,
-        enabled = !state.isBusy,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(BackupTestTags.EXPORT),
-    ) {
-        if (state.isExporting) {
-            WorkingIndicator(R.string.backup_export_working)
-        } else {
-            Text(stringResource(R.string.backup_export_button))
-        }
-    }
-}
-
-@Composable
-private fun ImportSection(
-    state: BackupUiState,
     onImport: () -> Unit,
 ) {
-    SectionHeading(R.string.backup_import_heading)
-    Text(stringResource(R.string.backup_import_body))
-    Text(
-        text = stringResource(R.string.backup_import_free_note, FreeTier.MATCH_LIMIT),
-        modifier = Modifier.testTag(BackupTestTags.IMPORT_FREE_NOTE),
-    )
-    OutlinedButton(
-        onClick = onImport,
-        enabled = !state.isBusy,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(BackupTestTags.IMPORT),
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        if (state.isImporting) {
-            WorkingIndicator(R.string.backup_import_working)
-        } else {
-            Text(stringResource(R.string.backup_import_button))
+        Button(
+            onClick = onExport,
+            enabled = !state.isBusy,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag(BackupTestTags.EXPORT),
+        ) {
+            if (state.isExporting) {
+                WorkingIndicator(R.string.backup_export_working)
+            } else {
+                ButtonLabel(icon = R.drawable.ic_upload, text = R.string.backup_export_button)
+            }
+        }
+        OutlinedButton(
+            onClick = onImport,
+            enabled = !state.isBusy,
+            border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag(BackupTestTags.IMPORT),
+        ) {
+            if (state.isImporting) {
+                WorkingIndicator(R.string.backup_import_working)
+            } else {
+                ButtonLabel(icon = R.drawable.ic_download, text = R.string.backup_import_button)
+            }
         }
     }
 }
 
 @Composable
-private fun SectionHeading(text: Int) {
-    Text(
-        text = stringResource(text),
-        style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.semantics { heading() },
-    )
+private fun ButtonLabel(
+    @DrawableRes icon: Int,
+    @StringRes text: Int,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Icon(painter = painterResource(icon), contentDescription = null, modifier = Modifier.size(20.dp))
+        Text(stringResource(text))
+    }
 }
 
 @Composable
