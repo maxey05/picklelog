@@ -10,7 +10,9 @@ import com.maxeydev.picklelog.data.billing.BillingStartupCheck
 import com.maxeydev.picklelog.data.billing.PlayEntitlementRepository
 import com.maxeydev.picklelog.data.billing.PlayProStore
 import com.maxeydev.picklelog.data.billing.PurchaseAcknowledger
+import com.maxeydev.picklelog.data.db.DB_BACKUP_DIRECTORY
 import com.maxeydev.picklelog.data.db.createPicklelogDatabase
+import com.maxeydev.picklelog.data.erase.RoomLocalDataEraser
 import com.maxeydev.picklelog.data.match.DataStoreLastUsedFormatStore
 import com.maxeydev.picklelog.data.match.DataStoreMatchSortStore
 import com.maxeydev.picklelog.data.match.RoomMatchRepository
@@ -23,10 +25,13 @@ import com.maxeydev.picklelog.data.profile.DataStoreEntitlementRepository
 import com.maxeydev.picklelog.data.profile.DataStoreProfileRepository
 import com.maxeydev.picklelog.data.profile.createUserProfileDataStore
 import com.maxeydev.picklelog.data.reminder.DataStoreReminderStore
+import com.maxeydev.picklelog.data.settings.DataStoreAppSettingsStore
+import com.maxeydev.picklelog.data.settings.createAppSettingsDataStore
 import com.maxeydev.picklelog.data.share.DataStoreCardFormatStore
 import com.maxeydev.picklelog.data.streak.DataStoreStreakNoticeStore
 import com.maxeydev.picklelog.domain.backup.BackupRepository
 import com.maxeydev.picklelog.domain.billing.ProStore
+import com.maxeydev.picklelog.domain.erase.LocalDataEraser
 import com.maxeydev.picklelog.domain.match.LastUsedFormatStore
 import com.maxeydev.picklelog.domain.match.MatchRepository
 import com.maxeydev.picklelog.domain.match.MatchSortStore
@@ -35,6 +40,7 @@ import com.maxeydev.picklelog.domain.photo.PhotoImportQueue
 import com.maxeydev.picklelog.domain.profile.EntitlementRepository
 import com.maxeydev.picklelog.domain.profile.ProfileRepository
 import com.maxeydev.picklelog.domain.reminder.ReminderStore
+import com.maxeydev.picklelog.domain.settings.AppSettingsStore
 import com.maxeydev.picklelog.domain.share.CardFormatStore
 import com.maxeydev.picklelog.domain.streak.StreakNoticeStore
 import kotlinx.coroutines.CoroutineDispatcher
@@ -63,6 +69,8 @@ class DataLayer(
     val backupRepository: BackupRepository,
     val streakNoticeStore: StreakNoticeStore,
     val reminderStore: ReminderStore,
+    val appSettingsStore: AppSettingsStore,
+    val localDataEraser: LocalDataEraser,
     private val ioDispatcher: CoroutineDispatcher,
 ) {
     val matchRepository: MatchRepository = roomMatchRepository
@@ -86,6 +94,9 @@ suspend fun createDataLayer(
     val preferences = createMatchPreferencesDataStore(appContext, applicationScope + ioDispatcher)
     val photoStore = PhotoStore(appContext.filesDir)
     val profileStore = createUserProfileDataStore(appContext, applicationScope + ioDispatcher)
+    val profileRepository = DataStoreProfileRepository(profileStore)
+    val appSettings =
+        DataStoreAppSettingsStore(createAppSettingsDataStore(appContext, applicationScope + ioDispatcher))
     val matchRepository = RoomMatchRepository(database, photoStore, ioDispatcher)
     val billing = BillingClientWrapper(appContext)
     val entitlements =
@@ -122,7 +133,7 @@ suspend fun createDataLayer(
         lastUsedFormatStore = DataStoreLastUsedFormatStore(preferences),
         matchSortStore = DataStoreMatchSortStore(preferences),
         photoStore = photoStore,
-        profileRepository = DataStoreProfileRepository(profileStore),
+        profileRepository = profileRepository,
         entitlementRepository = entitlements,
         proStore = PlayProStore(billing, entitlements) { currentActivity()?.let { billing.launchProPurchase(it) } },
         billingStartupCheck = BillingStartupCheck(entitlements, billing, applicationScope),
@@ -131,6 +142,18 @@ suspend fun createDataLayer(
         backupRepository = backupRepository,
         streakNoticeStore = DataStoreStreakNoticeStore(preferences),
         reminderStore = DataStoreReminderStore(preferences),
+        appSettingsStore = appSettings,
+        localDataEraser =
+            RoomLocalDataEraser(
+                database = database,
+                photoStore = photoStore,
+                exportDirectory = File(appContext.cacheDir, EXPORT_CACHE_DIRECTORY),
+                databaseBackupDirectory = File(appContext.noBackupFilesDir, DB_BACKUP_DIRECTORY),
+                preferences = preferences,
+                profileRepository = profileRepository,
+                appSettings = appSettings,
+                ioDispatcher = ioDispatcher,
+            ),
         ioDispatcher = ioDispatcher,
     )
 }
