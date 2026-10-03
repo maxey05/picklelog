@@ -3,6 +3,7 @@
 package com.maxeydev.picklelog.ui.dashboard
 
 import com.maxeydev.picklelog.domain.match.FilterState
+import com.maxeydev.picklelog.domain.match.MatchResult
 import com.maxeydev.picklelog.domain.stats.AdvancedStats
 import com.maxeydev.picklelog.domain.stats.BasicStats
 import com.maxeydev.picklelog.domain.streak.MissedSkipOpportunity
@@ -15,6 +16,8 @@ data class DashboardUiState(
     val isLoading: Boolean = true,
     val displayName: String = "",
     val stats: BasicStats = BasicStats.EMPTY,
+    val overallStats: BasicStats = BasicStats.EMPTY,
+    val recentResults: List<MatchResult> = emptyList(),
     val streak: StreakResult = StreakResult.NONE,
     val hasAnyMatches: Boolean = false,
     val filter: FilterState = FilterState.NONE,
