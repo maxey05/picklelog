@@ -58,6 +58,11 @@ private data class FilterChoices(
     val locations: List<String>,
 )
 
+private data class MatchCounts(
+    val total: Int,
+    val result: Int,
+)
+
 private data class CapBanner(
     val warning: CapWarning,
     val remainingFreeMatches: Int,
@@ -113,6 +118,18 @@ class MatchListViewModel(
             )
         }.flowOn(defaultDispatcher)
 
+    private val matchCounts: Flow<MatchCounts> =
+        combine(filter, appliedSearch) { currentFilter, currentSearch -> currentFilter to currentSearch }
+            .distinctUntilChanged()
+            .flatMapLatest { (currentFilter, currentSearch) ->
+                combine(
+                    matchRepository.observeMatchCount(),
+                    matchRepository.observeFilteredMatchCount(currentFilter, currentSearch),
+                    ::MatchCounts,
+                )
+            }.distinctUntilChanged()
+            .flowOn(defaultDispatcher)
+
     private val capBanner: Flow<CapBanner> =
         combine(
             matchRepository.observeMatchCount(),
@@ -131,13 +148,16 @@ class MatchListViewModel(
             filterChoices,
             savedStateHandle.getStateFlow<String?>(JUST_SAVED_MATCH_ID_KEY, null),
             capBanner,
-        ) { state, choices, savedMatchId, banner ->
+            matchCounts,
+        ) { state, choices, savedMatchId, banner, counts ->
             state.copy(
                 savedMatchId = savedMatchId,
                 opponentChoices = choices.opponents,
                 locationChoices = choices.locations,
                 capWarning = banner.warning,
                 remainingFreeMatches = banner.remainingFreeMatches,
+                totalCount = counts.total,
+                resultCount = counts.result,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), MatchListUiState())
 
@@ -199,6 +219,8 @@ class MatchListViewModel(
             opponentNames = opponentNames,
             games = games,
             thumbnailPath = primaryPhotoPath?.let { photoFile(it).path },
+            partnerName = partnerName,
+            location = location,
         )
 
     companion object {
