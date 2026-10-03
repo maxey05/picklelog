@@ -22,49 +22,87 @@ class OnboardingScreenTest {
     private var continues = 0
     private val typed = mutableListOf<String>()
 
-    private fun show(state: OnboardingUiState) {
+    private fun show(
+        state: OnboardingUiState,
+        initialPage: Int = 0,
+    ) {
         compose.setContent {
             OnboardingScreen(
                 state = state,
                 onNameChanged = { typed += it },
                 onContinue = { continues++ },
+                initialPage = initialPage,
             )
         }
     }
 
+    private val lastPage = IntroPage.entries.lastIndex
+
     @Test
-    fun the_screen_says_automatic_backup_may_not_be_running() {
+    fun the_intro_opens_on_the_logging_page() {
         show(OnboardingUiState())
 
-        compose.onNodeWithTag(OnboardingTestTags.BACKUP_NOTE).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag(OnboardingTestTags.title(IntroPage.LOGGING)).assertIsDisplayed()
+        compose.onNodeWithTag(OnboardingTestTags.NEXT).assertIsDisplayed()
+        compose.onNodeWithTag(OnboardingTestTags.SKIP).assertIsDisplayed()
     }
 
     @Test
-    fun continue_is_disabled_until_a_name_is_entered() {
-        show(OnboardingUiState(name = ""))
+    fun next_moves_to_the_following_page() {
+        show(OnboardingUiState())
 
-        compose.onNodeWithTag(OnboardingTestTags.CONTINUE).performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag(OnboardingTestTags.NEXT).performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithTag(OnboardingTestTags.title(IntroPage.STATS)).assertIsDisplayed()
     }
 
     @Test
-    fun a_blank_name_still_cannot_continue() {
-        show(OnboardingUiState(name = "   "))
+    fun skip_jumps_to_the_last_page() {
+        show(OnboardingUiState())
 
-        compose.onNodeWithTag(OnboardingTestTags.CONTINUE).performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag(OnboardingTestTags.SKIP).performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithTag(OnboardingTestTags.title(IntroPage.PRIVACY)).assertIsDisplayed()
+        compose.onNodeWithTag(OnboardingTestTags.CONTINUE).assertIsDisplayed()
     }
 
     @Test
-    fun a_name_enables_continue_and_tapping_it_continues() {
-        show(OnboardingUiState(name = "Matthew"))
+    fun the_last_page_says_automatic_backup_may_not_be_running() {
+        show(OnboardingUiState(), initialPage = lastPage)
 
-        compose.onNodeWithTag(OnboardingTestTags.CONTINUE).performScrollTo().assertIsEnabled().performClick()
+        compose.onNodeWithTag(OnboardingTestTags.BACKUP_NOTE).assertIsDisplayed()
+    }
+
+    @Test
+    fun get_started_works_without_a_name() {
+        show(OnboardingUiState(name = ""), initialPage = lastPage)
+
+        compose.onNodeWithTag(OnboardingTestTags.CONTINUE).assertIsEnabled().performClick()
 
         assertEquals(1, continues)
     }
 
     @Test
+    fun a_name_also_continues() {
+        show(OnboardingUiState(name = "Matthew"), initialPage = lastPage)
+
+        compose.onNodeWithTag(OnboardingTestTags.CONTINUE).assertIsEnabled().performClick()
+
+        assertEquals(1, continues)
+    }
+
+    @Test
+    fun get_started_is_disabled_while_saving() {
+        show(OnboardingUiState(name = "Matthew", isSaving = true), initialPage = lastPage)
+
+        compose.onNodeWithTag(OnboardingTestTags.CONTINUE).assertIsNotEnabled()
+    }
+
+    @Test
     fun typing_reports_the_text_to_the_view_model() {
-        show(OnboardingUiState())
+        show(OnboardingUiState(), initialPage = lastPage)
 
         compose.onNodeWithTag(OnboardingTestTags.NAME_FIELD).performScrollTo().performTextInput("Sam")
 
@@ -73,7 +111,7 @@ class OnboardingScreenTest {
 
     @Test
     fun a_failed_save_is_reported() {
-        show(OnboardingUiState(name = "Matthew", saveFailed = true))
+        show(OnboardingUiState(name = "Matthew", saveFailed = true), initialPage = lastPage)
 
         compose.onNodeWithTag(OnboardingTestTags.SAVE_ERROR).performScrollTo().assertIsDisplayed()
     }
