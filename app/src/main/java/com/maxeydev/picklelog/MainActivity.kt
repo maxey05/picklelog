@@ -1,14 +1,18 @@
 package com.maxeydev.picklelog
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.os.Looper
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -16,8 +20,13 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import com.maxeydev.picklelog.domain.settings.AppSettings
 import com.maxeydev.picklelog.ui.navigation.PicklelogNavHost
 import com.maxeydev.picklelog.ui.notification.StreakNotification
+import com.maxeydev.picklelog.ui.theme.PicklelogTheme
+
+private val LIGHT_NAVIGATION_SCRIM = Color.argb(0xE6, 0xFF, 0xFF, 0xFF)
+private val DARK_NAVIGATION_SCRIM = Color.argb(0x80, 0x1B, 0x1B, 0x1B)
 
 class MainActivity : ComponentActivity() {
     private var openLogging by mutableStateOf(false)
@@ -28,28 +37,42 @@ class MainActivity : ComponentActivity() {
         openLogging = StreakNotification.wantsLogging(intent)
         val container = (application as PicklelogApplication).container
         setContent {
-            MaterialTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background,
-                ) {
-                    val dependencies by produceState<AppContainer?>(initialValue = null, container) {
-                        value = container.await()
-                    }
-                    dependencies?.let { ready ->
-                        PicklelogNavHost(
-                            dependencies = ready,
-                            openLogging = openLogging,
-                            onOpenLoggingHandled = {
-                                openLogging = false
-                                intent.removeExtra(StreakNotification.EXTRA_OPEN_LOGGING)
-                            },
+            val dependencies by produceState<AppContainer?>(initialValue = null, container) {
+                value = container.await()
+            }
+            dependencies?.let { ready ->
+                val settings by produceState<AppSettings?>(initialValue = null, ready) {
+                    ready.appSettingsStore.observe().collect { value = it }
+                }
+                settings?.let { loaded ->
+                    val darkTheme = loaded.darkTheme ?: isSystemInDarkTheme()
+                    DisposableEffect(darkTheme) {
+                        enableEdgeToEdge(
+                            statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { darkTheme },
+                            navigationBarStyle =
+                                SystemBarStyle.auto(LIGHT_NAVIGATION_SCRIM, DARK_NAVIGATION_SCRIM) { darkTheme },
                         )
-                        LaunchedEffect(ready) {
-                            withFrameNanos { }
-                            Looper.myQueue().addIdleHandler {
-                                ready.warmCardRenderer()
-                                false
+                        onDispose { }
+                    }
+                    PicklelogTheme(darkTheme = darkTheme) {
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = MaterialTheme.colorScheme.background,
+                        ) {
+                            PicklelogNavHost(
+                                dependencies = ready,
+                                openLogging = openLogging,
+                                onOpenLoggingHandled = {
+                                    openLogging = false
+                                    intent.removeExtra(StreakNotification.EXTRA_OPEN_LOGGING)
+                                },
+                            )
+                            LaunchedEffect(ready) {
+                                withFrameNanos { }
+                                Looper.myQueue().addIdleHandler {
+                                    ready.warmCardRenderer()
+                                    false
+                                }
                             }
                         }
                     }
