@@ -6,8 +6,12 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.maxeydev.picklelog.domain.datetime.AppTime
+import com.maxeydev.picklelog.domain.reminder.ReminderSchedule
 import com.maxeydev.picklelog.domain.reminder.ReminderState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -99,6 +103,75 @@ class DataStoreReminderStoreTest {
             store.setEnabled(false)
 
             assertEquals(false, store.observe().first().enabled)
+            job.cancelAndJoin()
+        }
+
+    @Test
+    fun a_fresh_store_uses_the_default_friday_evening_time() =
+        runBlocking {
+            val job = SupervisorJob()
+
+            val state = DataStoreReminderStore(openDataStore(job)).observe().first()
+
+            assertEquals(ReminderSchedule.DEFAULT_FIRE_TIME, state.fireTime)
+            job.cancelAndJoin()
+        }
+
+    @Test
+    fun a_chosen_time_survives_an_app_restart() =
+        runBlocking {
+            val firstLaunch = SupervisorJob()
+            DataStoreReminderStore(openDataStore(firstLaunch)).setFireTime(AppTime(7, 5))
+            firstLaunch.cancelAndJoin()
+
+            val secondLaunch = SupervisorJob()
+            val reopened = DataStoreReminderStore(openDataStore(secondLaunch)).observe().first()
+
+            assertEquals(AppTime(7, 5), reopened.fireTime)
+            secondLaunch.cancelAndJoin()
+        }
+
+    @Test
+    fun the_time_can_be_midnight_and_the_last_minute_of_the_day() =
+        runBlocking {
+            val job = SupervisorJob()
+            val store = DataStoreReminderStore(openDataStore(job))
+
+            store.setFireTime(AppTime(0, 0))
+            assertEquals(AppTime(0, 0), store.observe().first().fireTime)
+
+            store.setFireTime(AppTime(23, 59))
+            assertEquals(AppTime(23, 59), store.observe().first().fireTime)
+            job.cancelAndJoin()
+        }
+
+    @Test
+    fun an_unreadable_stored_time_falls_back_to_the_default() =
+        runBlocking {
+            val job = SupervisorJob()
+            val dataStore = openDataStore(job)
+            dataStore.edit { it[intPreferencesKey("streak_reminder_fire_minute_of_day")] = 5_000 }
+
+            val state = DataStoreReminderStore(dataStore).observe().first()
+
+            assertEquals(ReminderSchedule.DEFAULT_FIRE_TIME, state.fireTime)
+            job.cancelAndJoin()
+        }
+
+    @Test
+    fun choosing_a_time_keeps_the_enabled_choice_and_notified_week() =
+        runBlocking {
+            val job = SupervisorJob()
+            val store = DataStoreReminderStore(openDataStore(job))
+            store.setEnabled(true)
+            store.markNotified(2_900)
+
+            store.setFireTime(AppTime(9, 0))
+
+            assertEquals(
+                ReminderState(enabled = true, lastNotifiedWeek = 2_900, fireTime = AppTime(9, 0)),
+                store.observe().first(),
+            )
             job.cancelAndJoin()
         }
 }
