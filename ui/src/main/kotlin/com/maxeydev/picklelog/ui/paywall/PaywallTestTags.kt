@@ -9,7 +9,6 @@ object PaywallTestTags {
     const val PAYWALL = "paywall"
     const val PAYWALL_CLOSE = "paywall_close"
     const val PAYWALL_BUY = "paywall_buy"
-    const val PAYWALL_NOT_NOW = "paywall_not_now"
     const val PAYWALL_RESTORE = "paywall_restore"
     const val PAYWALL_PRICE_TERMS = "paywall_price_terms"
     const val PAYWALL_RECORD = "paywall_record"
