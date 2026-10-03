@@ -27,6 +27,7 @@ import com.maxeydev.picklelog.domain.stats.PersonRecord
 import com.maxeydev.picklelog.domain.stats.WinLoss
 import com.maxeydev.picklelog.domain.stats.percentIfEnoughMatches
 import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.match.currentLocale
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -122,7 +123,7 @@ private fun BreakdownGroup(
 @Composable
 private fun MonthlyGroup(months: List<MonthRecord>) {
     val group = DashboardTestTags.GROUP_MONTH
-    val locale = Locale.getDefault()
+    val locale = currentLocale()
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         SectionTitle(stringResource(R.string.stats_advanced_monthly))
         ExpandableRows(group = group, total = months.size, collapsedCount = COLLAPSED_MONTHS) { visible ->
