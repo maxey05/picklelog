@@ -1,5 +1,6 @@
 package com.maxeydev.picklelog.ui.fakes
 
+import com.maxeydev.picklelog.domain.datetime.AppTime
 import com.maxeydev.picklelog.domain.reminder.ReminderState
 import com.maxeydev.picklelog.domain.reminder.ReminderStore
 import kotlinx.coroutines.flow.Flow
@@ -18,6 +19,10 @@ class FakeReminderStore(
 
     override suspend fun setEnabled(enabled: Boolean) {
         state.update { it.copy(enabled = enabled) }
+    }
+
+    override suspend fun setFireTime(time: AppTime) {
+        state.update { it.copy(fireTime = time) }
     }
 
     override suspend fun markNotified(weekOrdinal: Long?) {
