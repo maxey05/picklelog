@@ -2,6 +2,7 @@ package com.maxeydev.picklelog.domain.reminder
 
 import com.maxeydev.picklelog.domain.datetime.AppDate
 import com.maxeydev.picklelog.domain.datetime.AppInstant
+import com.maxeydev.picklelog.domain.datetime.AppTime
 import com.maxeydev.picklelog.domain.datetime.AppTimeZone
 import com.maxeydev.picklelog.domain.streak.InsuredStreakEngine
 import com.maxeydev.picklelog.domain.streak.StreakRisk
@@ -29,6 +30,13 @@ class StreakReminder(
         store.setEnabled(false)
     }
 
+    suspend fun setFireTime(time: AppTime) {
+        store.setFireTime(time)
+        if (store.observe().first().enabled) {
+            arm()
+        }
+    }
+
     suspend fun ensureArmed() {
         if (store.observe().first().enabled) {
             arm()
@@ -43,7 +51,7 @@ class StreakReminder(
         arm()
         val now = clock.now()
         val zone = timeZone()
-        if (!ReminderSchedule.isLateInWeek(now, zone)) {
+        if (!ReminderSchedule.isLateInWeek(now, zone, state.fireTime)) {
             return ReminderOutcome.OUTSIDE_WINDOW
         }
         val week = WeekKey.containing(now, zone)
@@ -63,7 +71,8 @@ class StreakReminder(
         return ReminderOutcome.NOTIFIED
     }
 
-    private fun arm() {
-        scheduling.scheduleNext(ReminderSchedule.nextFire(clock.now(), timeZone()))
+    private suspend fun arm() {
+        val fireTime = store.observe().first().fireTime
+        scheduling.scheduleNext(ReminderSchedule.nextFire(clock.now(), timeZone(), fireTime))
     }
 }
