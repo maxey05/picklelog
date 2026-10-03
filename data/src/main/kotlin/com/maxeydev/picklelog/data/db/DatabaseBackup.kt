@@ -7,6 +7,8 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import java.io.File
 
+const val DB_BACKUP_DIRECTORY = "db-backups"
+
 class DatabaseBackup(
     private val context: Context,
     private val ioDispatcher: CoroutineDispatcher,
@@ -46,7 +48,7 @@ class DatabaseBackup(
         }
     }
 
-    private fun backupRoot(): File = File(context.noBackupFilesDir, "db-backups")
+    private fun backupRoot(): File = File(context.noBackupFilesDir, DB_BACKUP_DIRECTORY)
 
     private fun currentVersionDirectory(): File = File(backupRoot(), appVersionCode().toString())
 
