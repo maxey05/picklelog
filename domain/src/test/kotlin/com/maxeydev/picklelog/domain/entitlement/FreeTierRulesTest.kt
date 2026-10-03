@@ -42,8 +42,15 @@ class FreeTierRulesTest {
     }
 
     @Test
-    fun `pro has no per match photo limit`() {
-        assertEquals(Int.MAX_VALUE, CanAddPhoto.remaining(25, pro))
+    fun `pro allows ten photos per match`() {
+        assertEquals(ProTier.PHOTOS_PER_MATCH, CanAddPhoto.remaining(0, pro))
+        assertEquals(4, CanAddPhoto.remaining(6, pro))
+    }
+
+    @Test
+    fun `a pro match at ten photos cannot gain more`() {
+        assertEquals(0, CanAddPhoto.remaining(10, pro))
+        assertEquals(0, CanAddPhoto.remaining(25, pro))
     }
 
     @Test
