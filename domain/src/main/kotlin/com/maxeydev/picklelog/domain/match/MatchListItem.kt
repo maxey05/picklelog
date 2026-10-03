@@ -14,4 +14,6 @@ data class MatchListItem(
     val opponentNames: List<String>,
     val games: List<GameScore>,
     val primaryPhotoPath: String?,
+    val partnerName: String? = null,
+    val location: String? = null,
 )
