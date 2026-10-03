@@ -6,6 +6,7 @@ import androidx.work.WorkManager
 import com.maxeydev.picklelog.data.DataLayer
 import com.maxeydev.picklelog.data.photo.PhotoStore
 import com.maxeydev.picklelog.data.reminder.ReminderScheduler
+import com.maxeydev.picklelog.data.settings.DirectoryAppCache
 import com.maxeydev.picklelog.domain.backup.BackupRepository
 import com.maxeydev.picklelog.domain.billing.ProStore
 import com.maxeydev.picklelog.domain.erase.EraseAllData
@@ -20,6 +21,7 @@ import com.maxeydev.picklelog.domain.profile.EntitlementRepository
 import com.maxeydev.picklelog.domain.profile.ProfileRepository
 import com.maxeydev.picklelog.domain.reminder.ReminderStore
 import com.maxeydev.picklelog.domain.reminder.StreakReminder
+import com.maxeydev.picklelog.domain.settings.AppCache
 import com.maxeydev.picklelog.domain.settings.AppSettingsStore
 import com.maxeydev.picklelog.domain.share.CardFormatStore
 import com.maxeydev.picklelog.domain.streak.InsuredStreakEngine
@@ -82,6 +84,7 @@ class AppContainer(
             timeZone = { currentTimeZone() },
         )
     override val appSettingsStore: AppSettingsStore = dataLayer.appSettingsStore
+    override val appCache: AppCache = DirectoryAppCache(context.cacheDir, Dispatchers.IO)
     override val onboarding: Onboarding =
         Onboarding(
             settings = dataLayer.appSettingsStore,
