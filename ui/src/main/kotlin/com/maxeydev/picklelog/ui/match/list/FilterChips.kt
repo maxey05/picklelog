@@ -4,17 +4,13 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.Icon
-import androidx.compose.material3.InputChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -23,11 +19,12 @@ import com.maxeydev.picklelog.domain.match.FilterKind
 import com.maxeydev.picklelog.domain.match.FilterState
 import com.maxeydev.picklelog.domain.match.MatchResult
 import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.common.PillChip
 import com.maxeydev.picklelog.ui.match.currentLocale
 import com.maxeydev.picklelog.ui.match.formatLabel
 import com.maxeydev.picklelog.ui.match.formatMatchDate
+import com.maxeydev.picklelog.ui.match.todayInDeviceZone
 
-private val CHIP_ICON_SIZE = 18.dp
 private val MIN_TOUCH_TARGET = 48.dp
 
 @Composable
@@ -46,17 +43,11 @@ fun FilterChips(
         filter.activeKinds.forEach { kind ->
             val label = filterChipLabel(kind, filter, opponentName)
             val removeDescription = stringResource(R.string.filter_remove, label)
-            InputChip(
-                selected = true,
+            PillChip(
+                label = label,
+                isSelected = true,
                 onClick = { onFilterCleared(kind) },
-                label = { Text(label) },
-                trailingIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_close),
-                        contentDescription = null,
-                        modifier = Modifier.size(CHIP_ICON_SIZE),
-                    )
-                },
+                trailingIcon = R.drawable.ic_close,
                 modifier =
                     Modifier
                         .testTag(MatchListTestTags.filterChip(kind))
@@ -99,6 +90,10 @@ fun filterChipLabel(
 @Composable
 fun dateRangeLabel(filter: FilterState): String? {
     val locale = currentLocale()
+    val preset = filter.matchingDatePreset(todayInDeviceZone())
+    if (preset != null) {
+        return datePresetLabel(preset)
+    }
     val from = filter.fromDate?.let { formatMatchDate(it, locale) }
     val to = filter.toDate?.let { formatMatchDate(it, locale) }
     return when {
