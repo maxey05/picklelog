@@ -1,6 +1,7 @@
 package com.maxeydev.picklelog.domain.reminder
 
 import com.maxeydev.picklelog.domain.datetime.AppInstant
+import com.maxeydev.picklelog.domain.datetime.AppTime
 import com.maxeydev.picklelog.domain.datetime.AppTimeZone
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -120,6 +121,46 @@ class ReminderScheduleTest {
     fun `the window is judged in local time`() {
         assertTrue(late("2026-10-02T10:00:00Z", taipei))
         assertFalse(late("2026-10-02T09:59:00Z", taipei))
+    }
+
+    @Test
+    fun `a custom time moves the friday fire to that time`() {
+        val morning = AppTime(8, 30)
+
+        assertEquals(
+            at("2026-10-02T08:30:00Z"),
+            ReminderSchedule.nextFire(at("2026-09-30T13:57:00Z"), utc, morning),
+        )
+    }
+
+    @Test
+    fun `a custom time that has already passed on friday rolls to next week`() {
+        val morning = AppTime(8, 30)
+
+        assertEquals(
+            at("2026-10-09T08:30:00Z"),
+            ReminderSchedule.nextFire(at("2026-10-02T12:00:00Z"), utc, morning),
+        )
+    }
+
+    @Test
+    fun `the late window opens and closes at the custom time`() {
+        val morning = AppTime(8, 30)
+
+        assertFalse(ReminderSchedule.isLateInWeek(at("2026-10-02T08:29:59Z"), utc, morning))
+        assertTrue(ReminderSchedule.isLateInWeek(at("2026-10-02T08:30:00Z"), utc, morning))
+        assertTrue(ReminderSchedule.isLateInWeek(at("2026-10-04T08:29:59Z"), utc, morning))
+        assertFalse(ReminderSchedule.isLateInWeek(at("2026-10-04T08:30:00Z"), utc, morning))
+    }
+
+    @Test
+    fun `a custom time is read in the local zone`() {
+        val evening = AppTime(20, 15)
+
+        assertEquals(
+            at("2026-10-02T12:15:00Z"),
+            ReminderSchedule.nextFire(at("2026-09-30T00:00:00Z"), taipei, evening),
+        )
     }
 }
 
