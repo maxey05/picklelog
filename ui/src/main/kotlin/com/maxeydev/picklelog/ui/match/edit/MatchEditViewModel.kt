@@ -330,7 +330,12 @@ class MatchEditViewModel(
             val remaining = canAddPhoto.remainingFor(current.photos.size)
             val accepted = sources.take(remaining)
             if (accepted.size < sources.size) {
-                upgradePrompt = UpgradeReason.PHOTO_LIMIT
+                upgradePrompt =
+                    if (canAddPhoto.hasPro()) {
+                        UpgradeReason.PRO_PHOTO_LIMIT
+                    } else {
+                        UpgradeReason.PHOTO_LIMIT
+                    }
             }
             if (accepted.isEmpty()) {
                 mutableUiState.value = renderState()
