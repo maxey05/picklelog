@@ -10,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -32,12 +33,7 @@ import com.maxeydev.picklelog.ui.R
 @Composable
 fun SettingsScreen(
     state: SettingsUiState,
-    onBack: () -> Unit,
-    onSeePro: () -> Unit,
-    onRestore: () -> Unit,
-    onOpenBackup: () -> Unit,
-    onEnableReminder: () -> Unit,
-    onDisableReminder: () -> Unit,
+    actions: SettingsActions,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -46,7 +42,7 @@ fun SettingsScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = actions.onBack) {
                         Icon(
                             painter = painterResource(R.drawable.ic_arrow_back),
                             contentDescription = stringResource(R.string.action_back),
@@ -65,10 +61,21 @@ fun SettingsScreen(
                     .padding(horizontal = 24.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            ProfileSection(
+                nameDraft = state.nameDraft,
+                canSave = state.canSaveName,
+                onNameChanged = actions.onNameChanged,
+                onSave = actions.onSaveName,
+            )
+            AppearanceSection(
+                darkTheme = state.darkTheme,
+                onDarkThemeChanged = actions.onDarkThemeChanged,
+                modifier = Modifier.padding(top = 12.dp),
+            )
             Text(
                 text = stringResource(R.string.settings_pro_heading),
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.semantics { heading() },
+                modifier = Modifier.padding(top = 12.dp).semantics { heading() },
             )
             Text(
                 text =
@@ -81,7 +88,7 @@ fun SettingsScreen(
             )
             if (!state.hasPro) {
                 Button(
-                    onClick = onSeePro,
+                    onClick = actions.onSeePro,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(SettingsTestTags.SEE_PRO),
                 ) {
                     Text(stringResource(R.string.settings_see_pro))
@@ -90,7 +97,7 @@ fun SettingsScreen(
             RestorePurchaseAction(
                 isRestoring = state.isRestoring,
                 message = state.restoreMessage,
-                onRestore = onRestore,
+                onRestore = actions.onRestore,
             )
             Text(
                 text = stringResource(R.string.settings_reminder_heading),
@@ -99,9 +106,12 @@ fun SettingsScreen(
             )
             ReminderToggle(
                 enabled = state.reminderEnabled,
-                onEnable = onEnableReminder,
-                onDisable = onDisableReminder,
+                onEnable = actions.onEnableReminder,
+                onDisable = actions.onDisableReminder,
             )
+            if (state.reminderEnabled) {
+                ReminderTimeRow(time = state.reminderTime, onTimeChanged = actions.onReminderTimeChanged)
+            }
             Text(
                 text = stringResource(R.string.settings_backup_heading),
                 style = MaterialTheme.typography.titleMedium,
@@ -113,11 +123,26 @@ fun SettingsScreen(
             )
             LastExportText(lastExportAt = state.lastExportAt)
             OutlinedButton(
-                onClick = onOpenBackup,
+                onClick = actions.onOpenBackup,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(BackupTestTags.OPEN_BACKUP),
             ) {
                 Text(stringResource(R.string.settings_backup_open))
             }
+            HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
+            OutlinedButton(
+                onClick = actions.onOpenAbout,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(SettingsTestTags.ABOUT_OPEN),
+            ) {
+                Text(stringResource(R.string.settings_about_open))
+            }
+            EraseDataSection(
+                isErasing = state.isErasing,
+                eraseFailed = state.eraseFailed,
+                onOpenBackup = actions.onOpenBackup,
+                onEraseConfirmed = actions.onEraseConfirmed,
+                onEraseFailureDismissed = actions.onEraseFailureDismissed,
+                modifier = Modifier.padding(top = 12.dp),
+            )
         }
     }
 }
