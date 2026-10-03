@@ -132,6 +132,22 @@ class RoomMatchRepository(
 
     override fun observeMatchCount(): Flow<Int> = matchDao.observeMatchCount().flowOn(ioDispatcher)
 
+    override fun observeFilteredMatchCount(
+        filter: FilterState,
+        search: SearchTerm?,
+    ): Flow<Int> =
+        matchDao
+            .observeFilteredMatchCount(
+                format = filter.format?.name,
+                result = filter.result?.name,
+                fromDate = filter.fromDate,
+                toDate = filter.toDate,
+                opponentId = filter.opponentId?.toString(),
+                location = filter.location,
+                textPattern = search?.textPattern,
+                namePattern = search?.namePattern,
+            ).flowOn(ioDispatcher)
+
     override fun observePriorValues(field: FreeTextField): Flow<List<FreeTextUsage>> {
         val rows =
             when (field) {
