@@ -181,6 +181,56 @@ class DashboardViewModelTest {
         }
 
     @Test
+    fun `the last five results run oldest to newest and skip anything older`() =
+        runTest {
+            val state =
+                dashboard(
+                    listOf(
+                        match("2026-02-20", result = MatchResult.WIN),
+                        match("2026-02-22", result = MatchResult.LOSS),
+                        match("2026-02-24", result = MatchResult.WIN),
+                        match("2026-02-26", result = MatchResult.WIN),
+                        match("2026-02-28", result = MatchResult.LOSS),
+                        match("2026-03-02", result = MatchResult.WIN),
+                    ),
+                ).uiState.value
+
+            assertEquals(
+                listOf(MatchResult.LOSS, MatchResult.WIN, MatchResult.WIN, MatchResult.LOSS, MatchResult.WIN),
+                state.recentResults,
+            )
+        }
+
+    @Test
+    fun `with fewer than five matches the last results list is just those matches`() =
+        runTest {
+            val state =
+                dashboard(listOf(match("2026-03-02"), match("2026-02-24", result = MatchResult.LOSS))).uiState.value
+
+            assertEquals(listOf(MatchResult.LOSS, MatchResult.WIN), state.recentResults)
+        }
+
+    @Test
+    fun `a filter changes the filtered figures but the header figures stay whole history`() =
+        runTest {
+            val viewModel =
+                dashboard(
+                    listOf(
+                        match("2026-03-02", format = MatchFormat.DOUBLES),
+                        match("2026-02-24", format = MatchFormat.SINGLES, result = MatchResult.LOSS),
+                    ),
+                )
+
+            listFor(matches).changeFilter(FilterState(format = MatchFormat.SINGLES))
+
+            val state = viewModel.uiState.value
+            assertEquals(1, state.stats.totalMatches)
+            assertEquals(2, state.overallStats.totalMatches)
+            assertEquals(1, state.overallStats.overall.wins)
+            assertEquals(1, state.overallStats.overall.losses)
+        }
+
+    @Test
     fun `a filter narrows the counts but the streak stays whole history`() =
         runTest {
             val viewModel =
