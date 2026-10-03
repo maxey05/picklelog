@@ -25,6 +25,8 @@ data class MatchListUiState(
     val locationChoices: List<String> = emptyList(),
     val capWarning: CapWarning = CapWarning.NONE,
     val remainingFreeMatches: Int = 0,
+    val totalCount: Int = 0,
+    val resultCount: Int = 0,
 ) {
     val canLoadMore: Boolean
         get() = pageLimit > 0 && matches.size >= pageLimit
