@@ -55,8 +55,8 @@ class LogAnotherFlowTest {
 
     private fun logFirstMatch(dependencies: FakeDependencies) {
         compose.setContent { PicklelogNavHost(dependencies = dependencies) }
-        waitForTag(MatchListTestTags.NEW_MATCH)
-        compose.onNodeWithTag(MatchListTestTags.NEW_MATCH).performClick()
+        waitForTag(MatchListTestTags.EMPTY_LOG_MATCH)
+        compose.onNodeWithTag(MatchListTestTags.EMPTY_LOG_MATCH).performClick()
         waitForTag(MatchEditTestTags.RESULT_WIN)
         compose.onNodeWithTag(MatchEditTestTags.RESULT_WIN).performClick()
         compose.onNodeWithTag(MatchEditTestTags.personSlot(PersonSlot.OPPONENT_1)).performTextInput("Ana")
