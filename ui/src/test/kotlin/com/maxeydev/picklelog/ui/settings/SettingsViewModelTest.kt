@@ -2,25 +2,22 @@
 
 package com.maxeydev.picklelog.ui.settings
 
-import com.maxeydev.picklelog.domain.billing.RestoreOutcome
-import com.maxeydev.picklelog.domain.billing.StoreProblem
 import com.maxeydev.picklelog.domain.datetime.AppInstant
 import com.maxeydev.picklelog.domain.datetime.AppTime
 import com.maxeydev.picklelog.domain.erase.EraseAllData
 import com.maxeydev.picklelog.domain.profile.DisplayName
 import com.maxeydev.picklelog.domain.reminder.StreakReminder
 import com.maxeydev.picklelog.domain.streak.InsuredStreakEngine
+import com.maxeydev.picklelog.ui.fakes.FakeAppCache
 import com.maxeydev.picklelog.ui.fakes.FakeAppSettingsStore
-import com.maxeydev.picklelog.ui.fakes.FakeBackupRepository
 import com.maxeydev.picklelog.ui.fakes.FakeEntitlementRepository
 import com.maxeydev.picklelog.ui.fakes.FakeLocalDataEraser
-import com.maxeydev.picklelog.ui.fakes.FakeProStore
+import com.maxeydev.picklelog.ui.fakes.FakeMatchRepository
 import com.maxeydev.picklelog.ui.fakes.FakeProfileRepository
 import com.maxeydev.picklelog.ui.fakes.FakeReminderNotifier
 import com.maxeydev.picklelog.ui.fakes.FakeReminderScheduling
 import com.maxeydev.picklelog.ui.fakes.FakeReminderStore
 import com.maxeydev.picklelog.ui.fakes.FixedClock
-import com.maxeydev.picklelog.ui.paywall.StoreMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -37,8 +34,8 @@ import org.junit.Test
 
 class SettingsViewModelTest {
     private val entitlements = FakeEntitlementRepository()
-    private val store = FakeProStore(entitlements)
-    private val backup = FakeBackupRepository()
+    private val matches = FakeMatchRepository()
+    private val cache = FakeAppCache(bytes = 12_000L)
     private val reminderStore = FakeReminderStore()
     private val scheduling = FakeReminderScheduling()
     private val clock = FixedClock(AppInstant.parse("2026-09-30T09:00:00Z"))
@@ -62,14 +59,14 @@ class SettingsViewModelTest {
 
     private fun viewModel(entitlementRepository: FakeEntitlementRepository = entitlements) =
         SettingsViewModel(
-            store,
             entitlementRepository,
-            backup,
+            matches,
             reminderStore,
             streakReminder,
             profile,
             appSettings,
             eraseAllData,
+            cache,
         )
 
     @Before
@@ -83,39 +80,42 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `restore is available without any account and unlocks pro`() {
-        store.restoreOutcome = RestoreOutcome.Restored
-        val viewModel = viewModel()
-        assertFalse(viewModel.uiState.value.hasPro)
-
-        viewModel.restore()
-
-        assertTrue(viewModel.uiState.value.hasPro)
-        assertEquals(StoreMessage.RESTORED, viewModel.uiState.value.restoreMessage)
-        assertEquals(1, store.restoreAttempts)
+    fun `settings reports how big the cache is`() {
+        assertEquals(12_000L, viewModel().uiState.value.cacheBytes)
     }
 
     @Test
-    fun `offline restore never tells the user they lost anything`() {
-        store.restoreOutcome = RestoreOutcome.CouldNotCheck(StoreProblem.OFFLINE)
+    fun `clearing the cache empties it and shows the new size`() {
         val viewModel = viewModel()
 
-        viewModel.restore()
+        viewModel.clearCache()
 
-        assertEquals(StoreMessage.OFFLINE, viewModel.uiState.value.restoreMessage)
-        assertFalse(viewModel.uiState.value.isRestoring)
+        assertEquals(1, cache.clearCount)
+        assertEquals(0L, viewModel.uiState.value.cacheBytes)
+        assertFalse(viewModel.uiState.value.isClearingCache)
     }
 
     @Test
-    fun `settings shows that nothing has been exported until an export happens`() {
+    fun `reopening settings picks up cache that grew since`() {
         val viewModel = viewModel()
+        cache.bytes = 40_000L
 
-        assertNull(viewModel.uiState.value.lastExportAt)
+        viewModel.refreshCacheSize()
 
-        val exportedAt = AppInstant.parse("2026-09-30T02:00:00Z")
-        backup.setLastExport(exportedAt)
+        assertEquals(40_000L, viewModel.uiState.value.cacheBytes)
+    }
 
-        assertEquals(exportedAt, viewModel.uiState.value.lastExportAt)
+    @Test
+    fun `cancelling a name edit puts the saved name back`() {
+        val viewModel = viewModel()
+        viewModel.changeName("Matthew")
+        viewModel.saveName()
+        viewModel.changeName("Someone else")
+
+        viewModel.discardNameDraft()
+
+        assertEquals("Matthew", viewModel.uiState.value.nameDraft)
+        assertFalse(viewModel.uiState.value.canSaveName)
     }
 
     @Test
