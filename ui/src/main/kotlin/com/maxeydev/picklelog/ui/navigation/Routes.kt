@@ -29,7 +29,7 @@ data object StatsRoute
 data object PaywallRoute
 
 @Serializable
-data object SettingsRoute
+data object PrivacyRoute
 
 @Serializable
 data object BackupRoute
