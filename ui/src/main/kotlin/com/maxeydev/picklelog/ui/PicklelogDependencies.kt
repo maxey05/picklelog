@@ -13,6 +13,7 @@ import com.maxeydev.picklelog.domain.profile.EntitlementRepository
 import com.maxeydev.picklelog.domain.profile.ProfileRepository
 import com.maxeydev.picklelog.domain.reminder.ReminderStore
 import com.maxeydev.picklelog.domain.reminder.StreakReminder
+import com.maxeydev.picklelog.domain.settings.AppCache
 import com.maxeydev.picklelog.domain.settings.AppSettingsStore
 import com.maxeydev.picklelog.domain.share.CardFormatStore
 import com.maxeydev.picklelog.domain.streak.StreakNoticeStore
@@ -38,6 +39,7 @@ interface PicklelogDependencies {
     val reminderStore: ReminderStore
     val streakReminder: StreakReminder
     val appSettingsStore: AppSettingsStore
+    val appCache: AppCache
     val onboarding: Onboarding
     val eraseAllData: EraseAllData
     val appVersionName: String
