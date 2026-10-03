@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import com.maxeydev.picklelog.domain.entitlement.ProTier
 import com.maxeydev.picklelog.ui.R
 
 @Composable
@@ -23,6 +24,8 @@ fun UpgradePrompt(
             Text(
                 when (reason) {
                     UpgradeReason.PHOTO_LIMIT -> stringResource(R.string.upgrade_photo_limit_title)
+                    UpgradeReason.PRO_PHOTO_LIMIT ->
+                        stringResource(R.string.upgrade_pro_photo_limit_title, ProTier.PHOTOS_PER_MATCH)
                     UpgradeReason.PRO_THEME -> stringResource(R.string.upgrade_pro_theme_title)
                 },
             )
@@ -31,6 +34,7 @@ fun UpgradePrompt(
             Text(
                 when (reason) {
                     UpgradeReason.PHOTO_LIMIT -> stringResource(R.string.upgrade_photo_limit_body)
+                    UpgradeReason.PRO_PHOTO_LIMIT -> stringResource(R.string.upgrade_pro_photo_limit_body)
                     UpgradeReason.PRO_THEME -> stringResource(R.string.upgrade_pro_theme_body)
                 },
             )
