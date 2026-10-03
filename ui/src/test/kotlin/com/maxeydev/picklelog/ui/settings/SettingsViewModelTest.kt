@@ -5,11 +5,17 @@ package com.maxeydev.picklelog.ui.settings
 import com.maxeydev.picklelog.domain.billing.RestoreOutcome
 import com.maxeydev.picklelog.domain.billing.StoreProblem
 import com.maxeydev.picklelog.domain.datetime.AppInstant
+import com.maxeydev.picklelog.domain.datetime.AppTime
+import com.maxeydev.picklelog.domain.erase.EraseAllData
+import com.maxeydev.picklelog.domain.profile.DisplayName
 import com.maxeydev.picklelog.domain.reminder.StreakReminder
 import com.maxeydev.picklelog.domain.streak.InsuredStreakEngine
+import com.maxeydev.picklelog.ui.fakes.FakeAppSettingsStore
 import com.maxeydev.picklelog.ui.fakes.FakeBackupRepository
 import com.maxeydev.picklelog.ui.fakes.FakeEntitlementRepository
+import com.maxeydev.picklelog.ui.fakes.FakeLocalDataEraser
 import com.maxeydev.picklelog.ui.fakes.FakeProStore
+import com.maxeydev.picklelog.ui.fakes.FakeProfileRepository
 import com.maxeydev.picklelog.ui.fakes.FakeReminderNotifier
 import com.maxeydev.picklelog.ui.fakes.FakeReminderScheduling
 import com.maxeydev.picklelog.ui.fakes.FakeReminderStore
@@ -49,8 +55,22 @@ class SettingsViewModelTest {
             timeZone = { TimeZone.UTC },
         )
 
+    private val profile = FakeProfileRepository()
+    private val appSettings = FakeAppSettingsStore()
+    private val eraser = FakeLocalDataEraser()
+    private val eraseAllData = EraseAllData(streakReminder, eraser)
+
     private fun viewModel(entitlementRepository: FakeEntitlementRepository = entitlements) =
-        SettingsViewModel(store, entitlementRepository, backup, reminderStore, streakReminder)
+        SettingsViewModel(
+            store,
+            entitlementRepository,
+            backup,
+            reminderStore,
+            streakReminder,
+            profile,
+            appSettings,
+            eraseAllData,
+        )
 
     @Before
     fun setUp() {
@@ -129,5 +149,123 @@ class SettingsViewModelTest {
 
         assertFalse(viewModel.uiState.value.reminderEnabled)
         assertEquals(1, scheduling.cancelCount)
+    }
+
+    @Test
+    fun `a saved name is trimmed and stored on the profile`() {
+        val viewModel = viewModel()
+
+        viewModel.changeName("  Matthew  ")
+        assertTrue(viewModel.uiState.value.canSaveName)
+        viewModel.saveName()
+
+        assertEquals("Matthew", viewModel.uiState.value.displayName)
+        assertEquals("Matthew", viewModel.uiState.value.nameDraft)
+        assertFalse(viewModel.uiState.value.canSaveName)
+    }
+
+    @Test
+    fun `a blank name can never be saved`() {
+        val viewModel = viewModel()
+        viewModel.changeName("Matthew")
+        viewModel.saveName()
+
+        viewModel.changeName("   ")
+        viewModel.saveName()
+
+        assertFalse(viewModel.uiState.value.canSaveName)
+        assertEquals("Matthew", viewModel.uiState.value.displayName)
+    }
+
+    @Test
+    fun `an unchanged name offers nothing to save`() {
+        val viewModel = viewModel()
+        viewModel.changeName("Matthew")
+        viewModel.saveName()
+
+        viewModel.changeName("Matthew ")
+
+        assertFalse(viewModel.uiState.value.canSaveName)
+    }
+
+    @Test
+    fun `the name draft is cut at the length limit`() {
+        val viewModel = viewModel()
+
+        viewModel.changeName("x".repeat(DisplayName.MAX_LENGTH + 10))
+
+        assertEquals(DisplayName.MAX_LENGTH, viewModel.uiState.value.nameDraft.length)
+    }
+
+    @Test
+    fun `dark mode follows the system until the user chooses`() {
+        val viewModel = viewModel()
+        assertNull(viewModel.uiState.value.darkTheme)
+
+        viewModel.changeDarkTheme(true)
+        assertEquals(true, viewModel.uiState.value.darkTheme)
+
+        viewModel.changeDarkTheme(false)
+        assertEquals(false, viewModel.uiState.value.darkTheme)
+    }
+
+    @Test
+    fun `changing the reminder time re-arms the next friday at that time`() {
+        val viewModel = viewModel()
+        viewModel.enableReminder()
+
+        viewModel.changeReminderTime(AppTime(8, 30))
+
+        assertEquals(AppTime(8, 30), viewModel.uiState.value.reminderTime)
+        assertEquals(AppInstant.parse("2026-10-02T08:30:00Z"), scheduling.scheduled.last())
+    }
+
+    @Test
+    fun `changing the time while the reminder is off arms nothing`() {
+        val viewModel = viewModel()
+
+        viewModel.changeReminderTime(AppTime(8, 30))
+
+        assertEquals(AppTime(8, 30), viewModel.uiState.value.reminderTime)
+        assertTrue(scheduling.scheduled.isEmpty())
+    }
+
+    @Test
+    fun `erasing all data cancels the reminder, erases and flags completion`() {
+        val viewModel = viewModel()
+        viewModel.enableReminder()
+
+        viewModel.eraseAll()
+
+        assertEquals(1, eraser.eraseCount)
+        assertEquals(1, scheduling.cancelCount)
+        assertTrue(viewModel.uiState.value.isErased)
+        assertFalse(viewModel.uiState.value.isErasing)
+        assertFalse(viewModel.uiState.value.eraseFailed)
+    }
+
+    @Test
+    fun `erasing all data never revokes pro`() {
+        val proEntitlements = FakeEntitlementRepository(isPro = true)
+        val viewModel = viewModel(proEntitlements)
+
+        viewModel.eraseAll()
+
+        assertTrue(proEntitlements.current.isPro)
+        assertTrue(viewModel.uiState.value.hasPro)
+    }
+
+    @Test
+    fun `a failed erase reports the failure and does not claim completion`() {
+        eraser.failure = IllegalStateException("disk error")
+        val viewModel = viewModel()
+
+        viewModel.eraseAll()
+
+        assertTrue(viewModel.uiState.value.eraseFailed)
+        assertFalse(viewModel.uiState.value.isErased)
+        assertFalse(viewModel.uiState.value.isErasing)
+        viewModel.dismissEraseFailure()
+        assertFalse(viewModel.uiState.value.eraseFailed)
     }
 }
