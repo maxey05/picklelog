@@ -2,6 +2,7 @@ package com.maxeydev.picklelog.domain.reminder
 
 import com.maxeydev.picklelog.domain.datetime.AppDate
 import com.maxeydev.picklelog.domain.datetime.AppInstant
+import com.maxeydev.picklelog.domain.datetime.AppTime
 import com.maxeydev.picklelog.domain.datetime.AppTimeZone
 import com.maxeydev.picklelog.domain.streak.InsuredStreakEngine
 import com.maxeydev.picklelog.domain.streak.WeekKey
@@ -24,6 +25,10 @@ private class FakeReminderStore(
 
     override suspend fun setEnabled(enabled: Boolean) {
         state.update { it.copy(enabled = enabled) }
+    }
+
+    override suspend fun setFireTime(time: AppTime) {
+        state.update { it.copy(fireTime = time) }
     }
 
     override suspend fun markNotified(weekOrdinal: Long?) {
@@ -292,5 +297,36 @@ class StreakReminderTest {
             reminder.ensureArmed()
 
             assertEquals(1, scheduling.scheduled.size)
+        }
+
+    @Test
+    fun `choosing a time while enabled re-arms the next friday at that time`() =
+        runTest {
+            enabled()
+
+            reminder.setFireTime(AppTime(8, 30))
+
+            assertEquals(AppTime(8, 30), store.state.value.fireTime)
+            assertEquals(listOf(AppInstant.parse("2026-10-09T08:30:00Z")), scheduling.scheduled)
+        }
+
+    @Test
+    fun `choosing a time while disabled stores it and arms nothing`() =
+        runTest {
+            reminder.setFireTime(AppTime(8, 30))
+
+            assertEquals(AppTime(8, 30), store.state.value.fireTime)
+            assertTrue(scheduling.scheduled.isEmpty())
+        }
+
+    @Test
+    fun `a fire before the chosen time on friday is outside the window`() =
+        runTest {
+            now = AppInstant.parse("2026-10-02T19:00:00Z")
+            store.state.value = ReminderState(enabled = true, fireTime = AppTime(21, 0))
+
+            assertEquals(ReminderOutcome.OUTSIDE_WINDOW, reminder.onFire())
+
+            assertTrue(notifier.skipFlags.isEmpty())
         }
 }
