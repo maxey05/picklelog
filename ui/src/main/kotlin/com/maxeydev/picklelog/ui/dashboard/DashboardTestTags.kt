@@ -3,9 +3,6 @@ package com.maxeydev.picklelog.ui.dashboard
 object DashboardTestTags {
     const val HEADER = "dashboard_header"
     const val NAME = "dashboard_name"
-    const val EMPTY = "dashboard_empty"
-    const val FILTERED_EMPTY = "dashboard_filtered_empty"
-    const val MATCH_COUNT = "dashboard_match_count"
     const val RECORD = "dashboard_record"
     const val WIN_PERCENT = "dashboard_win_percent"
     const val STREAK = "dashboard_streak"
