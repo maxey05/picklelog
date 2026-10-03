@@ -10,6 +10,10 @@ internal const val SECOND_OPPONENT_NAME = "(SELECT p.display_name $OPPONENTS_OF_
 
 internal const val FIRST_OPPONENT_SORT_KEY = "(SELECT p.normalized_name $OPPONENTS_OF_OUTER_MATCH LIMIT 1)"
 
+internal const val PARTNER_NAME =
+    "(SELECT p.display_name FROM match_person mp INNER JOIN person p ON p.id = mp.person_id " +
+        "WHERE mp.match_id = m.id AND mp.role = '${MatchPersonEntity.ROLE_PARTNER}' LIMIT 1)"
+
 internal const val PRIMARY_PHOTO_PATH =
     "(SELECT ph.relative_path FROM photo ph WHERE ph.match_id = m.id ORDER BY ph.sort_index LIMIT 1)"
 
@@ -17,6 +21,8 @@ internal const val MATCH_LIST_SELECT =
     "SELECT m.id AS id, m.date AS date, m.format AS format, m.result AS result, " +
         "$FIRST_OPPONENT_NAME AS first_opponent, " +
         "$SECOND_OPPONENT_NAME AS second_opponent, " +
+        "$PARTNER_NAME AS partner_name, " +
+        "m.location AS location, " +
         "$PRIMARY_PHOTO_PATH AS primary_photo_path " +
         "FROM `match` m"
 
