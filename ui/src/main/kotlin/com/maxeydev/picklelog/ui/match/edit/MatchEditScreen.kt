@@ -56,6 +56,7 @@ import com.maxeydev.picklelog.ui.match.resultLabel
 import com.maxeydev.picklelog.ui.match.toUtcEpochMillis
 import com.maxeydev.picklelog.ui.match.utcEpochMillisToAppDate
 import com.maxeydev.picklelog.ui.paywall.UpgradePrompt
+import com.maxeydev.picklelog.ui.paywall.UpgradeReason
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -116,7 +117,7 @@ fun MatchEditScreen(
             UpgradePrompt(
                 reason = reason,
                 onDismiss = actions.onUpgradePromptDismissed,
-                onSeePro = actions.onSeePro,
+                onSeePro = actions.onSeePro.takeIf { reason != UpgradeReason.PRO_PHOTO_LIMIT },
             )
         }
     }
