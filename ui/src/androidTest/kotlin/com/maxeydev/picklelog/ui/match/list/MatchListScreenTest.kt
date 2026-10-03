@@ -9,6 +9,7 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -17,6 +18,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToKey
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.Density
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.maxeydev.picklelog.domain.datetime.AppDate
@@ -124,13 +127,21 @@ class MatchListScreenTest {
 
         compose.onNodeWithTag(MatchListTestTags.EMPTY_STATE).assertIsDisplayed()
         compose.onNodeWithText("No matches yet").assertIsDisplayed()
-        compose.onNodeWithTag(MatchListTestTags.NEW_MATCH).assertIsDisplayed()
+        compose.onNodeWithTag(MatchListTestTags.NEW_MATCH).assertDoesNotExist()
         compose.onNodeWithTag(MatchListTestTags.LIST).assertDoesNotExist()
         compose.onNodeWithTag(MatchListTestTags.SORT_BUTTON).assertDoesNotExist()
 
         compose.onNodeWithTag(MatchListTestTags.EMPTY_LOG_MATCH).performClick()
 
         assertEquals(1, newMatchRequests)
+    }
+
+    @Test
+    fun `the_new_match_button_shows_once_there_are_matches`() {
+        showScreen(contentState())
+
+        compose.onNodeWithTag(MatchListTestTags.NEW_MATCH).assertIsDisplayed()
+        compose.onNodeWithTag(MatchListTestTags.EMPTY_STATE).assertDoesNotExist()
     }
 
     @Test
@@ -147,32 +158,46 @@ class MatchListScreenTest {
 
         compose
             .onNodeWithTag(MatchListTestTags.SORT_BUTTON)
-            .assert(hasText("Sort: Opponent A–Z — by first opponent"))
+            .assert(hasContentDescription("Sort: Opponent A–Z"))
+        compose.onNodeWithTag(MatchListTestTags.SORT_BUTTON).assert(hasText("Opponent A–Z"))
     }
 
     @Test
-    fun `the_sort_menu_offers_all_eight_sorts_marks_the_active_one_and_reports_a_choice`() {
+    fun `the_sort_menu_offers_seven_sorts_marks_the_active_one_and_reports_a_choice`() {
         val chosen = mutableListOf<MatchSort>()
         showScreen(contentState(sort = MatchSort.DATE_OLDEST), onSortSelected = { chosen += it })
 
         compose.onNodeWithTag(MatchListTestTags.SORT_BUTTON).performClick()
 
-        MatchSort.entries.forEach { sort ->
+        val labels =
+            mapOf(
+                MatchSort.DATE_NEWEST to "Newest first",
+                MatchSort.DATE_OLDEST to "Oldest first",
+                MatchSort.RESULT_WINS_FIRST to "Wins first",
+                MatchSort.RESULT_LOSSES_FIRST to "Losses first",
+                MatchSort.OPPONENT_A_TO_Z to "Opponent A–Z",
+                MatchSort.LOCATION_A_TO_Z to "Location A–Z",
+                MatchSort.DURATION_LONGEST to "Longest first",
+            )
+        labels.forEach { (sort, label) ->
             val option = compose.onNodeWithTag(MatchListTestTags.sortOption(sort))
+            option.assert(hasText(label))
             if (sort == MatchSort.DATE_OLDEST) option.assertIsSelected() else option.assertIsNotSelected()
         }
-        compose.onNodeWithText("Date — newest first").assertIsDisplayed()
-        compose.onNodeWithText("Date — oldest first").assertIsDisplayed()
-        compose.onNodeWithText("Result — wins first").assertIsDisplayed()
-        compose.onNodeWithText("Result — losses first").assertIsDisplayed()
-        compose.onNodeWithText("Opponent A–Z — by first opponent").assertIsDisplayed()
-        compose.onNodeWithText("Location A–Z").assertIsDisplayed()
-        compose.onNodeWithText("Duration — shortest first").assertIsDisplayed()
-        compose.onNodeWithText("Duration — longest first").assertIsDisplayed()
+        compose.onNodeWithTag(MatchListTestTags.sortOption(MatchSort.DURATION_SHORTEST)).assertDoesNotExist()
 
         compose.onNodeWithTag(MatchListTestTags.sortOption(MatchSort.RESULT_WINS_FIRST)).performClick()
 
         assertEquals(listOf(MatchSort.RESULT_WINS_FIRST), chosen)
+    }
+
+    @Test
+    fun `the_shortest_first_sort_stays_in_the_menu_while_it_is_the_active_sort`() {
+        showScreen(contentState(sort = MatchSort.DURATION_SHORTEST))
+
+        compose.onNodeWithTag(MatchListTestTags.SORT_BUTTON).performClick()
+
+        compose.onNodeWithTag(MatchListTestTags.sortOption(MatchSort.DURATION_SHORTEST)).assertIsSelected()
     }
 
     @Test
@@ -207,7 +232,7 @@ class MatchListScreenTest {
         assertTrue(rowTop(oldLoss) < rowTop(newWin))
         compose
             .onNodeWithTag(MatchListTestTags.SORT_BUTTON)
-            .assert(hasText("Sort: Result — losses first"))
+            .assert(hasContentDescription("Sort: Losses first"))
     }
 
     @Test
@@ -242,7 +267,7 @@ class MatchListScreenTest {
     }
 
     @Test
-    fun `the_search_and_filter_header_scrolls_away_with_the_list_so_rows_get_the_screen`() {
+    fun `the_header_collapses_when_the_list_scrolls_and_expands_again_at_the_top`() {
         val stored = List(80) { match(day = it) }
         compose.setContent {
             PicklelogNavHost(
@@ -251,12 +276,17 @@ class MatchListScreenTest {
         }
         waitForTag(MatchListTestTags.LIST)
         compose.onNodeWithTag(MatchListTestTags.SEARCH_FIELD).assertIsDisplayed()
+        compose.onNodeWithText("Picklelog").assertIsDisplayed()
 
         compose.onNodeWithTag(MatchListTestTags.LIST).performScrollToIndex(40)
+        compose.waitForIdle()
 
-        compose.onNodeWithTag(MatchListTestTags.SEARCH_FIELD).assertDoesNotExist()
-        compose.onNodeWithTag(MatchListTestTags.LIST).performScrollToIndex(0)
+        compose.onNodeWithText("Picklelog").assertDoesNotExist()
         compose.onNodeWithTag(MatchListTestTags.SEARCH_FIELD).assertIsDisplayed()
+        compose.onNodeWithTag(MatchListTestTags.LIST).performScrollToIndex(0)
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Picklelog").assertIsDisplayed()
     }
 
     @Test
@@ -285,7 +315,7 @@ class MatchListScreenTest {
                 }
             }
         }
-        compose.onNodeWithTag(MatchListTestTags.LIST).performScrollToIndex(1)
+        compose.onNodeWithTag(MatchListTestTags.NO_RESULTS).performTouchInput { swipeUp() }
 
         val clear = compose.onNodeWithTag(MatchListTestTags.NO_RESULTS_CLEAR).fetchSemanticsNode().boundsInRoot
         val newMatch = compose.onNodeWithTag(MatchListTestTags.NEW_MATCH).fetchSemanticsNode().boundsInRoot
