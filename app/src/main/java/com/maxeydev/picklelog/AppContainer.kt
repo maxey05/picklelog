@@ -8,16 +8,19 @@ import com.maxeydev.picklelog.data.photo.PhotoStore
 import com.maxeydev.picklelog.data.reminder.ReminderScheduler
 import com.maxeydev.picklelog.domain.backup.BackupRepository
 import com.maxeydev.picklelog.domain.billing.ProStore
+import com.maxeydev.picklelog.domain.erase.EraseAllData
 import com.maxeydev.picklelog.domain.match.FilterState
 import com.maxeydev.picklelog.domain.match.LastUsedFormatStore
 import com.maxeydev.picklelog.domain.match.MatchRepository
 import com.maxeydev.picklelog.domain.match.MatchSortStore
+import com.maxeydev.picklelog.domain.onboarding.Onboarding
 import com.maxeydev.picklelog.domain.person.PersonRepository
 import com.maxeydev.picklelog.domain.photo.PhotoImportQueue
 import com.maxeydev.picklelog.domain.profile.EntitlementRepository
 import com.maxeydev.picklelog.domain.profile.ProfileRepository
 import com.maxeydev.picklelog.domain.reminder.ReminderStore
 import com.maxeydev.picklelog.domain.reminder.StreakReminder
+import com.maxeydev.picklelog.domain.settings.AppSettingsStore
 import com.maxeydev.picklelog.domain.share.CardFormatStore
 import com.maxeydev.picklelog.domain.streak.InsuredStreakEngine
 import com.maxeydev.picklelog.domain.streak.StreakNoticeStore
@@ -78,6 +81,19 @@ class AppContainer(
             clock = clock,
             timeZone = { currentTimeZone() },
         )
+    override val appSettingsStore: AppSettingsStore = dataLayer.appSettingsStore
+    override val onboarding: Onboarding =
+        Onboarding(
+            settings = dataLayer.appSettingsStore,
+            profile = dataLayer.profileRepository,
+            matchCount = { dataLayer.matchRepository.observeMatchCount().first() },
+        )
+    override val eraseAllData: EraseAllData = EraseAllData(streakReminder, dataLayer.localDataEraser)
+    override val appVersionName: String =
+        context.packageManager
+            .getPackageInfo(context.packageName, 0)
+            .versionName
+            .orEmpty()
     private val cardWarmer = WebViewWarmer(context)
     override val cardRenderer: CardRendering = CardRenderer(cardWarmer)
 
