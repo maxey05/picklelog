@@ -19,17 +19,22 @@ fun DisplayNameField(
     onValueChange: (String) -> Unit,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
+    required: Boolean = true,
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier.fillMaxWidth(),
-        label = { Text(stringResource(R.string.name_field_label)) },
+        label = {
+            Text(
+                stringResource(if (required) R.string.name_field_label else R.string.name_field_label_optional),
+            )
+        },
         singleLine = true,
-        isError = value.isNotEmpty() && value.isBlank(),
+        isError = required && value.isNotEmpty() && value.isBlank(),
         supportingText = {
             Text(
-                if (value.isBlank()) {
+                if (required && value.isBlank()) {
                     stringResource(R.string.name_field_required)
                 } else {
                     stringResource(R.string.name_field_hint, DisplayName.MAX_LENGTH)
