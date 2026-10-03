@@ -30,8 +30,9 @@ import com.maxeydev.picklelog.domain.datetime.AppDate
 import com.maxeydev.picklelog.domain.match.GameScore
 import com.maxeydev.picklelog.domain.match.MatchFormat
 import com.maxeydev.picklelog.domain.match.MatchResult
-import com.maxeydev.picklelog.ui.match.formatMatchDate
 import com.maxeydev.picklelog.ui.match.formatMatchDateLong
+import com.maxeydev.picklelog.ui.match.formatMatchDateShort
+import com.maxeydev.picklelog.ui.match.todayInDeviceZone
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -47,7 +48,7 @@ class MatchRowTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private val date = AppDate.parse("2026-09-20")
+    private val date = AppDate.parse("2025-03-05")
 
     private val fullRow =
         MatchRowUiState(
@@ -58,6 +59,8 @@ class MatchRowTest {
             opponentNames = listOf("Ana", "Ben"),
             games = listOf(GameScore(1, 11, 7), GameScore(2, 9, 11)),
             thumbnailPath = "/nonexistent/photos/full.jpg",
+            partnerName = "Cy",
+            location = "Rec Center",
         )
 
     private val bareRow =
@@ -76,6 +79,9 @@ class MatchRowTest {
             InstrumentationRegistry
                 .getInstrumentation()
                 .targetContext.resources.configuration.locales[0]
+
+    private val shortDate: String
+        get() = formatMatchDateShort(date, todayInDeviceZone(), locale)
 
     private fun show(
         vararg rows: MatchRowUiState,
@@ -138,11 +144,13 @@ class MatchRowTest {
     }
 
     @Test
-    fun `a_full_row_shows_result_format_date_both_opponents_scores_and_a_thumbnail`() {
+    fun `a_full_row_shows_result_date_opponents_partner_location_scores_and_a_thumbnail`() {
         show(fullRow)
 
         part("full", MatchListTestTags.HEADLINE).assertTextEquals("vs Ana & Ben")
-        part("full", MatchListTestTags.DETAILS).assertTextEquals("Doubles · ${formatMatchDate(date, locale)}")
+        part("full", MatchListTestTags.DETAILS).assertTextEquals("Doubles · with Cy")
+        part("full", MatchListTestTags.LOCATION).assertTextEquals("Rec Center")
+        part("full", MatchListTestTags.ROW_DATE).assertTextEquals(shortDate)
         val scores = scoreEntries("full")
         scores.assertCountEquals(2)
         scores[0].assertTextEquals("11–7")
@@ -150,7 +158,7 @@ class MatchRowTest {
         part("full", MatchListTestTags.THUMBNAIL).assertExists()
         compose
             .onNode(
-                hasText("Win") and hasAnyAncestor(hasTestTag(MatchListTestTags.RESULT_BADGE)),
+                hasText("W") and hasAnyAncestor(hasTestTag(MatchListTestTags.RESULT_BADGE)),
                 useUnmergedTree = true,
             ).assertExists()
     }
@@ -159,8 +167,10 @@ class MatchRowTest {
     fun `missing_scores_opponents_and_photo_are_simply_absent_with_no_placeholder`() {
         show(bareRow)
 
-        part("bare", MatchListTestTags.HEADLINE).assertTextEquals("Singles")
-        part("bare", MatchListTestTags.DETAILS).assertTextEquals(formatMatchDate(date, locale))
+        part("bare", MatchListTestTags.HEADLINE).assertTextEquals("Singles match")
+        part("bare", MatchListTestTags.DETAILS).assertDoesNotExist()
+        part("bare", MatchListTestTags.LOCATION).assertDoesNotExist()
+        part("bare", MatchListTestTags.ROW_DATE).assertTextEquals(shortDate)
         part("bare", MatchListTestTags.SCORES).assertDoesNotExist()
         part("bare", MatchListTestTags.THUMBNAIL).assertDoesNotExist()
         listOf("Unknown", "—", "–", "vs").forEach { placeholder ->
@@ -206,7 +216,7 @@ class MatchRowTest {
 
         val expected =
             "Win, Doubles, ${formatMatchDateLong(date, locale)}, " +
-                "against Ana and Ben, scores 11 to 7, 9 to 11, with photo"
+                "against Ana and Ben, with Cy, at Rec Center, scores 11 to 7, 9 to 11, with photo"
         assertEquals(listOf(expected), row.config[SemanticsProperties.ContentDescription])
         compose.onNode(hasText("vs Ana & Ben")).assertExists()
         compose.onAllNodes(hasText("vs Ana & Ben")).assertCountEquals(1)
@@ -231,12 +241,12 @@ class MatchRowTest {
 
         compose
             .onNode(
-                hasText("Win") and hasAnyAncestor(hasTestTag(MatchListTestTags.row("full"))),
+                hasText("W") and hasAnyAncestor(hasTestTag(MatchListTestTags.row("full"))),
                 useUnmergedTree = true,
             ).assertExists()
         compose
             .onNode(
-                hasText("Loss") and hasAnyAncestor(hasTestTag(MatchListTestTags.row("bare"))),
+                hasText("L") and hasAnyAncestor(hasTestTag(MatchListTestTags.row("bare"))),
                 useUnmergedTree = true,
             ).assertExists()
     }
@@ -249,12 +259,14 @@ class MatchRowTest {
         val badge = bounds(part("full", MatchListTestTags.RESULT_BADGE))
         val text = bounds(part("full", MatchListTestTags.TEXT_COLUMN))
         val thumbnail = bounds(part("full", MatchListTestTags.THUMBNAIL))
-        listOf(badge, text, thumbnail).forEach { child ->
+        val scoreColumn = bounds(part("full", MatchListTestTags.SCORES))
+        listOf(badge, text, thumbnail, scoreColumn).forEach { child ->
             assertTrue("$child escapes the row $row", child.left >= row.left && child.right <= row.right)
             assertTrue("$child escapes the row $row", child.top >= row.top && child.bottom <= row.bottom)
         }
         assertTrue("badge $badge overlaps text $text", badge.right <= text.left)
         assertTrue("text $text overlaps thumbnail $thumbnail", text.right <= thumbnail.left)
+        assertTrue("thumbnail $thumbnail overlaps scores $scoreColumn", thumbnail.right <= scoreColumn.left)
 
         val headline = textLayout(part("full", MatchListTestTags.HEADLINE))
         assertEquals(1, headline.lineCount)
@@ -262,7 +274,7 @@ class MatchRowTest {
         val scores = scoreEntries("full")
         scores.assertCountEquals(2)
         repeat(2) { index -> assertTextNotClipped("score ${index + 1}", scores[index]) }
-        listOf(MatchListTestTags.HEADLINE, MatchListTestTags.DETAILS, MatchListTestTags.SCORES).forEach { tag ->
+        listOf(MatchListTestTags.HEADLINE, MatchListTestTags.DETAILS, MatchListTestTags.LOCATION).forEach { tag ->
             val line = bounds(part("full", tag))
             val isInsideColumn = line.top >= text.top && line.bottom <= text.bottom
             assertTrue("$tag $line is clipped by the text column $text", isInsideColumn)
