@@ -10,15 +10,19 @@ class CanAddPhoto(
     suspend fun remainingFor(photosOnMatch: Int): Int =
         remaining(photosOnMatch, entitlements.observeEntitlement().first())
 
+    suspend fun hasPro(): Boolean = entitlements.observeEntitlement().first().isPro
+
     companion object {
+        fun limitFor(entitlement: Entitlement): Int =
+            if (entitlement.isPro) {
+                ProTier.PHOTOS_PER_MATCH
+            } else {
+                FreeTier.PHOTOS_PER_MATCH
+            }
+
         fun remaining(
             photosOnMatch: Int,
             entitlement: Entitlement,
-        ): Int =
-            if (entitlement.isPro) {
-                Int.MAX_VALUE
-            } else {
-                (FreeTier.PHOTOS_PER_MATCH - photosOnMatch).coerceAtLeast(0)
-            }
+        ): Int = (limitFor(entitlement) - photosOnMatch).coerceAtLeast(0)
     }
 }
