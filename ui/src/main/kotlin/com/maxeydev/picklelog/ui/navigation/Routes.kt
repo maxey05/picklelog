@@ -38,3 +38,9 @@ data object BackupRoute
 data class ShareRoute(
     val matchId: String,
 )
+
+@Serializable
+data object OnboardingRoute
+
+@Serializable
+data object AboutRoute
