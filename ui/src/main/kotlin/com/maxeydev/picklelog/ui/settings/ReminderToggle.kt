@@ -4,11 +4,10 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -20,7 +19,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -48,7 +46,7 @@ fun ReminderToggle(
     val context = LocalContext.current
     var allowed by remember { mutableStateOf(notificationsAllowed(context)) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { allowed = notificationsAllowed(context) }
-    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(modifier = modifier.fillMaxWidth()) {
         if (StreakNotification.requiresRuntimePermission()) {
             val (permission, prompt) = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS, onEnable)
             ReminderSwitchRow(checked = enabled && allowed, onTurnOn = permission::request, onTurnOff = onDisable)
@@ -84,27 +82,17 @@ private fun ReminderSwitchRow(
     onTurnOn: () -> Unit,
     onTurnOff: () -> Unit,
 ) {
-    Row(
+    SettingsRow(
+        icon = R.drawable.ic_notifications,
+        label = stringResource(R.string.settings_reminder_label),
         modifier =
             Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp)
                 .toggleable(
                     value = checked,
                     role = Role.Switch,
                     onValueChange = { wantsOn -> if (wantsOn) onTurnOn() else onTurnOff() },
                 ).testTag(SettingsTestTags.REMINDER_TOGGLE),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = stringResource(R.string.settings_reminder_label), style = MaterialTheme.typography.bodyLarge)
-            Text(
-                text = stringResource(R.string.settings_reminder_description),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
         Switch(checked = checked, onCheckedChange = null)
     }
 }
@@ -135,7 +123,7 @@ private fun RuntimePermissionDialogs(
 
 @Composable
 private fun BlockedNotice(onOpenSettings: () -> Unit) {
-    Column(modifier = Modifier.testTag(SettingsTestTags.REMINDER_BLOCKED)) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp).testTag(SettingsTestTags.REMINDER_BLOCKED)) {
         Text(
             text = stringResource(R.string.settings_reminder_blocked),
             style = MaterialTheme.typography.bodySmall,
