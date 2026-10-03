@@ -13,4 +13,6 @@ data class MatchRowUiState(
     val opponentNames: List<String>,
     val games: List<GameScore>,
     val thumbnailPath: String?,
+    val partnerName: String? = null,
+    val location: String? = null,
 )
