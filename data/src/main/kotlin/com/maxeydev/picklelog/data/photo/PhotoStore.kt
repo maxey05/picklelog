@@ -32,6 +32,15 @@ class PhotoStore(
         }
     }
 
+    fun deleteAll() {
+        val directory = resolve(PHOTO_DIRECTORY)
+        directory.listFiles().orEmpty().forEach { file ->
+            if (!file.deleteRecursively()) {
+                throw IOException("A photo file could not be removed.")
+            }
+        }
+    }
+
     fun deleteOrphans(
         referencedPaths: Set<String>,
         olderThanMillis: Long,
