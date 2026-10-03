@@ -163,6 +163,18 @@ interface MatchDao {
     @Query("SELECT COUNT(*) FROM `match`")
     fun observeMatchCount(): Flow<Int>
 
+    @Query("SELECT COUNT(*) FROM `match` m $MATCH_LIST_FILTER")
+    fun observeFilteredMatchCount(
+        format: String?,
+        result: String?,
+        fromDate: LocalDate?,
+        toDate: LocalDate?,
+        opponentId: String?,
+        location: String?,
+        textPattern: String?,
+        namePattern: String?,
+    ): Flow<Int>
+
     @Query("SELECT * FROM `match` WHERE id = :id")
     fun observeById(id: String): Flow<MatchWithRelationsEntity?>
 
