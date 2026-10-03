@@ -93,6 +93,11 @@ class FakeMatchRepository(
 
     override fun observeMatchCount(): Flow<Int> = matches.map { byId -> byId.size }
 
+    override fun observeFilteredMatchCount(
+        filter: FilterState,
+        search: SearchTerm?,
+    ): Flow<Int> = matches.map { byId -> byId.values.count { it.passes(filter) && it.contains(search) } }
+
     fun observeAllMatches(): Flow<List<Match>> = matches.map { byId -> byId.values.toList() }
 
     override fun observePriorValues(field: FreeTextField): Flow<List<FreeTextUsage>> =
@@ -212,5 +217,7 @@ class FakeMatchRepository(
             opponentNames = opponents.map { it.displayName },
             games = games.sortedBy { it.gameNumber },
             primaryPhotoPath = photos.minByOrNull { it.sortIndex }?.relativePath,
+            partnerName = partner?.displayName,
+            location = location,
         )
 }
