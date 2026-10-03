@@ -8,6 +8,7 @@ import com.maxeydev.picklelog.domain.datetime.AppInstant
 import com.maxeydev.picklelog.domain.entitlement.CanAddMatch
 import com.maxeydev.picklelog.domain.entitlement.CanAddPhoto
 import com.maxeydev.picklelog.domain.entitlement.EntitlementSignal
+import com.maxeydev.picklelog.domain.entitlement.ProTier
 import com.maxeydev.picklelog.domain.match.Match
 import com.maxeydev.picklelog.domain.match.MatchFormat
 import com.maxeydev.picklelog.domain.match.MatchResult
@@ -196,13 +197,23 @@ class MatchEditEntitlementTest {
     }
 
     @Test
-    fun `pro has no per match photo limit`() {
+    fun `pro takes up to ten photos on a match without any prompt`() {
         val viewModel = viewModel(FakeMatchRepository(), FakeEntitlementRepository(isPro = true))
 
-        viewModel.addPickedPhotos(List(6) { "content://$it" })
+        viewModel.addPickedPhotos(List(ProTier.PHOTOS_PER_MATCH) { "content://$it" })
 
-        assertEquals(6, viewModel.uiState.value.photos.size)
+        assertEquals(ProTier.PHOTOS_PER_MATCH, viewModel.uiState.value.photos.size)
         assertNull(viewModel.uiState.value.upgradePrompt)
+    }
+
+    @Test
+    fun `pro stops at ten photos and explains the limit without offering an upgrade`() {
+        val viewModel = viewModel(FakeMatchRepository(), FakeEntitlementRepository(isPro = true))
+
+        viewModel.addPickedPhotos(List(ProTier.PHOTOS_PER_MATCH + 3) { "content://$it" })
+
+        assertEquals(ProTier.PHOTOS_PER_MATCH, viewModel.uiState.value.photos.size)
+        assertEquals(UpgradeReason.PRO_PHOTO_LIMIT, viewModel.uiState.value.upgradePrompt)
     }
 
     @Test
