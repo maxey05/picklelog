@@ -10,6 +10,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.maxeydev.picklelog.domain.match.FilterState
 import com.maxeydev.picklelog.domain.match.MatchRepository
+import com.maxeydev.picklelog.domain.match.MatchResult
+import com.maxeydev.picklelog.domain.match.MatchSort
 import com.maxeydev.picklelog.domain.person.Person
 import com.maxeydev.picklelog.domain.person.PersonRepository
 import com.maxeydev.picklelog.domain.profile.ProfileRepository
@@ -40,6 +42,7 @@ import kotlinx.coroutines.launch
 import kotlin.uuid.ExperimentalUuidApi
 
 private const val STOP_TIMEOUT_MILLIS = 5_000L
+private const val RECENT_RESULT_COUNT = 5
 
 private data class FilteredStats(
     val filter: FilterState,
@@ -68,6 +71,11 @@ class DashboardViewModel(
         }
 
     private val wholeHistory: Flow<List<MatchStatLine>> = matchRepository.observeStatLines(FilterState.NONE)
+
+    private val recentResults: Flow<List<MatchResult>> =
+        matchRepository
+            .observeListPage(MatchSort.DATE_NEWEST, RECENT_RESULT_COUNT)
+            .map { items -> items.map { it.result }.reversed() }
 
     private val advancedStats: Flow<AdvancedStats> =
         homeFilter.flatMapLatest { filter ->
@@ -100,6 +108,7 @@ class DashboardViewModel(
                 isLoading = false,
                 displayName = profile.displayName.trim(),
                 stats = filtered.stats,
+                overallStats = BasicStats.from(history),
                 streak = insured.streak,
                 hasAnyMatches = history.isNotEmpty(),
                 filter = filtered.filter,
@@ -119,8 +128,9 @@ class DashboardViewModel(
         }
 
     val uiState: StateFlow<DashboardUiState> =
-        combine(baseState, advancedStats) { state, advanced -> state.copy(advanced = advanced) }
-            .flowOn(defaultDispatcher)
+        combine(baseState, advancedStats, recentResults) { state, advanced, recent ->
+            state.copy(advanced = advanced, recentResults = recent)
+        }.flowOn(defaultDispatcher)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), DashboardUiState())
 
     fun dismissUsedSkip() {
