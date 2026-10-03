@@ -9,5 +9,5 @@ data class OnboardingUiState(
     val isFinished: Boolean = false,
 ) {
     val canContinue: Boolean
-        get() = DisplayName.isValid(name) && !isSaving
+        get() = !isSaving && (DisplayName.clean(name).isEmpty() || DisplayName.isValid(name))
 }
