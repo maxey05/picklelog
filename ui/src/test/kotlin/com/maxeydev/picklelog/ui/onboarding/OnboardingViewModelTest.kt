@@ -16,7 +16,6 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -37,20 +36,29 @@ class OnboardingViewModelTest {
     }
 
     @Test
-    fun `it starts empty and cannot continue`() {
+    fun `it starts empty and can continue because the name is optional`() {
         assertEquals("", viewModel.uiState.value.name)
-        assertFalse(viewModel.uiState.value.canContinue)
+        assertTrue(viewModel.uiState.value.canContinue)
     }
 
     @Test
-    fun `a blank name cannot continue and stores nothing`() =
+    fun `continuing without a name finishes onboarding and stores no name`() =
+        runTest {
+            viewModel.continueToApp()
+
+            assertTrue(viewModel.uiState.value.isFinished)
+            assertEquals("", profile.observeProfile().first().displayName)
+            assertTrue(settings.current.onboardingComplete)
+        }
+
+    @Test
+    fun `a whitespace only name is treated as no name`() =
         runTest {
             viewModel.changeName("   ")
             viewModel.continueToApp()
 
-            assertFalse(viewModel.uiState.value.isFinished)
+            assertTrue(viewModel.uiState.value.isFinished)
             assertEquals("", profile.observeProfile().first().displayName)
-            assertFalse(settings.current.onboardingComplete)
         }
 
     @Test
