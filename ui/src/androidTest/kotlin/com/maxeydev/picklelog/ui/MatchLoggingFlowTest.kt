@@ -64,7 +64,7 @@ class MatchLoggingFlowTest {
             taps++
         }
 
-        tap(MatchListTestTags.NEW_MATCH)
+        tap(MatchListTestTags.EMPTY_LOG_MATCH)
         tap(MatchEditTestTags.RESULT_WIN)
         tap(MatchEditTestTags.SAVE)
 
@@ -79,8 +79,8 @@ class MatchLoggingFlowTest {
     @Test
     fun `save_stays_disabled_while_two_slots_name_the_same_person`() {
         compose.setContent { PicklelogNavHost(dependencies = FakeDependencies()) }
-        waitForTag(MatchListTestTags.NEW_MATCH)
-        compose.onNodeWithTag(MatchListTestTags.NEW_MATCH).performClick()
+        waitForTag(MatchListTestTags.EMPTY_LOG_MATCH)
+        compose.onNodeWithTag(MatchListTestTags.EMPTY_LOG_MATCH).performClick()
         waitForTag(MatchEditTestTags.RESULT_WIN)
         compose.onNodeWithTag(MatchEditTestTags.RESULT_WIN).performClick()
         compose.onNodeWithTag(MatchEditTestTags.SAVE).assertIsEnabled()
@@ -130,6 +130,6 @@ class MatchLoggingFlowTest {
 
         compose.waitUntil(WAIT_MILLIS) { dependencies.matchRepository.current.isEmpty() }
         assertEquals(listOf(match.id), dependencies.matchRepository.deletedIds)
-        waitForTag(MatchListTestTags.NEW_MATCH)
+        waitForTag(MatchListTestTags.EMPTY_LOG_MATCH)
     }
 }
