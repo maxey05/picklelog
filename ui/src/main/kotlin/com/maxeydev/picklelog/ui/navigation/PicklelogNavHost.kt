@@ -5,9 +5,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -42,9 +45,12 @@ import com.maxeydev.picklelog.ui.settings.BackupSettingsScreen
 import com.maxeydev.picklelog.ui.settings.BackupViewModel
 import com.maxeydev.picklelog.ui.settings.ExportPromptBanner
 import com.maxeydev.picklelog.ui.settings.ExportPromptViewModel
+import com.maxeydev.picklelog.ui.settings.PrivacyPolicyScreen
 import com.maxeydev.picklelog.ui.settings.SettingsActions
-import com.maxeydev.picklelog.ui.settings.SettingsScreen
+import com.maxeydev.picklelog.ui.settings.SettingsDrawer
+import com.maxeydev.picklelog.ui.settings.SettingsDrawerHost
 import com.maxeydev.picklelog.ui.settings.SettingsViewModel
+import com.maxeydev.picklelog.ui.settings.openStoreListing
 import com.maxeydev.picklelog.ui.share.ResourceCardLabels
 import com.maxeydev.picklelog.ui.share.ShareIntentLauncher
 import com.maxeydev.picklelog.ui.share.SharePreviewScreen
@@ -113,61 +119,111 @@ private fun PicklelogNavGraph(
             val exportPromptViewModel: ExportPromptViewModel =
                 viewModel(factory = ExportPromptViewModel.factory(dependencies))
             val exportPromptState by exportPromptViewModel.uiState.collectAsStateWithLifecycle()
-            MatchListScreen(
-                state = state,
-                dashboard = dashboardState,
-                onOpenStats = { navController.navigate(StatsRoute) },
-                notices = {
-                    Column {
-                        CapWarningBanner(
-                            warning = state.capWarning,
-                            remainingFreeMatches = state.remainingFreeMatches,
-                            onDismiss = viewModel::dismissCapWarning,
-                            modifier = Modifier.padding(horizontal = 16.dp).padding(top = 8.dp),
-                        )
-                        ExportPromptBanner(
-                            reason = exportPromptState.reason,
-                            onExport = {
-                                exportPromptViewModel.dismiss()
-                                navController.navigate(BackupRoute)
-                            },
-                            onDismiss = exportPromptViewModel::dismiss,
-                            modifier = Modifier.padding(horizontal = 16.dp).padding(top = 8.dp),
-                        )
-                        SkipUsedNotice(
-                            skippedWeek = dashboardState.usedSkipWeek,
-                            skipsHeld = dashboardState.skipsHeld,
-                            onDismiss = dashboardViewModel::dismissUsedSkip,
-                            modifier = Modifier.padding(horizontal = 16.dp).padding(top = 8.dp),
-                        )
-                        MissedSkipNotice(
-                            opportunity = dashboardState.missedOpportunity,
-                            onSeePro = { navController.navigate(PaywallRoute) },
-                            onDismiss = dashboardViewModel::dismissMissedOpportunity,
-                            modifier = Modifier.padding(horizontal = 16.dp).padding(top = 8.dp),
-                        )
-                    }
+            var settingsOpen by rememberSaveable { mutableStateOf(false) }
+            val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.factory(dependencies))
+            val settingsState by settingsViewModel.uiState.collectAsStateWithLifecycle()
+            val context = LocalContext.current
+            LaunchedEffect(settingsState.isErased) {
+                if (settingsState.isErased) {
+                    settingsViewModel.erasedHandled()
+                    settingsOpen = false
+                    navController.navigate(OnboardingRoute) { popUpTo<HomeRoute> { inclusive = true } }
+                }
+            }
+            LaunchedEffect(settingsOpen) {
+                if (settingsOpen) {
+                    settingsViewModel.refreshCacheSize()
+                }
+            }
+            val settingsActions =
+                remember(settingsViewModel) {
+                    SettingsActions(
+                        onClose = { settingsOpen = false },
+                        onSeePro = { navController.navigate(PaywallRoute) },
+                        onOpenBackup = { navController.navigate(BackupRoute) },
+                        onOpenPrivacy = { navController.navigate(PrivacyRoute) },
+                        onOpenAbout = { navController.navigate(AboutRoute) },
+                        onRateUs = { openStoreListing(context) },
+                        onClearCache = settingsViewModel::clearCache,
+                        onEnableReminder = settingsViewModel::enableReminder,
+                        onDisableReminder = settingsViewModel::disableReminder,
+                        onReminderTimeChanged = settingsViewModel::changeReminderTime,
+                        onNameChanged = settingsViewModel::changeName,
+                        onSaveName = settingsViewModel::saveName,
+                        onNameEditCancelled = settingsViewModel::discardNameDraft,
+                        onDarkThemeChanged = settingsViewModel::changeDarkTheme,
+                        onEraseConfirmed = settingsViewModel::eraseAll,
+                        onEraseFailureDismissed = settingsViewModel::dismissEraseFailure,
+                    )
+                }
+            SettingsDrawerHost(
+                open = settingsOpen,
+                onDismiss = { settingsOpen = false },
+                drawer = { drawerModifier ->
+                    SettingsDrawer(
+                        state = settingsState,
+                        versionName = dependencies.appVersionName,
+                        actions = settingsActions,
+                        modifier = drawerModifier,
+                    )
                 },
-                onNewMatch = { navController.navigate(MatchEditRoute()) },
-                onOpenMatch = { matchId -> navController.navigate(MatchDetailRoute(matchId)) },
-                onSortSelected = viewModel::selectSort,
-                onLastVisibleIndexChanged = viewModel::loadMoreIfNeeded,
-                onLogAnother = { savedMatchId ->
-                    navController.navigate(MatchEditRoute(logAnotherFrom = savedMatchId))
-                },
-                onSavedConfirmationDismissed = viewModel::dismissSavedConfirmation,
-                onOpenSettings = { navController.navigate(SettingsRoute) },
-                filterActions =
-                    remember(viewModel) {
-                        MatchListFilterActions(
-                            onSearchChanged = viewModel::changeSearch,
-                            onFilterChanged = viewModel::changeFilter,
-                            onFilterCleared = viewModel::clearFilter,
-                            onAllFiltersCleared = viewModel::clearAllFilters,
-                            onFiltersAndSearchCleared = viewModel::clearFiltersAndSearch,
-                        )
+            ) {
+                MatchListScreen(
+                    state = state,
+                    dashboard = dashboardState,
+                    onOpenStats = { navController.navigate(StatsRoute) },
+                    notices = {
+                        Column {
+                            CapWarningBanner(
+                                warning = state.capWarning,
+                                remainingFreeMatches = state.remainingFreeMatches,
+                                onDismiss = viewModel::dismissCapWarning,
+                                modifier = Modifier.padding(horizontal = 16.dp).padding(top = 8.dp),
+                            )
+                            ExportPromptBanner(
+                                reason = exportPromptState.reason,
+                                onExport = {
+                                    exportPromptViewModel.dismiss()
+                                    navController.navigate(BackupRoute)
+                                },
+                                onDismiss = exportPromptViewModel::dismiss,
+                                modifier = Modifier.padding(horizontal = 16.dp).padding(top = 8.dp),
+                            )
+                            SkipUsedNotice(
+                                skippedWeek = dashboardState.usedSkipWeek,
+                                skipsHeld = dashboardState.skipsHeld,
+                                onDismiss = dashboardViewModel::dismissUsedSkip,
+                                modifier = Modifier.padding(horizontal = 16.dp).padding(top = 8.dp),
+                            )
+                            MissedSkipNotice(
+                                opportunity = dashboardState.missedOpportunity,
+                                onSeePro = { navController.navigate(PaywallRoute) },
+                                onDismiss = dashboardViewModel::dismissMissedOpportunity,
+                                modifier = Modifier.padding(horizontal = 16.dp).padding(top = 8.dp),
+                            )
+                        }
                     },
-            )
+                    onNewMatch = { navController.navigate(MatchEditRoute()) },
+                    onOpenMatch = { matchId -> navController.navigate(MatchDetailRoute(matchId)) },
+                    onSortSelected = viewModel::selectSort,
+                    onLastVisibleIndexChanged = viewModel::loadMoreIfNeeded,
+                    onLogAnother = { savedMatchId ->
+                        navController.navigate(MatchEditRoute(logAnotherFrom = savedMatchId))
+                    },
+                    onSavedConfirmationDismissed = viewModel::dismissSavedConfirmation,
+                    onOpenSettings = { settingsOpen = true },
+                    filterActions =
+                        remember(viewModel) {
+                            MatchListFilterActions(
+                                onSearchChanged = viewModel::changeSearch,
+                                onFilterChanged = viewModel::changeFilter,
+                                onFilterCleared = viewModel::clearFilter,
+                                onAllFiltersCleared = viewModel::clearAllFilters,
+                                onFiltersAndSearchCleared = viewModel::clearFiltersAndSearch,
+                            )
+                        },
+                )
+            }
         }
         composable<StatsRoute> {
             val homeEntry = remember(it) { navController.getBackStackEntry<HomeRoute>() }
@@ -239,34 +295,8 @@ private fun PicklelogNavGraph(
                 onClose = { navController.popBackStack() },
             )
         }
-        composable<SettingsRoute> {
-            val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.factory(dependencies))
-            val state by viewModel.uiState.collectAsStateWithLifecycle()
-            LaunchedEffect(state.isErased) {
-                if (state.isErased) {
-                    viewModel.erasedHandled()
-                    navController.navigate(OnboardingRoute) { popUpTo<HomeRoute> { inclusive = true } }
-                }
-            }
-            val actions =
-                remember(viewModel) {
-                    SettingsActions(
-                        onBack = { navController.popBackStack() },
-                        onSeePro = { navController.navigate(PaywallRoute) },
-                        onRestore = viewModel::restore,
-                        onOpenBackup = { navController.navigate(BackupRoute) },
-                        onOpenAbout = { navController.navigate(AboutRoute) },
-                        onEnableReminder = viewModel::enableReminder,
-                        onDisableReminder = viewModel::disableReminder,
-                        onReminderTimeChanged = viewModel::changeReminderTime,
-                        onNameChanged = viewModel::changeName,
-                        onSaveName = viewModel::saveName,
-                        onDarkThemeChanged = viewModel::changeDarkTheme,
-                        onEraseConfirmed = viewModel::eraseAll,
-                        onEraseFailureDismissed = viewModel::dismissEraseFailure,
-                    )
-                }
-            SettingsScreen(state = state, actions = actions)
+        composable<PrivacyRoute> {
+            PrivacyPolicyScreen(onBack = { navController.popBackStack() })
         }
         composable<AboutRoute> {
             AboutScreen(
