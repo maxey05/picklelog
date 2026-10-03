@@ -46,6 +46,7 @@ class FakeDependencies(
             timeZone = { timeZone },
         ),
     override val appSettingsStore: FakeAppSettingsStore = FakeAppSettingsStore(),
+    override val appCache: FakeAppCache = FakeAppCache(),
     override val onboarding: Onboarding =
         Onboarding(appSettingsStore, profileRepository) { matchRepository.observeMatchCount().first() },
     val localDataEraser: FakeLocalDataEraser = FakeLocalDataEraser(),
