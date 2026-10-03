@@ -1,5 +1,7 @@
 package com.maxeydev.picklelog.ui.settings
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -7,8 +9,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -19,10 +21,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.theme.PicklelogTheme
 
 @Composable
 fun EraseDataSection(
@@ -34,20 +36,21 @@ fun EraseDataSection(
     modifier: Modifier = Modifier,
 ) {
     var confirming by rememberSaveable { mutableStateOf(false) }
-    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = stringResource(R.string.settings_data_heading),
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.semantics { heading() },
+    Surface(
+        shape = SETTINGS_CARD_SHAPE,
+        color = settingsCardColor(),
+        border = BorderStroke(1.dp, PicklelogTheme.colors.cardBorder),
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        SettingsRow(
+            icon = R.drawable.ic_warning,
+            label = stringResource(R.string.settings_erase_open),
+            contentColor = MaterialTheme.colorScheme.error,
+            modifier =
+                Modifier
+                    .clickable(role = Role.Button) { confirming = true }
+                    .testTag(SettingsTestTags.ERASE_OPEN),
         )
-        Text(text = stringResource(R.string.settings_erase_description))
-        OutlinedButton(
-            onClick = { confirming = true },
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(SettingsTestTags.ERASE_OPEN),
-        ) {
-            Text(stringResource(R.string.settings_erase_open))
-        }
     }
     if (confirming) {
         EraseConfirmDialog(
