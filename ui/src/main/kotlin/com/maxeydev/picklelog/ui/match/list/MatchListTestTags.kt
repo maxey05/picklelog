@@ -35,6 +35,9 @@ object MatchListTestTags {
     const val SCORES = "match_row_scores"
     const val SCORE_ENTRY = "match_row_score_entry"
     const val THUMBNAIL = "match_row_thumbnail"
+    const val COUNT = "match_list_count"
+    const val LOCATION = "match_row_location"
+    const val ROW_DATE = "match_row_date"
 
     fun row(id: String): String = "match_row_$id"
 
@@ -45,6 +48,8 @@ object MatchListTestTags {
     fun formatOption(format: MatchFormat?): String = "filter_sheet_format_${format?.name?.lowercase() ?: "any"}"
 
     fun resultOption(result: MatchResult?): String = "filter_sheet_result_${result?.name?.lowercase() ?: "any"}"
+
+    fun datePreset(preset: DatePreset): String = "filter_sheet_date_${preset.name.lowercase()}"
 
     fun opponentOption(personId: String): String = "filter_sheet_opponent_$personId"
 
