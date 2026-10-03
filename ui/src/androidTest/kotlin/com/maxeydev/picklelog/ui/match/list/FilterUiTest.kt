@@ -4,6 +4,8 @@ package com.maxeydev.picklelog.ui.match.list
 
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -22,6 +24,7 @@ import com.maxeydev.picklelog.domain.person.Person
 import com.maxeydev.picklelog.ui.fakes.FakeDependencies
 import com.maxeydev.picklelog.ui.fakes.FakeMatchRepository
 import com.maxeydev.picklelog.ui.fakes.FakePersonRepository
+import com.maxeydev.picklelog.ui.match.todayInDeviceZone
 import com.maxeydev.picklelog.ui.navigation.PicklelogNavHost
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.plus
@@ -47,11 +50,12 @@ class FilterUiTest {
         result: MatchResult = MatchResult.WIN,
         opponents: List<Person> = emptyList(),
         notes: String? = null,
+        date: AppDate = AppDate.parse("2026-01-01").plus(day, DateTimeUnit.DAY),
     ): Match =
         Match(
             id = Uuid.random(),
             format = format,
-            date = AppDate.parse("2026-01-01").plus(day, DateTimeUnit.DAY),
+            date = date,
             result = result,
             createdAt = AppInstant.fromEpochMilliseconds(1_000),
             updatedAt = AppInstant.fromEpochMilliseconds(1_000),
@@ -72,6 +76,15 @@ class FilterUiTest {
 
     private fun waitForTag(tag: String) {
         compose.waitUntil(WAIT_MILLIS) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty() }
+    }
+
+    private fun waitForCount(description: String) {
+        compose.waitUntil(WAIT_MILLIS) {
+            compose
+                .onAllNodes(hasTestTag(MatchListTestTags.COUNT) and hasContentDescription(description))
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+        }
     }
 
     private fun waitForTagGone(tag: String) {
@@ -102,7 +115,7 @@ class FilterUiTest {
 
         compose.onNodeWithTag(MatchListTestTags.filterChip(FilterKind.FORMAT)).assertIsDisplayed()
         compose.onNodeWithTag(MatchListTestTags.filterChip(FilterKind.RESULT)).assertIsDisplayed()
-        compose.onNodeWithTag(MatchListTestTags.FILTER_BUTTON).assert(hasText("Filters (2)"))
+        compose.onNodeWithTag(MatchListTestTags.FILTER_BUTTON).assert(hasContentDescription("Filters (2)"))
         waitForTagGone(MatchListTestTags.row(doublesWin.id.toString()))
         compose.onNodeWithTag(MatchListTestTags.row(singlesWin.id.toString())).assertIsDisplayed()
 
@@ -116,7 +129,37 @@ class FilterUiTest {
 
         waitForTag(MatchListTestTags.row(doublesWin.id.toString()))
         compose.onNodeWithTag(MatchListTestTags.FILTER_CHIPS).assertDoesNotExist()
-        compose.onNodeWithTag(MatchListTestTags.FILTER_BUTTON).assert(hasText("Filters"))
+        compose.onNodeWithTag(MatchListTestTags.FILTER_BUTTON).assert(hasContentDescription("Filters"))
+    }
+
+    @Test
+    fun `a_date_preset_keeps_only_recent_matches_and_names_itself_on_its_chip`() {
+        val recent = match(day = 0, date = todayInDeviceZone())
+        val old = match(day = 0, date = AppDate.parse("2020-01-01"))
+        showHome(recent, old)
+
+        openSheet()
+        compose.onNodeWithTag(MatchListTestTags.datePreset(DatePreset.THIS_MONTH)).performClick()
+        closeSheet()
+
+        waitForTagGone(MatchListTestTags.row(old.id.toString()))
+        compose.onNodeWithTag(MatchListTestTags.row(recent.id.toString())).assertIsDisplayed()
+        compose.onNodeWithTag(MatchListTestTags.filterChip(FilterKind.DATE_RANGE)).assert(hasText("This month"))
+    }
+
+    @Test
+    fun `the_count_shows_how_many_of_all_matches_the_filters_leave`() {
+        val singles = match(day = 1, format = MatchFormat.SINGLES)
+        val doubles = match(day = 2)
+        showHome(singles, doubles)
+        waitForCount("2 matches")
+
+        openSheet()
+        compose.onNodeWithTag(MatchListTestTags.formatOption(MatchFormat.SINGLES)).performClick()
+        closeSheet()
+
+        waitForTagGone(MatchListTestTags.row(doubles.id.toString()))
+        waitForCount("1 of 2 matches")
     }
 
     @Test
