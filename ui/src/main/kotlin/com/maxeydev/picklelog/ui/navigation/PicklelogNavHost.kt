@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -19,7 +20,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.maxeydev.picklelog.ui.PicklelogDependencies
-import com.maxeydev.picklelog.ui.dashboard.DashboardHeader
 import com.maxeydev.picklelog.ui.dashboard.DashboardViewModel
 import com.maxeydev.picklelog.ui.dashboard.ExpandedStatsScreen
 import com.maxeydev.picklelog.ui.match.detail.MatchDetailScreen
@@ -31,14 +31,18 @@ import com.maxeydev.picklelog.ui.match.edit.PhotoPickerActions
 import com.maxeydev.picklelog.ui.match.list.MatchListFilterActions
 import com.maxeydev.picklelog.ui.match.list.MatchListScreen
 import com.maxeydev.picklelog.ui.match.list.MatchListViewModel
+import com.maxeydev.picklelog.ui.onboarding.OnboardingScreen
+import com.maxeydev.picklelog.ui.onboarding.OnboardingViewModel
 import com.maxeydev.picklelog.ui.paywall.CapWarningBanner
 import com.maxeydev.picklelog.ui.paywall.PaywallScreen
 import com.maxeydev.picklelog.ui.paywall.PaywallViewModel
+import com.maxeydev.picklelog.ui.settings.AboutScreen
 import com.maxeydev.picklelog.ui.settings.BackupActions
 import com.maxeydev.picklelog.ui.settings.BackupSettingsScreen
 import com.maxeydev.picklelog.ui.settings.BackupViewModel
 import com.maxeydev.picklelog.ui.settings.ExportPromptBanner
 import com.maxeydev.picklelog.ui.settings.ExportPromptViewModel
+import com.maxeydev.picklelog.ui.settings.SettingsActions
 import com.maxeydev.picklelog.ui.settings.SettingsScreen
 import com.maxeydev.picklelog.ui.settings.SettingsViewModel
 import com.maxeydev.picklelog.ui.share.ResourceCardLabels
@@ -59,7 +63,46 @@ fun PicklelogNavHost(
     openLogging: Boolean = false,
     onOpenLoggingHandled: () -> Unit = {},
 ) {
-    NavHost(navController = navController, startDestination = HomeRoute, modifier = modifier) {
+    val requiresOnboarding by produceState<Boolean?>(initialValue = null, dependencies) {
+        value = dependencies.onboarding.isRequired()
+    }
+    requiresOnboarding?.let { required ->
+        PicklelogNavGraph(
+            dependencies = dependencies,
+            requiresOnboarding = required,
+            modifier = modifier,
+            navController = navController,
+            openLogging = openLogging,
+            onOpenLoggingHandled = onOpenLoggingHandled,
+        )
+    }
+}
+
+@Composable
+private fun PicklelogNavGraph(
+    dependencies: PicklelogDependencies,
+    requiresOnboarding: Boolean,
+    modifier: Modifier,
+    navController: NavHostController,
+    openLogging: Boolean,
+    onOpenLoggingHandled: () -> Unit,
+) {
+    val startDestination: Any = if (requiresOnboarding) OnboardingRoute else HomeRoute
+    NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
+        composable<OnboardingRoute> {
+            val viewModel: OnboardingViewModel = viewModel(factory = OnboardingViewModel.factory(dependencies))
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+            LaunchedEffect(state.isFinished) {
+                if (state.isFinished) {
+                    navController.navigate(HomeRoute) { popUpTo<OnboardingRoute> { inclusive = true } }
+                }
+            }
+            OnboardingScreen(
+                state = state,
+                onNameChanged = viewModel::changeName,
+                onContinue = viewModel::continueToApp,
+            )
+        }
         composable<HomeRoute> { backStackEntry ->
             val viewModel: MatchListViewModel =
                 viewModel(factory = MatchListViewModel.factory(dependencies, backStackEntry.savedStateHandle))
@@ -72,7 +115,9 @@ fun PicklelogNavHost(
             val exportPromptState by exportPromptViewModel.uiState.collectAsStateWithLifecycle()
             MatchListScreen(
                 state = state,
-                dashboard = {
+                dashboard = dashboardState,
+                onOpenStats = { navController.navigate(StatsRoute) },
+                notices = {
                     Column {
                         CapWarningBanner(
                             warning = state.capWarning,
@@ -100,10 +145,6 @@ fun PicklelogNavHost(
                             onSeePro = { navController.navigate(PaywallRoute) },
                             onDismiss = dashboardViewModel::dismissMissedOpportunity,
                             modifier = Modifier.padding(horizontal = 16.dp).padding(top = 8.dp),
-                        )
-                        DashboardHeader(
-                            state = dashboardState,
-                            onOpenStats = { navController.navigate(StatsRoute) },
                         )
                     }
                 },
@@ -201,14 +242,36 @@ fun PicklelogNavHost(
         composable<SettingsRoute> {
             val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.factory(dependencies))
             val state by viewModel.uiState.collectAsStateWithLifecycle()
-            SettingsScreen(
-                state = state,
+            LaunchedEffect(state.isErased) {
+                if (state.isErased) {
+                    viewModel.erasedHandled()
+                    navController.navigate(OnboardingRoute) { popUpTo<HomeRoute> { inclusive = true } }
+                }
+            }
+            val actions =
+                remember(viewModel) {
+                    SettingsActions(
+                        onBack = { navController.popBackStack() },
+                        onSeePro = { navController.navigate(PaywallRoute) },
+                        onRestore = viewModel::restore,
+                        onOpenBackup = { navController.navigate(BackupRoute) },
+                        onOpenAbout = { navController.navigate(AboutRoute) },
+                        onEnableReminder = viewModel::enableReminder,
+                        onDisableReminder = viewModel::disableReminder,
+                        onReminderTimeChanged = viewModel::changeReminderTime,
+                        onNameChanged = viewModel::changeName,
+                        onSaveName = viewModel::saveName,
+                        onDarkThemeChanged = viewModel::changeDarkTheme,
+                        onEraseConfirmed = viewModel::eraseAll,
+                        onEraseFailureDismissed = viewModel::dismissEraseFailure,
+                    )
+                }
+            SettingsScreen(state = state, actions = actions)
+        }
+        composable<AboutRoute> {
+            AboutScreen(
+                versionName = dependencies.appVersionName,
                 onBack = { navController.popBackStack() },
-                onSeePro = { navController.navigate(PaywallRoute) },
-                onRestore = viewModel::restore,
-                onOpenBackup = { navController.navigate(BackupRoute) },
-                onEnableReminder = viewModel::enableReminder,
-                onDisableReminder = viewModel::disableReminder,
             )
         }
         composable<BackupRoute> {
@@ -315,7 +378,9 @@ fun PicklelogNavHost(
     }
     LaunchedEffect(openLogging) {
         if (openLogging) {
-            navController.navigate(MatchEditRoute()) { launchSingleTop = true }
+            if (!requiresOnboarding) {
+                navController.navigate(MatchEditRoute()) { launchSingleTop = true }
+            }
             onOpenLoggingHandled()
         }
     }
