@@ -1,6 +1,7 @@
 package com.maxeydev.picklelog.ui.notification
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.PendingIntent
 import android.content.Context
@@ -35,6 +36,7 @@ object StreakNotification {
 class StreakReminderNotifier(
     private val context: Context,
 ) : ReminderNotifier {
+    @SuppressLint("MissingPermission")
     override fun notifyStreakAtRisk(skipAvailable: Boolean): Boolean {
         val manager = NotificationManagerCompat.from(context)
         ensureChannel(manager)
