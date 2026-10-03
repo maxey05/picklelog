@@ -1,6 +1,8 @@
 package com.maxeydev.picklelog.ui.fakes
 
+import com.maxeydev.picklelog.domain.erase.EraseAllData
 import com.maxeydev.picklelog.domain.match.FilterState
+import com.maxeydev.picklelog.domain.onboarding.Onboarding
 import com.maxeydev.picklelog.domain.reminder.StreakReminder
 import com.maxeydev.picklelog.domain.streak.InsuredStreakEngine
 import com.maxeydev.picklelog.domain.streak.streakInsuranceStart
@@ -43,6 +45,12 @@ class FakeDependencies(
             clock = clock,
             timeZone = { timeZone },
         ),
+    override val appSettingsStore: FakeAppSettingsStore = FakeAppSettingsStore(),
+    override val onboarding: Onboarding =
+        Onboarding(appSettingsStore, profileRepository) { matchRepository.observeMatchCount().first() },
+    val localDataEraser: FakeLocalDataEraser = FakeLocalDataEraser(),
+    override val eraseAllData: EraseAllData = EraseAllData(streakReminder, localDataEraser),
+    override val appVersionName: String = "1.0.0-test",
     private val photoRoot: File = File(System.getProperty("java.io.tmpdir"), "picklelog-fake-photos"),
 ) : PicklelogDependencies {
     override fun currentTimeZone(): TimeZone = timeZone
