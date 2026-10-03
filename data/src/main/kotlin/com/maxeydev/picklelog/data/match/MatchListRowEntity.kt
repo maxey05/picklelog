@@ -24,6 +24,10 @@ data class MatchListRowEntity(
     val firstOpponent: String?,
     @ColumnInfo(name = "second_opponent")
     val secondOpponent: String?,
+    @ColumnInfo(name = "partner_name")
+    val partnerName: String?,
+    @ColumnInfo(name = "location")
+    val location: String?,
     @ColumnInfo(name = "primary_photo_path")
     val primaryPhotoPath: String?,
     @Relation(parentColumn = "id", entityColumn = "match_id")
@@ -39,4 +43,6 @@ internal fun MatchListRowEntity.toDomain(): MatchListItem =
         opponentNames = listOfNotNull(firstOpponent, secondOpponent),
         games = games.sortedBy { it.gameNumber }.map { it.toDomain() },
         primaryPhotoPath = primaryPhotoPath,
+        partnerName = partnerName,
+        location = location,
     )
