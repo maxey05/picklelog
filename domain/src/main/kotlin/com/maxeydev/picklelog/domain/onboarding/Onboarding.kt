@@ -23,10 +23,13 @@ class Onboarding(
     }
 
     suspend fun complete(rawName: String): Boolean {
-        if (!DisplayName.isValid(rawName)) {
-            return false
+        val name = DisplayName.clean(rawName)
+        if (name.isNotEmpty()) {
+            if (!DisplayName.isValid(name)) {
+                return false
+            }
+            profile.updateDisplayName(name)
         }
-        profile.updateDisplayName(DisplayName.clean(rawName))
         settings.setOnboardingComplete(true)
         return true
     }
