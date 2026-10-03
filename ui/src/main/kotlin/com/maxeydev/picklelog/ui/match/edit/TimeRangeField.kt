@@ -124,7 +124,7 @@ private fun TimeEndpointRow(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MatchTimePickerDialog(
+internal fun MatchTimePickerDialog(
     initial: AppTime,
     onConfirm: (AppTime) -> Unit,
     onDismiss: () -> Unit,
