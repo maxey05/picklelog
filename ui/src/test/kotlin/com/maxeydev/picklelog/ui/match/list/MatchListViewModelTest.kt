@@ -70,6 +70,7 @@ class MatchListViewModelTest {
         location: String? = null,
         notes: String? = null,
         opponents: List<Person> = emptyList(),
+        partner: Person? = null,
     ): Match =
         Match(
             id = Uuid.random(),
@@ -82,6 +83,7 @@ class MatchListViewModelTest {
             location = location,
             notes = notes,
             opponents = opponents,
+            partner = partner,
         )
 
     private fun person(name: String): Person = Person(Uuid.random(), name, AppInstant.fromEpochMilliseconds(0))
@@ -442,6 +444,43 @@ class MatchListViewModelTest {
             val state = viewModel.uiState.value
             assertFalse(state.isNarrowed)
             assertEquals(2, state.matches.size)
+        }
+
+    @Test
+    fun `rows carry the partner and location for the list to show`() =
+        runTest {
+            val cy = person("Cy")
+            val state =
+                subscribedViewModel(
+                    listOf(match(day = 1, partner = cy, location = "Rec Center"), match(day = 2)),
+                    knownPeople = listOf(cy),
+                ).uiState.value
+
+            val withDetails = state.matches.last()
+            assertEquals("Cy", withDetails.partnerName)
+            assertEquals("Rec Center", withDetails.location)
+            assertNull(state.matches.first().partnerName)
+            assertNull(state.matches.first().location)
+        }
+
+    @Test
+    fun `the counts give the whole log and how many of it the filter leaves`() =
+        runTest {
+            val viewModel =
+                subscribedViewModel(
+                    listOf(
+                        match(day = 1, format = MatchFormat.SINGLES),
+                        match(day = 2, format = MatchFormat.DOUBLES),
+                        match(day = 3, format = MatchFormat.DOUBLES),
+                    ),
+                )
+            assertEquals(3, viewModel.uiState.value.totalCount)
+            assertEquals(3, viewModel.uiState.value.resultCount)
+
+            viewModel.changeFilter(FilterState(format = MatchFormat.SINGLES))
+
+            assertEquals(3, viewModel.uiState.value.totalCount)
+            assertEquals(1, viewModel.uiState.value.resultCount)
         }
 
     @Test
