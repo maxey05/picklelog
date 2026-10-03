@@ -25,6 +25,11 @@ interface MatchRepository {
 
     fun observeMatchCount(): Flow<Int>
 
+    fun observeFilteredMatchCount(
+        filter: FilterState = FilterState.NONE,
+        search: SearchTerm? = null,
+    ): Flow<Int>
+
     fun observePriorValues(field: FreeTextField): Flow<List<FreeTextUsage>>
 
     suspend fun saveMatch(
