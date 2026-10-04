@@ -9,6 +9,21 @@ private val MOST_RECENT_FIRST =
         .thenByDescending { it.lastLoggedAt }
         .thenBy { suggestionKey(it.value) }
 
+private const val DEFAULT_RECENT_LIMIT = 3
+
+fun recentFreeText(
+    candidates: List<FreeTextUsage>,
+    limit: Int = DEFAULT_RECENT_LIMIT,
+): List<String> =
+    candidates
+        .asSequence()
+        .filter { it.value.isNotBlank() }
+        .sortedWith(MOST_RECENT_FIRST)
+        .distinctBy { suggestionKey(it.value) }
+        .map { it.value }
+        .take(limit)
+        .toList()
+
 fun suggestFreeText(
     query: String,
     candidates: List<FreeTextUsage>,
