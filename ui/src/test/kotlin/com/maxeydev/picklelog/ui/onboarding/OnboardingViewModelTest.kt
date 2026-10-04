@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -36,28 +37,39 @@ class OnboardingViewModelTest {
     }
 
     @Test
-    fun `it starts empty and can continue because the name is optional`() {
+    fun `it starts empty and cannot continue because a name is required`() {
         assertEquals("", viewModel.uiState.value.name)
-        assertTrue(viewModel.uiState.value.canContinue)
+        assertFalse(viewModel.uiState.value.canContinue)
+        assertFalse(viewModel.uiState.value.showNameRequired)
     }
 
     @Test
-    fun `continuing without a name finishes onboarding and stores no name`() =
+    fun `continuing without a name is blocked, flags the name as required and stores nothing`() =
         runTest {
             viewModel.continueToApp()
 
-            assertTrue(viewModel.uiState.value.isFinished)
+            assertFalse(viewModel.uiState.value.isFinished)
+            assertTrue(viewModel.uiState.value.showNameRequired)
             assertEquals("", profile.observeProfile().first().displayName)
-            assertTrue(settings.current.onboardingComplete)
+            assertFalse(settings.current.onboardingComplete)
         }
 
     @Test
-    fun `a whitespace only name is treated as no name`() =
+    fun `every blocked attempt is counted so the screen can react again`() {
+        viewModel.continueToApp()
+        viewModel.continueToApp()
+
+        assertEquals(2, viewModel.uiState.value.nameRequiredAttempts)
+    }
+
+    @Test
+    fun `a whitespace only name is blocked like an empty one`() =
         runTest {
             viewModel.changeName("   ")
             viewModel.continueToApp()
 
-            assertTrue(viewModel.uiState.value.isFinished)
+            assertFalse(viewModel.uiState.value.isFinished)
+            assertTrue(viewModel.uiState.value.showNameRequired)
             assertEquals("", profile.observeProfile().first().displayName)
         }
 
