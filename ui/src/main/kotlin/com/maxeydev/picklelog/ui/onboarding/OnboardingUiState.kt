@@ -7,7 +7,11 @@ data class OnboardingUiState(
     val isSaving: Boolean = false,
     val saveFailed: Boolean = false,
     val isFinished: Boolean = false,
+    val nameRequiredAttempts: Int = 0,
 ) {
     val canContinue: Boolean
-        get() = !isSaving && (DisplayName.clean(name).isEmpty() || DisplayName.isValid(name))
+        get() = !isSaving && DisplayName.isValid(name)
+
+    val showNameRequired: Boolean
+        get() = nameRequiredAttempts > 0
 }
