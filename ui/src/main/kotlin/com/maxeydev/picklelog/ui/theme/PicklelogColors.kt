@@ -9,6 +9,9 @@ import androidx.compose.ui.graphics.Color
 @Immutable
 class PicklelogColors(
     val header: Color,
+    val headerTop: Color,
+    val headerBottom: Color,
+    val headerChip: Color,
     val onHeader: Color,
     val onHeaderMuted: Color,
     val headerAccent: Color,
@@ -28,6 +31,9 @@ class PicklelogColors(
 internal val LIGHT_PICKLELOG_COLORS =
     PicklelogColors(
         header = Color(0xFF007A43),
+        headerTop = Color(0xFF00381F),
+        headerBottom = Color(0xFF1F8557),
+        headerChip = Color(0x24FFFFFF),
         onHeader = Color(0xFFFFFFFF),
         onHeaderMuted = Color(0xFFDEF9E9),
         headerAccent = Color(0xFFA5E8C1),
@@ -47,6 +53,9 @@ internal val LIGHT_PICKLELOG_COLORS =
 internal val DARK_PICKLELOG_COLORS =
     PicklelogColors(
         header = Color(0xFF0B4A2C),
+        headerTop = Color(0xFF052E1C),
+        headerBottom = Color(0xFF0B4A2C),
+        headerChip = Color(0x24FFFFFF),
         onHeader = Color(0xFFFFFFFF),
         onHeaderMuted = Color(0xFFCDEEDB),
         headerAccent = Color(0xFFA5E8C1),
