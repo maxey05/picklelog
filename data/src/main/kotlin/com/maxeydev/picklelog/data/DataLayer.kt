@@ -130,7 +130,7 @@ suspend fun createDataLayer(
     return DataLayer(
         roomMatchRepository = matchRepository,
         personRepository = RoomPersonRepository(database, ioDispatcher),
-        lastUsedFormatStore = DataStoreLastUsedFormatStore(preferences),
+        lastUsedFormatStore = DataStoreLastUsedFormatStore(preferences, applicationScope),
         matchSortStore = DataStoreMatchSortStore(preferences),
         photoStore = photoStore,
         profileRepository = profileRepository,
