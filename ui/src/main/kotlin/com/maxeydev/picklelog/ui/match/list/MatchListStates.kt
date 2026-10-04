@@ -28,7 +28,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.maxeydev.picklelog.ui.R
-import com.maxeydev.picklelog.ui.common.MascotIllustration
 
 private val ACTION_MIN_HEIGHT = 56.dp
 private val NO_RESULTS_ICON_CIRCLE = 96.dp
@@ -51,7 +50,6 @@ fun MatchListEmptyState(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            MascotIllustration()
             Text(
                 text = stringResource(R.string.list_empty_title),
                 style = MaterialTheme.typography.headlineSmall,
