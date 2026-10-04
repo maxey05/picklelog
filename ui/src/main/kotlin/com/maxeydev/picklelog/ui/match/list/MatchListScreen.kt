@@ -2,15 +2,18 @@
 
 package com.maxeydev.picklelog.ui.match.list
 
-import androidx.compose.foundation.border
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
@@ -18,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -39,11 +43,19 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.maxeydev.picklelog.domain.match.MatchSort
 import com.maxeydev.picklelog.ui.R
@@ -53,7 +65,12 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlin.uuid.ExperimentalUuidApi
 
 private val LIST_BOTTOM_SPACE = 88.dp
+private val LIST_CARD_RADIUS = 20.dp
 private const val MATCH_ROW_CONTENT_TYPE = "match_row"
+private const val ROW_GLIDE_MILLIS = 360
+
+private val RowGlideSpec: FiniteAnimationSpec<IntOffset> =
+    tween(durationMillis = ROW_GLIDE_MILLIS, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f))
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -128,7 +145,18 @@ fun MatchListScreen(
             }
         },
     ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        val layoutDirection = LocalLayoutDirection.current
+        val bottomInset = innerPadding.calculateBottomPadding()
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(
+                        start = innerPadding.calculateStartPadding(layoutDirection),
+                        top = innerPadding.calculateTopPadding(),
+                        end = innerPadding.calculateEndPadding(layoutDirection),
+                    ),
+        ) {
             HomeHeader(
                 dashboard = dashboard,
                 isCollapsed = isCollapsed,
@@ -143,9 +171,12 @@ fun MatchListScreen(
             )
             notices()
             when {
-                state.isLoading -> Box(modifier = Modifier.weight(1f).fillMaxWidth())
+                state.isLoading -> Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(bottom = bottomInset))
                 isEmptyState ->
-                    MatchListEmptyState(onNewMatch = onNewMatch, modifier = Modifier.weight(1f).fillMaxWidth())
+                    MatchListEmptyState(
+                        onNewMatch = onNewMatch,
+                        modifier = Modifier.weight(1f).fillMaxWidth().padding(bottom = bottomInset),
+                    )
                 else ->
                     MatchListContent(
                         state = state,
@@ -159,6 +190,7 @@ fun MatchListScreen(
                             filterActions.onFiltersAndSearchCleared()
                         },
                         filterActions = filterActions,
+                        bottomInset = bottomInset,
                         modifier = Modifier.weight(1f).fillMaxWidth(),
                     )
             }
@@ -216,6 +248,7 @@ private fun MatchListContent(
     onLastVisibleIndexChanged: (Int) -> Unit,
     onFiltersAndSearchCleared: () -> Unit,
     filterActions: MatchListFilterActions,
+    bottomInset: Dp,
     modifier: Modifier = Modifier,
 ) {
     val latestOnLastVisibleIndexChanged by rememberUpdatedState(onLastVisibleIndexChanged)
@@ -238,24 +271,34 @@ private fun MatchListContent(
             )
         }
         if (state.hasNoResults) {
-            NoResultsState(onClear = onFiltersAndSearchCleared, modifier = Modifier.weight(1f).fillMaxWidth())
+            NoResultsState(
+                onClear = onFiltersAndSearchCleared,
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(bottom = bottomInset),
+            )
         } else {
-            val cardShape = MaterialTheme.shapes.large
             Box(
                 modifier =
                     Modifier
-                        .weight(1f, fill = false)
+                        .weight(1f)
                         .padding(horizontal = 16.dp)
-                        .clip(cardShape)
-                        .border(1.dp, PicklelogTheme.colors.cardBorder, cardShape),
+                        .openBottomOutline(
+                            width = 1.dp,
+                            color = PicklelogTheme.colors.cardBorder,
+                            radius = LIST_CARD_RADIUS,
+                        )
+                        .clip(RoundedCornerShape(topStart = LIST_CARD_RADIUS, topEnd = LIST_CARD_RADIUS)),
             ) {
-                LazyColumn(state = listState, modifier = Modifier.testTag(MatchListTestTags.LIST)) {
+                LazyColumn(
+                    state = listState,
+                    contentPadding = PaddingValues(bottom = LIST_BOTTOM_SPACE + bottomInset),
+                    modifier = Modifier.fillMaxSize().testTag(MatchListTestTags.LIST),
+                ) {
                     itemsIndexed(
                         items = state.matches,
                         key = { _, row -> row.id },
                         contentType = { _, _ -> MATCH_ROW_CONTENT_TYPE },
                     ) { index, row ->
-                        Column {
+                        Column(modifier = Modifier.animateItem(placementSpec = RowGlideSpec)) {
                             if (index > 0) {
                                 HorizontalDivider(color = PicklelogTheme.colors.cardBorder)
                             }
@@ -264,7 +307,29 @@ private fun MatchListContent(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(LIST_BOTTOM_SPACE))
         }
     }
 }
+
+private fun Modifier.openBottomOutline(
+    width: Dp,
+    color: Color,
+    radius: Dp,
+): Modifier =
+    drawWithContent {
+        drawContent()
+        val stroke = width.toPx()
+        val inset = stroke / 2f
+        val arc = (radius.toPx() - inset).coerceIn(0f, size.width / 2f)
+        val outline =
+            Path().apply {
+                moveTo(inset, size.height)
+                lineTo(inset, inset + arc)
+                arcTo(Rect(inset, inset, inset + 2f * arc, inset + 2f * arc), 180f, 90f, false)
+                lineTo(size.width - inset - arc, inset)
+                val rightArcStart = size.width - inset - 2f * arc
+                arcTo(Rect(rightArcStart, inset, size.width - inset, inset + 2f * arc), 270f, 90f, false)
+                lineTo(size.width - inset, size.height)
+            }
+        drawPath(path = outline, color = color, style = Stroke(width = stroke))
+    }
