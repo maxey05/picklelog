@@ -27,7 +27,11 @@ class OnboardingViewModel(
 
     fun continueToApp() {
         val current = mutableUiState.value
-        if (!current.canContinue) {
+        if (current.isSaving) {
+            return
+        }
+        if (!DisplayName.isValid(current.name)) {
+            mutableUiState.update { it.copy(nameRequiredAttempts = it.nameRequiredAttempts + 1) }
             return
         }
         mutableUiState.update { it.copy(isSaving = true, saveFailed = false) }
