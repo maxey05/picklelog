@@ -91,7 +91,7 @@ class DataStoreMatchSortStoreTest {
         runBlocking {
             val job = SupervisorJob()
             val dataStore = openDataStore(job)
-            val formats = DataStoreLastUsedFormatStore(dataStore)
+            val formats = DataStoreLastUsedFormatStore(dataStore, CoroutineScope(job))
             val sorts = DataStoreMatchSortStore(dataStore)
             formats.recordLastUsedFormat(MatchFormat.SINGLES)
 
