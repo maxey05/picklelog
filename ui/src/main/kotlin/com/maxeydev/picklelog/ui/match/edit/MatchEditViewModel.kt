@@ -94,10 +94,11 @@ class MatchEditViewModel(
     private val timeZone: () -> TimeZone,
     private val defaultDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
-    private var draft: MatchDraft? =
+    private val restoredDraft: MatchDraft? =
         savedStateHandle.get<String>(DRAFT_KEY)?.let { encoded ->
             draftJson.decodeFromString(MatchDraft.serializer(), encoded)
         }
+    private var draft: MatchDraft? = restoredDraft ?: readyNewMatchDraft()
     private var isSaving = false
     private var isFinished = false
     private var savedNewMatchId: String? = null
@@ -113,10 +114,11 @@ class MatchEditViewModel(
     val uiState: StateFlow<MatchEditUiState> = mutableUiState.asStateFlow()
 
     init {
-        if (draft == null) {
-            viewModelScope.launch { loadInitialDraft() }
-        } else {
-            resumePendingPhotos()
+        val ready = draft
+        when {
+            restoredDraft != null -> resumePendingPhotos()
+            ready != null -> publish(ready)
+            else -> viewModelScope.launch { loadInitialDraft() }
         }
         viewModelScope.launch {
             val waitingForUnlock = savedStateHandle.getStateFlow(SAVE_AFTER_UNLOCK_KEY, false)
@@ -310,24 +312,40 @@ class MatchEditViewModel(
         }
     }
 
-    private suspend fun newMatchDraft(): MatchDraft {
+    private fun readyNewMatchDraft(): MatchDraft? {
+        val isPlainNewMatch =
+            savedStateHandle.get<String>(MATCH_ID_ARGUMENT) == null &&
+                savedStateHandle.get<String>(LOG_ANOTHER_FROM_ARGUMENT) == null
+        if (!isPlainNewMatch) {
+            return null
+        }
+        return lastUsedFormatStore.cachedLastUsedFormat()?.let(::freshDraft)
+    }
+
+    private fun freshDraft(format: MatchFormat): MatchDraft {
         val now = clock.now().toLocalDateTime(timeZone())
-        val matchId = Uuid.random().toString()
-        val startTime = AppTime(now.hour, now.minute)
+        return MatchDraft.forNewMatch(
+            matchId = Uuid.random().toString(),
+            format = format,
+            date = now.date,
+            startTime = AppTime(now.hour, now.minute),
+        )
+    }
+
+    private suspend fun newMatchDraft(): MatchDraft {
         val source =
             savedStateHandle.get<String>(LOG_ANOTHER_FROM_ARGUMENT)?.let { sourceId ->
                 matchRepository.observeById(Uuid.parse(sourceId)).first()
             }
-        return if (source == null) {
-            MatchDraft.forNewMatch(
-                matchId = matchId,
-                format = lastUsedFormatStore.lastUsedFormat(),
-                date = now.date,
-                startTime = startTime,
-            )
-        } else {
-            logAnotherDraft(source = source, matchId = matchId, startTime = startTime)
+        if (source == null) {
+            return freshDraft(lastUsedFormatStore.lastUsedFormat())
         }
+        val now = clock.now().toLocalDateTime(timeZone())
+        return logAnotherDraft(
+            source = source,
+            matchId = Uuid.random().toString(),
+            startTime = AppTime(now.hour, now.minute),
+        )
     }
 
     private fun addPhotos(sources: List<PhotoSource>) {
