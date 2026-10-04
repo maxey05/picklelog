@@ -5,10 +5,13 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import com.maxeydev.picklelog.ui.R
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -19,6 +22,7 @@ class OnboardingScreenTest {
     @get:Rule
     val compose = createComposeRule()
 
+    private val context = InstrumentationRegistry.getInstrumentation().targetContext
     private var continues = 0
     private val typed = mutableListOf<String>()
 
@@ -76,12 +80,19 @@ class OnboardingScreenTest {
     }
 
     @Test
-    fun get_started_works_without_a_name() {
+    fun get_started_without_a_name_still_reports_the_tap_so_the_name_can_be_flagged() {
         show(OnboardingUiState(name = ""), initialPage = lastPage)
 
         compose.onNodeWithTag(OnboardingTestTags.CONTINUE).assertIsEnabled().performClick()
 
         assertEquals(1, continues)
+    }
+
+    @Test
+    fun a_blocked_attempt_shows_that_a_name_is_required() {
+        show(OnboardingUiState(name = "", nameRequiredAttempts = 1), initialPage = lastPage)
+
+        compose.onNodeWithText(context.getString(R.string.name_field_required)).performScrollTo().assertIsDisplayed()
     }
 
     @Test
