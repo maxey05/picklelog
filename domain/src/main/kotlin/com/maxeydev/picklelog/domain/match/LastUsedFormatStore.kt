@@ -5,6 +5,8 @@ interface LastUsedFormatStore {
 
     suspend fun recordLastUsedFormat(format: MatchFormat)
 
+    fun cachedLastUsedFormat(): MatchFormat? = null
+
     companion object {
         val FIRST_LAUNCH_FORMAT: MatchFormat = MatchFormat.DOUBLES
     }
