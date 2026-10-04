@@ -13,9 +13,9 @@ import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
@@ -232,26 +232,47 @@ class SettingsDrawerTest {
     }
 
     @Test
-    fun erasing_needs_the_confirmation_word_before_it_can_proceed() {
-        show(SettingsUiState())
+    fun the_first_erase_prompt_does_not_erase_and_leads_to_a_final_confirmation() {
+        show(SettingsUiState(savedMatches = 3))
 
         compose.onNodeWithTag(SettingsTestTags.ERASE_OPEN).performScrollTo().performClick()
-        compose.onNodeWithTag(SettingsTestTags.ERASE_CONFIRM).assertIsNotEnabled()
+        compose.onNodeWithTag(SettingsTestTags.ERASE_CONFIRM).assertIsEnabled().performClick()
 
-        compose.onNodeWithTag(SettingsTestTags.ERASE_CONFIRM_FIELD).performTextInput("nope")
-        compose.onNodeWithTag(SettingsTestTags.ERASE_CONFIRM).assertIsNotEnabled()
         assertEquals(0, eraseConfirmations)
+        compose.onNodeWithTag(SettingsTestTags.ERASE_FINAL_DIALOG).assertIsDisplayed()
+        compose.onNodeWithText("Your 3 matches", substring = true).assertIsDisplayed()
     }
 
     @Test
-    fun typing_the_word_enables_the_erase_and_confirming_reports_it() {
-        show(SettingsUiState())
+    fun confirming_the_final_prompt_reports_the_erase() {
+        show(SettingsUiState(savedMatches = 3))
         compose.onNodeWithTag(SettingsTestTags.ERASE_OPEN).performScrollTo().performClick()
+        compose.onNodeWithTag(SettingsTestTags.ERASE_CONFIRM).performClick()
 
-        compose.onNodeWithTag(SettingsTestTags.ERASE_CONFIRM_FIELD).performTextInput("erase")
-        compose.onNodeWithTag(SettingsTestTags.ERASE_CONFIRM).assertIsEnabled().performClick()
+        compose.onNodeWithTag(SettingsTestTags.ERASE_FINAL_CONFIRM).performClick()
 
         assertEquals(1, eraseConfirmations)
+    }
+
+    @Test
+    fun cancelling_the_final_prompt_keeps_the_data() {
+        show(SettingsUiState(savedMatches = 3))
+        compose.onNodeWithTag(SettingsTestTags.ERASE_OPEN).performScrollTo().performClick()
+        compose.onNodeWithTag(SettingsTestTags.ERASE_CONFIRM).performClick()
+
+        compose.onNodeWithTag(SettingsTestTags.ERASE_FINAL_CANCEL).performClick()
+
+        assertEquals(0, eraseConfirmations)
+        compose.onAllNodesWithTag(SettingsTestTags.ERASE_FINAL_DIALOG).assertCountEquals(0)
+    }
+
+    @Test
+    fun the_final_prompt_uses_the_singular_for_one_match() {
+        show(SettingsUiState(savedMatches = 1))
+        compose.onNodeWithTag(SettingsTestTags.ERASE_OPEN).performScrollTo().performClick()
+        compose.onNodeWithTag(SettingsTestTags.ERASE_CONFIRM).performClick()
+
+        compose.onNodeWithText("Your 1 match,", substring = true).assertIsDisplayed()
     }
 
     @Test
@@ -265,9 +286,10 @@ class SettingsDrawerTest {
     }
 
     @Test
-    fun a_failed_erase_is_explained_inside_the_dialog() {
+    fun a_failed_erase_is_explained_inside_the_final_dialog() {
         show(SettingsUiState(eraseFailed = true))
         compose.onNodeWithTag(SettingsTestTags.ERASE_OPEN).performScrollTo().performClick()
+        compose.onNodeWithTag(SettingsTestTags.ERASE_CONFIRM).performClick()
 
         compose.onNodeWithTag(SettingsTestTags.ERASE_ERROR).assertIsDisplayed()
     }
