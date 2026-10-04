@@ -145,7 +145,7 @@ private fun StreakPill(
             else -> stringResource(R.string.dashboard_no_streak)
         }
     Surface(
-        color = colors.headerPill,
+        color = colors.headerChip,
         contentColor = colors.onHeaderPill,
         shape = CircleShape,
         modifier = modifier.testTag(DashboardTestTags.STREAK),
