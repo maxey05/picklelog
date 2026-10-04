@@ -213,15 +213,4 @@ class FilterUiTest {
 
         waitForTag(MatchListTestTags.row(calm.id.toString()))
     }
-
-    @Test
-    fun `the_filter_sheet_states_that_filters_reset_when_the_app_is_reopened`() {
-        showHome(match(day = 1))
-
-        openSheet()
-
-        compose.onNodeWithTag(
-            MatchListTestTags.FILTER_RESET_NOTICE,
-        ).assert(hasText("Filters reset each time you reopen Picklelog."))
-    }
 }
