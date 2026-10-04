@@ -112,7 +112,7 @@ fun MatchListScreen(
         contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            if (showsList) {
+            if (!state.isLoading) {
                 FloatingActionButton(
                     onClick = onNewMatch,
                     shape = MaterialTheme.shapes.large,
@@ -169,6 +169,7 @@ fun MatchListScreen(
             filter = state.filter,
             opponentChoices = state.opponentChoices,
             locationChoices = state.locationChoices,
+            resultCount = state.resultCount,
             onFilterChanged = filterActions.onFilterChanged,
             onAllFiltersCleared = filterActions.onAllFiltersCleared,
             onDismiss = { isFilterSheetOpen = false },
