@@ -10,11 +10,9 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -23,7 +21,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -53,11 +50,15 @@ import com.maxeydev.picklelog.ui.R
 import com.maxeydev.picklelog.ui.common.PermissionPrompt
 import com.maxeydev.picklelog.ui.common.PermissionRationale
 import com.maxeydev.picklelog.ui.common.PermissionSettingsRedirect
+import com.maxeydev.picklelog.ui.common.dashedBorder
 import com.maxeydev.picklelog.ui.common.rememberPermissionState
 import java.io.File
 
 private val TILE_WIDTH = 144.dp
 private val TILE_IMAGE_HEIGHT = 108.dp
+private val ACTION_BUTTON_HEIGHT = 72.dp
+private val ACTION_BUTTON_RADIUS = 12.dp
+private val ACTION_ICON_SIZE = 22.dp
 
 class PhotoPickerActions(
     val newCaptureUri: () -> String,
@@ -68,7 +69,6 @@ class PhotoPickerActions(
     val onPhotoErrorDismissed: () -> Unit,
 )
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PhotoPickerSection(
     photos: List<PhotoUiState>,
@@ -102,7 +102,6 @@ fun PhotoPickerSection(
         }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(text = stringResource(R.string.label_photos), style = MaterialTheme.typography.titleSmall)
         if (photos.isNotEmpty()) {
             Row(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -122,26 +121,22 @@ fun PhotoPickerSection(
         if (hasPhotoError) {
             PhotoErrorMessage(onDismiss = actions.onPhotoErrorDismissed)
         }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            PhotoActionButton(
+                icon = R.drawable.ic_photo_library,
+                label = stringResource(R.string.photos_add),
                 onClick = {
                     picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                 },
-                modifier = Modifier.testTag(MatchEditTestTags.ADD_PHOTOS),
-            ) {
-                Icon(painter = painterResource(R.drawable.ic_image), contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.photos_add))
-            }
+                modifier = Modifier.weight(1f).testTag(MatchEditTestTags.ADD_PHOTOS),
+            )
             if (hasCamera) {
-                OutlinedButton(
+                PhotoActionButton(
+                    icon = R.drawable.ic_photo_camera,
+                    label = stringResource(R.string.photos_take),
                     onClick = cameraPermission::request,
-                    modifier = Modifier.testTag(MatchEditTestTags.TAKE_PHOTO),
-                ) {
-                    Icon(painter = painterResource(R.drawable.ic_camera), contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.photos_take))
-                }
+                    modifier = Modifier.weight(1f).testTag(MatchEditTestTags.TAKE_PHOTO),
+                )
             }
         }
     }
@@ -162,6 +157,37 @@ fun PhotoPickerSection(
                 onDismiss = cameraPermission::dismiss,
             )
         PermissionPrompt.NONE -> Unit
+    }
+}
+
+@Composable
+private fun PhotoActionButton(
+    icon: Int,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.medium,
+        color = colors.surfaceContainerLow,
+        contentColor = colors.onSurface,
+        modifier = modifier.heightIn(min = ACTION_BUTTON_HEIGHT).dashedBorder(colors.outline, ACTION_BUTTON_RADIUS),
+    ) {
+        Column(
+            modifier = Modifier.padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+        ) {
+            Icon(
+                painter = painterResource(icon),
+                contentDescription = null,
+                tint = colors.primary,
+                modifier = Modifier.size(ACTION_ICON_SIZE),
+            )
+            Text(text = label, style = MaterialTheme.typography.labelLarge)
+        }
     }
 }
 
