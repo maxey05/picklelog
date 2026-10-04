@@ -36,8 +36,11 @@ fun PillChip(
     modifier: Modifier = Modifier,
     showsCheck: Boolean = false,
     trailingIcon: Int? = null,
+    filled: Boolean = false,
 ) {
     val colors = MaterialTheme.colorScheme
+    val selectedContainer = if (filled) colors.primary else colors.primaryContainer
+    val selectedContent = if (filled) colors.onPrimary else colors.onPrimaryContainer
     Box(
         modifier =
             modifier
@@ -48,8 +51,8 @@ fun PillChip(
     ) {
         Surface(
             shape = CircleShape,
-            color = if (isSelected) colors.primaryContainer else colors.surfaceContainerLowest,
-            contentColor = if (isSelected) colors.onPrimaryContainer else colors.onSurface,
+            color = if (isSelected) selectedContainer else colors.surfaceContainerLowest,
+            contentColor = if (isSelected) selectedContent else colors.onSurface,
             border = BorderStroke(1.dp, if (isSelected) colors.primary else PicklelogTheme.colors.cardBorder),
         ) {
             Row(
