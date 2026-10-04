@@ -3,6 +3,7 @@ package com.maxeydev.picklelog.ui.match.edit
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
@@ -34,8 +35,9 @@ fun GameScoreRow(
         ) {
             Text(
                 text = stringResource(R.string.game_number, row.gameNumber),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.widthIn(min = 64.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.widthIn(min = 50.dp),
             )
             ScoreField(
                 value = row.myScore,
@@ -55,6 +57,8 @@ fun GameScoreRow(
                 Icon(
                     painter = painterResource(R.drawable.ic_close),
                     contentDescription = stringResource(R.string.remove_game, row.gameNumber),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
                 )
             }
         }
@@ -82,6 +86,7 @@ private fun ScoreField(
         label = { Text(label) },
         singleLine = true,
         isError = isError,
+        shape = MaterialTheme.shapes.medium,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
         modifier = modifier,
     )
