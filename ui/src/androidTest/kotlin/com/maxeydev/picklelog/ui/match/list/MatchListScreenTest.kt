@@ -127,7 +127,7 @@ class MatchListScreenTest {
 
         compose.onNodeWithTag(MatchListTestTags.EMPTY_STATE).assertIsDisplayed()
         compose.onNodeWithText("No matches yet").assertIsDisplayed()
-        compose.onNodeWithTag(MatchListTestTags.NEW_MATCH).assertDoesNotExist()
+        compose.onNodeWithTag(MatchListTestTags.NEW_MATCH).assertIsDisplayed()
         compose.onNodeWithTag(MatchListTestTags.LIST).assertDoesNotExist()
         compose.onNodeWithTag(MatchListTestTags.SORT_BUTTON).assertDoesNotExist()
 
