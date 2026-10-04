@@ -118,6 +118,18 @@ class MatchEditViewModelTest {
     }
 
     @Test
+    fun `a cached format gives a ready form the moment the screen opens`() {
+        formats.cached = MatchFormat.SINGLES
+        formats.format = MatchFormat.DOUBLES
+
+        val state = viewModel().uiState.value
+
+        assertFalse(state.isLoading)
+        assertEquals(MatchFormat.SINGLES, state.format)
+        assertEquals(AppDate.parse("2026-09-24"), state.date)
+    }
+
+    @Test
     fun `a first launch with no stored format opens as doubles`() {
         assertEquals(MatchFormat.DOUBLES, viewModel().uiState.value.format)
     }
