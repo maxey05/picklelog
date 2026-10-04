@@ -13,7 +13,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -28,17 +30,20 @@ fun DisplayNameField(
     modifier: Modifier = Modifier,
     required: Boolean = true,
     labelAbove: Boolean = false,
+    showRequiredError: Boolean = false,
 ) {
     val label = stringResource(R.string.name_field_label)
-    val isError = required && value.isNotEmpty() && value.isBlank()
+    val isMissing = value.isBlank()
+    val isError = isMissing && ((required && value.isNotEmpty()) || showRequiredError)
     val supportingText: @Composable () -> Unit = {
-        Text(
-            if (required && value.isBlank()) {
-                stringResource(R.string.name_field_required)
-            } else {
-                stringResource(R.string.name_field_hint)
-            },
-        )
+        if (isMissing && (required || showRequiredError)) {
+            Text(
+                text = stringResource(R.string.name_field_required),
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+            )
+        } else {
+            Text(stringResource(R.string.name_field_hint))
+        }
     }
     val keyboardOptions =
         KeyboardOptions(
