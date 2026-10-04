@@ -19,6 +19,7 @@ import com.maxeydev.picklelog.domain.match.Match
 import com.maxeydev.picklelog.domain.match.MatchFormat
 import com.maxeydev.picklelog.domain.match.MatchRepository
 import com.maxeydev.picklelog.domain.match.MatchResult
+import com.maxeydev.picklelog.domain.match.recentFreeText
 import com.maxeydev.picklelog.domain.match.suggestFreeText
 import com.maxeydev.picklelog.domain.person.Person
 import com.maxeydev.picklelog.domain.person.PersonRepository
@@ -102,6 +103,7 @@ class MatchEditViewModel(
     private var savedNewMatchId: String? = null
     private val suggestionInput = MutableStateFlow<SuggestionInput?>(null)
     private var suggestionResult: SuggestionResult? = null
+    private var recentLocations: List<String> = emptyList()
     private var hasPhotoError = false
     private var upgradePrompt: UpgradeReason? = null
     private var isPaywallRequested = false
@@ -123,6 +125,16 @@ class MatchEditViewModel(
                 .collect {
                     savedStateHandle[SAVE_AFTER_UNLOCK_KEY] = false
                     save()
+                }
+        }
+        viewModelScope.launch {
+            matchRepository
+                .observePriorValues(FreeTextField.LOCATION)
+                .map { usages -> recentFreeText(usages) }
+                .flowOn(defaultDispatcher)
+                .collect { values ->
+                    recentLocations = values
+                    mutableUiState.value = renderState()
                 }
         }
         viewModelScope.launch {
@@ -417,6 +429,7 @@ class MatchEditViewModel(
             isFinished = isFinished,
             suggestionTarget = suggestionInput.value?.target,
             suggestions = visibleSuggestions(),
+            recentLocations = recentLocations,
             savedNewMatchId = savedNewMatchId,
             photoFilePath = { photoFile(it).path },
             hasPhotoError = hasPhotoError,
