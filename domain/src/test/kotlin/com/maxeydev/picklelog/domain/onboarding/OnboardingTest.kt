@@ -101,29 +101,22 @@ class OnboardingTest {
         }
 
     @Test
-    fun `completing without a name marks onboarding done and stores no name`() =
+    fun `completing without a name is refused and onboarding stays required`() =
         runTest {
-            assertTrue(onboarding.complete(""))
+            assertFalse(onboarding.complete(""))
 
             assertEquals("", profile.state.value.displayName)
-            assertTrue(settings.state.value.onboardingComplete)
+            assertFalse(settings.state.value.onboardingComplete)
+            assertTrue(onboarding.isRequired())
         }
 
     @Test
-    fun `a whitespace only name counts as no name`() =
+    fun `a whitespace only name is refused`() =
         runTest {
-            assertTrue(onboarding.complete("   "))
+            assertFalse(onboarding.complete("   "))
 
             assertEquals("", profile.state.value.displayName)
-            assertTrue(settings.state.value.onboardingComplete)
-        }
-
-    @Test
-    fun `skipping the name does not bring onboarding back on the next launch`() =
-        runTest {
-            onboarding.complete("")
-
-            assertFalse(onboarding.isRequired())
+            assertFalse(settings.state.value.onboardingComplete)
         }
 
     @Test
