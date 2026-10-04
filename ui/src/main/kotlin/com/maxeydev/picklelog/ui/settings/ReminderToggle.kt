@@ -85,6 +85,7 @@ private fun ReminderSwitchRow(
     SettingsRow(
         icon = R.drawable.ic_notifications,
         label = stringResource(R.string.settings_reminder_label),
+        supporting = if (checked) stringResource(R.string.settings_reminder_supporting) else null,
         modifier =
             Modifier
                 .toggleable(
@@ -110,6 +111,8 @@ private fun RuntimePermissionDialogs(
                 body = stringResource(R.string.reminder_permission_body),
                 onContinue = permission::continueFromRationale,
                 onDismiss = permission::dismiss,
+                icon = R.drawable.ic_notifications,
+                confirmLabel = stringResource(R.string.reminder_permission_confirm),
             )
         PermissionPrompt.SETTINGS ->
             PermissionSettingsRedirect(
