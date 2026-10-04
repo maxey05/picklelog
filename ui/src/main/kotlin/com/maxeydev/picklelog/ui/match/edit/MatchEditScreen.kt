@@ -1,6 +1,10 @@
 package com.maxeydev.picklelog.ui.match.edit
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,6 +41,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -49,6 +58,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.maxeydev.picklelog.domain.match.MatchFormat
 import com.maxeydev.picklelog.domain.match.MatchResult
@@ -60,12 +70,18 @@ import com.maxeydev.picklelog.ui.match.resultLabel
 import com.maxeydev.picklelog.ui.paywall.UpgradePrompt
 import com.maxeydev.picklelog.ui.paywall.UpgradeReason
 import com.maxeydev.picklelog.ui.theme.PicklelogTheme
+import kotlinx.coroutines.delay
 
 private val CARD_SHAPE = RoundedCornerShape(16.dp)
 private val ICON_SIZE = 22.dp
 private val FIELD_ICON_TOP_PADDING = 17.dp
 private val MIN_TOUCH_TARGET = 48.dp
 private val ADD_ICON_SIZE = 16.dp
+private const val FIELDS_EXPAND_MILLIS = 260
+private const val SPINNER_DELAY_MILLIS = 300L
+
+private val FieldsExpandSpec: FiniteAnimationSpec<IntSize> =
+    tween(durationMillis = FIELDS_EXPAND_MILLIS, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f))
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,12 +123,7 @@ fun MatchEditScreen(
         },
     ) { innerPadding ->
         if (state.isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator()
-            }
+            DelayedSpinner(modifier = Modifier.fillMaxSize().padding(innerPadding))
         } else {
             MatchEditForm(
                 state = state,
@@ -129,6 +140,20 @@ fun MatchEditScreen(
                 onDismiss = actions.onUpgradePromptDismissed,
                 onSeePro = actions.onSeePro.takeIf { reason != UpgradeReason.PRO_PHOTO_LIMIT },
             )
+        }
+    }
+}
+
+@Composable
+private fun DelayedSpinner(modifier: Modifier = Modifier) {
+    var isVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(SPINNER_DELAY_MILLIS)
+        isVisible = true
+    }
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        if (isVisible) {
+            CircularProgressIndicator()
         }
     }
 }
@@ -304,7 +329,10 @@ private fun PlayersCard(
             iconAlignment = Alignment.Top,
             iconTopPadding = FIELD_ICON_TOP_PADDING,
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(
+                modifier = Modifier.animateContentSize(animationSpec = FieldsExpandSpec),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
                 state.personSlots.forEach { slot ->
                     val target = SuggestionTarget.forSlot(slot.slot)
                     PersonSlotField(
