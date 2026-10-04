@@ -20,7 +20,6 @@ object MatchListTestTags {
     const val FILTER_CHIPS = "match_list_filter_chips"
     const val CLEAR_ALL_FILTERS = "match_list_filter_clear_all"
     const val FILTER_SHEET = "filter_sheet"
-    const val FILTER_RESET_NOTICE = "filter_sheet_reset_notice"
     const val SHEET_CLEAR_ALL = "filter_sheet_clear_all"
     const val SHEET_DONE = "filter_sheet_done"
     const val DATE_PICKER = "filter_sheet_date"
