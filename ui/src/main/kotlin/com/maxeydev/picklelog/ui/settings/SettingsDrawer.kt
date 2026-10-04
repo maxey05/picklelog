@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -40,7 +39,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -155,6 +153,7 @@ fun SettingsDrawer(
                 EraseDataSection(
                     isErasing = state.isErasing,
                     eraseFailed = state.eraseFailed,
+                    savedMatches = state.savedMatches,
                     onOpenBackup = actions.onOpenBackup,
                     onEraseConfirmed = actions.onEraseConfirmed,
                     onEraseFailureDismissed = actions.onEraseFailureDismissed,
@@ -173,22 +172,6 @@ private fun DrawerHeader(
         modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(32.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(PicklelogTheme.colors.header),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_settings),
-                contentDescription = null,
-                tint = PicklelogTheme.colors.onHeader,
-                modifier = Modifier.size(18.dp),
-            )
-        }
-        Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge,
