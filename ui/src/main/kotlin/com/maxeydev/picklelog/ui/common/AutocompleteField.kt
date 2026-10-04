@@ -34,13 +34,21 @@ fun AutocompleteField(
     isError: Boolean = false,
     supportingText: (@Composable () -> Unit)? = null,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    placeholder: String? = null,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
             label = { Text(label) },
+            placeholder =
+                if (placeholder != null) {
+                    { Text(placeholder) }
+                } else {
+                    null
+                },
             singleLine = true,
+            shape = MaterialTheme.shapes.medium,
             isError = isError,
             supportingText = supportingText,
             keyboardOptions = keyboardOptions,
