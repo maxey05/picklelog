@@ -66,7 +66,6 @@ class LogAnotherFlowTest {
         compose.onNode(hasText("Me") and hasSetTextAction()).performTextInput("11")
         compose.onNode(hasText("Them") and hasSetTextAction()).performTextInput("7")
         compose.onNodeWithTag(MatchEditTestTags.LOCATION).performTextInput("Ayala Triangle")
-        compose.onNodeWithTag(MatchEditTestTags.PADDLE).performTextInput("Selkirk")
         compose.onNodeWithTag(MatchEditTestTags.NOTES).performTextInput("Windy on court 3")
         compose.onNodeWithTag(MatchEditTestTags.SAVE).performClick()
         compose.waitUntil(WAIT_MILLIS) { dependencies.matchRepository.saved.isNotEmpty() }
@@ -86,7 +85,6 @@ class LogAnotherFlowTest {
         compose.onNodeWithTag(MatchEditTestTags.RESULT_LOSS).assertIsNotSelected()
         assertTrue(compose.onAllNodesWithText("Game 1").fetchSemanticsNodes().isEmpty())
         compose.onNodeWithTag(MatchEditTestTags.NOTES).assert(editableText(""))
-        compose.onNodeWithTag(MatchEditTestTags.PADDLE).assert(editableText(""))
         compose.onNodeWithTag(MatchEditTestTags.LOCATION).assert(editableText("Ayala Triangle"))
         compose.onNodeWithTag(MatchEditTestTags.personSlot(PersonSlot.OPPONENT_1)).assert(editableText("Ana"))
         compose.onNodeWithTag(MatchEditTestTags.personSlot(PersonSlot.OPPONENT_2)).assert(editableText("Ben"))
