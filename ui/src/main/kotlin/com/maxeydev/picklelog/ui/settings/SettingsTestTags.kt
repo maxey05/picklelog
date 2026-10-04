@@ -22,8 +22,12 @@ object SettingsTestTags {
     const val RATE_US = "settings_rate_us"
     const val ABOUT_OPEN = "settings_about_open"
     const val ERASE_OPEN = "settings_erase_open"
-    const val ERASE_CONFIRM_FIELD = "settings_erase_confirm_field"
+    const val ERASE_ASK_DIALOG = "settings_erase_ask_dialog"
+    const val ERASE_CANCEL = "settings_erase_cancel"
     const val ERASE_CONFIRM = "settings_erase_confirm"
     const val ERASE_EXPORT_FIRST = "settings_erase_export_first"
     const val ERASE_ERROR = "settings_erase_error"
+    const val ERASE_FINAL_DIALOG = "settings_erase_final_dialog"
+    const val ERASE_FINAL_CONFIRM = "settings_erase_final_confirm"
+    const val ERASE_FINAL_CANCEL = "settings_erase_final_cancel"
 }
