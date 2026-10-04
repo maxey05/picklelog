@@ -3,22 +3,17 @@
 package com.maxeydev.picklelog.ui.match.list
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -27,6 +22,7 @@ import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -34,7 +30,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -45,15 +40,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.maxeydev.picklelog.domain.datetime.AppDate
 import com.maxeydev.picklelog.domain.match.FilterState
@@ -69,14 +64,17 @@ import com.maxeydev.picklelog.ui.theme.PicklelogTheme
 import kotlin.uuid.ExperimentalUuidApi
 
 private val MIN_TOUCH_TARGET = 48.dp
-private val FIELD_MIN_HEIGHT = 56.dp
-private val ICON_SIZE = 20.dp
+private val FIELD_MIN_HEIGHT = 52.dp
+private val DONE_MIN_HEIGHT = 52.dp
+private val ICON_SIZE = 18.dp
+private val SHEET_HORIZONTAL_PADDING = 20.dp
 
 @Composable
 fun FilterSheet(
     filter: FilterState,
     opponentChoices: List<OpponentChoice>,
     locationChoices: List<String>,
+    resultCount: Int,
     onFilterChanged: (FilterState) -> Unit,
     onAllFiltersCleared: () -> Unit,
     onDismiss: () -> Unit,
@@ -93,72 +91,106 @@ fun FilterSheet(
                 Modifier
                     .weight(1f, fill = false)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+                    .padding(horizontal = SHEET_HORIZONTAL_PADDING),
         ) {
-            SegmentedChoice(
-                label = stringResource(R.string.label_format),
-                options = listOf(null, MatchFormat.SINGLES, MatchFormat.DOUBLES),
-                selected = filter.format,
-                optionLabel = { format -> format?.let { formatLabel(it) } ?: stringResource(R.string.filter_all) },
-                optionTag = { format -> MatchListTestTags.formatOption(format) },
-                onSelected = { format -> onFilterChanged(filter.copy(format = format)) },
-            )
-            SegmentedChoice(
-                label = stringResource(R.string.label_result),
-                options = listOf(null, MatchResult.WIN, MatchResult.LOSS),
-                selected = filter.result,
-                optionLabel = { result -> resultFilterLabel(result) },
-                optionTag = { result -> MatchListTestTags.resultOption(result) },
-                onSelected = { result -> onFilterChanged(filter.copy(result = result)) },
-            )
-            DateSection(
-                filter = filter,
-                onRangeChosen = { from, to -> onFilterChanged(filter.copy(fromDate = from, toDate = to)) },
-                onRangeCleared = { onFilterChanged(filter.copy(fromDate = null, toDate = null)) },
-            )
-            DropdownField(
-                label = stringResource(R.string.label_opponents),
-                shown =
-                    filter.opponentId?.let { id -> opponentChoices.firstOrNull { it.id == id }?.name }
-                        ?: stringResource(R.string.filter_any_opponent),
-                anyLabel = stringResource(R.string.filter_any_opponent),
-                emptyLabel = stringResource(R.string.filter_no_opponents),
-                options = opponentChoices.map { it.name },
-                fieldTag = MatchListTestTags.OPPONENT_PICKER,
-                optionTag = { index -> MatchListTestTags.opponentOption(opponentChoices[index].id.toString()) },
-                onAnyChosen = { onFilterChanged(filter.copy(opponentId = null)) },
-                onOptionChosen = { index -> onFilterChanged(filter.copy(opponentId = opponentChoices[index].id)) },
-            )
-            DropdownField(
-                label = stringResource(R.string.label_location),
-                shown = filter.location ?: stringResource(R.string.filter_any_location),
-                anyLabel = stringResource(R.string.filter_any_location),
-                emptyLabel = stringResource(R.string.filter_no_locations),
-                options = locationChoices,
-                fieldTag = MatchListTestTags.LOCATION_PICKER,
-                optionTag = { index -> MatchListTestTags.locationOption(index) },
-                onAnyChosen = { onFilterChanged(filter.copy(location = null)) },
-                onOptionChosen = { index -> onFilterChanged(filter.copy(location = locationChoices[index])) },
-            )
-            Text(
-                text = stringResource(R.string.filter_reset_notice),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.testTag(MatchListTestTags.FILTER_RESET_NOTICE),
-            )
+            FilterSection {
+                ChipChoice(
+                    label = stringResource(R.string.label_format),
+                    options = listOf(null, MatchFormat.SINGLES, MatchFormat.DOUBLES),
+                    selected = filter.format,
+                    optionLabel = { format -> format?.let { formatLabel(it) } ?: stringResource(R.string.filter_all) },
+                    optionTag = { format -> MatchListTestTags.formatOption(format) },
+                    onSelected = { format -> onFilterChanged(filter.copy(format = format)) },
+                )
+            }
+            FilterSection {
+                ChipChoice(
+                    label = stringResource(R.string.label_result),
+                    options = listOf(null, MatchResult.WIN, MatchResult.LOSS),
+                    selected = filter.result,
+                    optionLabel = { result -> resultFilterLabel(result) },
+                    optionTag = { result -> MatchListTestTags.resultOption(result) },
+                    onSelected = { result -> onFilterChanged(filter.copy(result = result)) },
+                )
+            }
+            FilterSection {
+                DateSection(
+                    filter = filter,
+                    onRangeChosen = { from, to -> onFilterChanged(filter.copy(fromDate = from, toDate = to)) },
+                    onRangeCleared = { onFilterChanged(filter.copy(fromDate = null, toDate = null)) },
+                )
+            }
+            FilterSection {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    DropdownField(
+                        label = stringResource(R.string.label_opponents),
+                        shown =
+                            filter.opponentId?.let { id -> opponentChoices.firstOrNull { it.id == id }?.name }
+                                ?: stringResource(R.string.filter_any),
+                        spokenValue =
+                            filter.opponentId?.let { id -> opponentChoices.firstOrNull { it.id == id }?.name }
+                                ?: stringResource(R.string.filter_any_opponent),
+                        anyLabel = stringResource(R.string.filter_any_opponent),
+                        emptyLabel = stringResource(R.string.filter_no_opponents),
+                        options = opponentChoices.map { it.name },
+                        fieldTag = MatchListTestTags.OPPONENT_PICKER,
+                        optionTag = { index -> MatchListTestTags.opponentOption(opponentChoices[index].id.toString()) },
+                        onAnyChosen = { onFilterChanged(filter.copy(opponentId = null)) },
+                        onOptionChosen = { index ->
+                            onFilterChanged(filter.copy(opponentId = opponentChoices[index].id))
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                    DropdownField(
+                        label = stringResource(R.string.label_location),
+                        shown = filter.location ?: stringResource(R.string.filter_any),
+                        spokenValue = filter.location ?: stringResource(R.string.filter_any_location),
+                        anyLabel = stringResource(R.string.filter_any_location),
+                        emptyLabel = stringResource(R.string.filter_no_locations),
+                        options = locationChoices,
+                        fieldTag = MatchListTestTags.LOCATION_PICKER,
+                        optionTag = { index -> MatchListTestTags.locationOption(index) },
+                        onAnyChosen = { onFilterChanged(filter.copy(location = null)) },
+                        onOptionChosen = { index -> onFilterChanged(filter.copy(location = locationChoices[index])) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
         }
-        Button(
-            onClick = onDismiss,
-            shape = MaterialTheme.shapes.large,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp)
-                    .heightIn(min = FIELD_MIN_HEIGHT)
-                    .testTag(MatchListTestTags.SHEET_DONE),
+        Column(modifier = Modifier.padding(horizontal = SHEET_HORIZONTAL_PADDING)) {
+            SectionDivider()
+            Button(
+                onClick = onDismiss,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 14.dp, bottom = 16.dp)
+                        .heightIn(min = DONE_MIN_HEIGHT)
+                        .testTag(MatchListTestTags.SHEET_DONE),
+            ) {
+                Text(
+                    text = pluralStringResource(R.plurals.filter_show_matches, resultCount, resultCount),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionDivider() {
+    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
+}
+
+@Composable
+private fun FilterSection(content: @Composable () -> Unit) {
+    Column {
+        SectionDivider()
+        Column(
+            modifier = Modifier.padding(vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text(text = stringResource(R.string.filter_done), style = MaterialTheme.typography.titleMedium)
+            content()
         }
     }
 }
@@ -169,7 +201,7 @@ private fun SheetHeader(
     onReset: () -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 12.dp, bottom = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = SHEET_HORIZONTAL_PADDING, end = 16.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -205,8 +237,9 @@ private fun SectionLabel(text: String) {
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun <T> SegmentedChoice(
+private fun <T> ChipChoice(
     label: String,
     options: List<T?>,
     selected: T?,
@@ -214,59 +247,22 @@ private fun <T> SegmentedChoice(
     optionTag: (T?) -> String,
     onSelected: (T?) -> Unit,
 ) {
-    val colors = MaterialTheme.colorScheme
-    val borderColor = PicklelogTheme.colors.cardBorder
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionLabel(label)
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(IntrinsicSize.Min)
-                    .clip(MaterialTheme.shapes.medium)
-                    .border(1.dp, borderColor, MaterialTheme.shapes.medium)
-                    .selectableGroup(),
-        ) {
-            options.forEachIndexed { index, option ->
-                val isSelected = option == selected
-                if (index > 0) {
-                    VerticalDivider(color = borderColor)
-                }
-                Box(
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .background(if (isSelected) colors.primaryContainer else colors.surfaceContainerLowest)
-                            .heightIn(min = MIN_TOUCH_TARGET)
-                            .selectable(
-                                selected = isSelected,
-                                role = Role.RadioButton,
-                                onClick = { onSelected(option) },
-                            )
-                            .testTag(optionTag(option)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        if (isSelected) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_check),
-                                contentDescription = null,
-                                tint = colors.onPrimaryContainer,
-                                modifier = Modifier.size(ICON_SIZE),
-                            )
-                        }
-                        Text(
-                            text = optionLabel(option),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = if (isSelected) colors.onPrimaryContainer else colors.onSurface,
-                        )
-                    }
-                }
-            }
+    SectionLabel(label)
+    FlowRow(
+        modifier = Modifier.fillMaxWidth().selectableGroup(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.Center,
+    ) {
+        options.forEach { option ->
+            val isSelected = option == selected
+            PillChip(
+                label = optionLabel(option),
+                isSelected = isSelected,
+                showsCheck = isSelected,
+                filled = true,
+                onClick = { onSelected(option) },
+                modifier = Modifier.testTag(optionTag(option)),
+            )
         }
     }
 }
@@ -284,7 +280,7 @@ private fun DateSection(
     val label = stringResource(R.string.label_date)
     val shown = dateRangeLabel(filter) ?: stringResource(R.string.filter_any_date)
     val customDescription = stringResource(R.string.filter_picker_description, label, shown)
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         SectionLabel(label)
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -394,6 +390,7 @@ private fun DateRangePickerDialog(
 private fun DropdownField(
     label: String,
     shown: String,
+    spokenValue: String,
     anyLabel: String,
     emptyLabel: String,
     options: List<String>,
@@ -401,14 +398,16 @@ private fun DropdownField(
     optionTag: (Int) -> String,
     onAnyChosen: () -> Unit,
     onOptionChosen: (Int) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var isExpanded by rememberSaveable { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
     val hasOptions = options.isNotEmpty()
     val fieldText = if (hasOptions) shown else emptyLabel
-    val fieldDescription = stringResource(R.string.filter_picker_description, label, fieldText)
+    val fieldDescription =
+        stringResource(R.string.filter_picker_description, label, if (hasOptions) spokenValue else emptyLabel)
     val borderColor = if (isExpanded) colors.primary else PicklelogTheme.colors.cardBorder
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionLabel(label)
         Box {
             Surface(
@@ -425,13 +424,15 @@ private fun DropdownField(
                         .semantics { contentDescription = fieldDescription },
             ) {
                 Row(
-                    modifier = Modifier.heightIn(min = FIELD_MIN_HEIGHT).padding(horizontal = 16.dp),
+                    modifier = Modifier.heightIn(min = FIELD_MIN_HEIGHT).padding(start = 14.dp, end = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
                         text = fieldText,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                         color = if (hasOptions) colors.onSurface else colors.onSurfaceVariant,
                         modifier = Modifier.weight(1f),
                     )
