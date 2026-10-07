@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,16 +21,13 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -52,7 +48,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -63,20 +59,21 @@ import androidx.compose.ui.unit.dp
 import com.maxeydev.picklelog.domain.match.MatchFormat
 import com.maxeydev.picklelog.domain.match.MatchResult
 import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.common.AddPill
 import com.maxeydev.picklelog.ui.common.AutocompleteField
 import com.maxeydev.picklelog.ui.common.PillChip
+import com.maxeydev.picklelog.ui.common.SegmentedToggle
 import com.maxeydev.picklelog.ui.match.formatLabel
 import com.maxeydev.picklelog.ui.match.resultLabel
 import com.maxeydev.picklelog.ui.paywall.UpgradePrompt
 import com.maxeydev.picklelog.ui.paywall.UpgradeReason
+import com.maxeydev.picklelog.ui.theme.PicklelogSpacing
 import com.maxeydev.picklelog.ui.theme.PicklelogTheme
 import kotlinx.coroutines.delay
 
-private val CARD_SHAPE = RoundedCornerShape(16.dp)
-private val ICON_SIZE = 22.dp
-private val FIELD_ICON_TOP_PADDING = 17.dp
+private val ICON_SIZE = 20.dp
+private val MESSAGE_ICON_SIZE = 18.dp
 private val MIN_TOUCH_TARGET = 48.dp
-private val ADD_ICON_SIZE = 16.dp
 private const val FIELDS_EXPAND_MILLIS = 260
 private const val SPINNER_DELAY_MILLIS = 300L
 
@@ -112,7 +109,7 @@ fun MatchEditScreen(
                 actions = {
                     Button(
                         onClick = actions.onSave,
-                        enabled = state.canSave,
+                        enabled = state.isSaveTappable,
                         contentPadding = PaddingValues(horizontal = 20.dp),
                         modifier = Modifier.padding(end = 12.dp).testTag(MatchEditTestTags.SAVE),
                     ) {
@@ -170,8 +167,13 @@ private fun MatchEditForm(
                 .fillMaxSize()
                 .imePadding()
                 .verticalScroll(rememberScrollState())
-                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(
+                    start = PicklelogSpacing.gutter,
+                    end = PicklelogSpacing.gutter,
+                    top = PicklelogSpacing.sm,
+                    bottom = PicklelogSpacing.xxl,
+                ),
+        verticalArrangement = Arrangement.spacedBy(PicklelogSpacing.md),
     ) {
         SetupCard(state = state, actions = actions)
         PlayersCard(state = state, actions = actions)
@@ -182,16 +184,12 @@ private fun MatchEditForm(
             onGameScoresChanged = actions.onGameScoresChanged,
         )
         FormCard {
-            IconRow(
-                icon = R.drawable.ic_photo_camera,
-                groupLabel = stringResource(R.string.label_photos),
-            ) {
-                PhotoPickerSection(
-                    photos = state.photos,
-                    hasPhotoError = state.hasPhotoError,
-                    actions = actions.photoActions,
-                )
-            }
+            SectionLabel(icon = R.drawable.ic_photo_camera, text = stringResource(R.string.label_photos))
+            PhotoPickerSection(
+                photos = state.photos,
+                hasPhotoError = state.hasPhotoError,
+                actions = actions.photoActions,
+            )
         }
         LocationCard(state = state, actions = actions)
         NotesCard(notes = state.notes, onNotesChanged = actions.onNotesChanged)
@@ -199,50 +197,88 @@ private fun MatchEditForm(
 }
 
 @Composable
-private fun FormCard(content: @Composable ColumnScope.() -> Unit) {
+private fun FormCard(
+    modifier: Modifier = Modifier,
+    spacing: Dp = PicklelogSpacing.md,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     Surface(
-        shape = CARD_SHAPE,
+        shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceContainerLowest,
         border = BorderStroke(1.dp, PicklelogTheme.colors.cardBorder),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier.padding(PicklelogSpacing.lg),
+            verticalArrangement = Arrangement.spacedBy(spacing),
             content = content,
         )
     }
 }
 
 @Composable
-private fun IconRow(
+private fun SectionLabel(
     @DrawableRes icon: Int,
+    text: String,
     modifier: Modifier = Modifier,
-    groupLabel: String? = null,
-    iconAlignment: Alignment.Vertical = Alignment.CenterVertically,
-    iconTopPadding: Dp = 0.dp,
-    content: @Composable () -> Unit,
+    isError: Boolean = false,
+    tag: String? = null,
 ) {
-    val groupModifier =
-        if (groupLabel != null) {
-            Modifier.semantics { contentDescription = groupLabel }
-        } else {
-            Modifier
-        }
+    val colors = MaterialTheme.colorScheme
     Row(
-        modifier = modifier.fillMaxWidth().then(groupModifier),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalAlignment = iconAlignment,
+        modifier = modifier.fillMaxWidth().semantics { heading() },
+        horizontalArrangement = Arrangement.spacedBy(PicklelogSpacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             painter = painterResource(icon),
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(top = iconTopPadding).size(ICON_SIZE),
+            tint = if (isError) colors.error else colors.primary,
+            modifier = Modifier.size(ICON_SIZE),
         )
-        Box(modifier = Modifier.weight(1f)) {
-            content()
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            color = if (isError) colors.error else colors.onSurfaceVariant,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        if (tag != null) {
+            Surface(shape = CircleShape, color = colors.tertiaryContainer, contentColor = colors.onTertiaryContainer) {
+                Text(
+                    text = tag,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(horizontal = PicklelogSpacing.sm, vertical = 2.dp),
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun FieldMessage(
+    text: String,
+    modifier: Modifier = Modifier,
+    isError: Boolean = false,
+) {
+    val colors = MaterialTheme.colorScheme
+    Row(
+        modifier = modifier.semantics { liveRegion = LiveRegionMode.Polite },
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        if (isError) {
+            Icon(
+                painter = painterResource(R.drawable.ic_warning),
+                contentDescription = null,
+                tint = colors.error,
+                modifier = Modifier.padding(top = 1.dp).size(MESSAGE_ICON_SIZE),
+            )
+        }
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = if (isError) colors.error else colors.onSurfaceVariant,
+        )
     }
 }
 
@@ -251,59 +287,63 @@ private fun SetupCard(
     state: MatchEditUiState,
     actions: MatchEditActions,
 ) {
-    FormCard {
-        IconRow(icon = R.drawable.ic_players, groupLabel = stringResource(R.string.label_format)) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                SegmentedToggle(
-                    options = listOf(MatchFormat.SINGLES, MatchFormat.DOUBLES),
-                    selected = state.format,
-                    optionLabel = { format -> formatLabel(format) },
-                    optionTag = { format ->
-                        if (format == MatchFormat.SINGLES) {
-                            MatchEditTestTags.FORMAT_SINGLES
-                        } else {
-                            MatchEditTestTags.FORMAT_DOUBLES
-                        }
-                    },
-                    onSelected = actions.onFormatSelected,
-                )
-                if (state.clearedOnFormatSwitch) {
-                    Text(
-                        text = stringResource(R.string.format_switch_cleared),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                    )
-                }
+    FormCard(spacing = PicklelogSpacing.lg) {
+        Column(verticalArrangement = Arrangement.spacedBy(PicklelogSpacing.sm)) {
+            SectionLabel(icon = R.drawable.ic_players, text = stringResource(R.string.label_format))
+            SegmentedToggle(
+                options = listOf(MatchFormat.SINGLES, MatchFormat.DOUBLES),
+                selected = state.format,
+                optionLabel = { format -> formatLabel(format) },
+                optionTag = { format ->
+                    if (format == MatchFormat.SINGLES) {
+                        MatchEditTestTags.FORMAT_SINGLES
+                    } else {
+                        MatchEditTestTags.FORMAT_DOUBLES
+                    }
+                },
+                onSelected = actions.onFormatSelected,
+            )
+            if (state.clearedOnFormatSwitch) {
+                FieldMessage(text = stringResource(R.string.format_switch_cleared))
             }
         }
-        IconRow(icon = R.drawable.ic_trophy, groupLabel = stringResource(R.string.label_result)) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                SegmentedToggle(
-                    options = listOf(MatchResult.WIN, MatchResult.LOSS),
-                    selected = state.result,
-                    optionLabel = { result -> resultLabel(result) },
-                    optionTag = { result ->
-                        if (result == MatchResult.WIN) MatchEditTestTags.RESULT_WIN else MatchEditTestTags.RESULT_LOSS
-                    },
-                    onSelected = actions.onResultSelected,
+        Column(verticalArrangement = Arrangement.spacedBy(PicklelogSpacing.sm)) {
+            SectionLabel(
+                icon = R.drawable.ic_trophy,
+                text = stringResource(R.string.label_result),
+                isError = state.showResultError,
+                tag = stringResource(R.string.label_result_required).takeIf { state.result == null },
+            )
+            SegmentedToggle(
+                options = listOf(MatchResult.WIN, MatchResult.LOSS),
+                selected = state.result,
+                optionLabel = { result -> resultLabel(result) },
+                optionTag = { result ->
+                    if (result == MatchResult.WIN) MatchEditTestTags.RESULT_WIN else MatchEditTestTags.RESULT_LOSS
+                },
+                onSelected = actions.onResultSelected,
+                isError = state.showResultError,
+            )
+            if (state.showResultError) {
+                FieldMessage(
+                    text = stringResource(R.string.result_required_message),
+                    isError = true,
+                    modifier = Modifier.testTag(MatchEditTestTags.RESULT_ERROR),
                 )
-                state.advisory?.let { advisory ->
-                    Text(
-                        text =
-                            when (advisory) {
-                                MatchResult.WIN -> stringResource(R.string.advisory_suggests_win)
-                                MatchResult.LOSS -> stringResource(R.string.advisory_suggests_loss)
-                            },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                    )
-                }
+            }
+            state.advisory?.let { advisory ->
+                FieldMessage(
+                    text =
+                        when (advisory) {
+                            MatchResult.WIN -> stringResource(R.string.advisory_suggests_win)
+                            MatchResult.LOSS -> stringResource(R.string.advisory_suggests_loss)
+                        },
+                )
             }
         }
         state.date?.let { date ->
-            IconRow(icon = R.drawable.ic_calendar, groupLabel = stringResource(R.string.label_date_time)) {
+            Column(verticalArrangement = Arrangement.spacedBy(PicklelogSpacing.xs)) {
+                SectionLabel(icon = R.drawable.ic_calendar, text = stringResource(R.string.label_when))
                 DateTimeField(
                     date = date,
                     startTime = state.startTime,
@@ -322,29 +362,55 @@ private fun PlayersCard(
     state: MatchEditUiState,
     actions: MatchEditActions,
 ) {
+    val partnerSlots = state.personSlots.filter { it.slot == PersonSlot.PARTNER }
+    val opponentSlots = state.personSlots.filter { it.slot != PersonSlot.PARTNER }
     FormCard {
-        IconRow(
-            icon = R.drawable.ic_person,
-            groupLabel = stringResource(R.string.label_players),
-            iconAlignment = Alignment.Top,
-            iconTopPadding = FIELD_ICON_TOP_PADDING,
+        SectionLabel(icon = R.drawable.ic_person, text = stringResource(R.string.label_players))
+        Column(
+            modifier = Modifier.animateContentSize(animationSpec = FieldsExpandSpec),
+            verticalArrangement = Arrangement.spacedBy(PicklelogSpacing.lg),
         ) {
-            Column(
-                modifier = Modifier.animateContentSize(animationSpec = FieldsExpandSpec),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                state.personSlots.forEach { slot ->
-                    val target = SuggestionTarget.forSlot(slot.slot)
-                    PersonSlotField(
-                        slot = slot,
-                        format = state.format,
-                        suggestions = state.suggestionsFor(target),
-                        onNameChanged = { name -> actions.onPersonNameChanged(slot.slot, name) },
-                        onSuggestionSelected = { suggestion -> actions.onSuggestionSelected(target, suggestion) },
-                        onFocusChanged = { isFocused -> actions.onSuggestionFocusChanged(target, isFocused) },
-                    )
-                }
+            if (partnerSlots.isNotEmpty()) {
+                PlayerGroup(
+                    heading = stringResource(R.string.players_heading_partner),
+                    slots = partnerSlots,
+                    state = state,
+                    actions = actions,
+                )
             }
+            PlayerGroup(
+                heading = stringResource(R.string.players_heading_opponents),
+                slots = opponentSlots,
+                state = state,
+                actions = actions,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PlayerGroup(
+    heading: String,
+    slots: List<PersonSlotUiState>,
+    state: MatchEditUiState,
+    actions: MatchEditActions,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(PicklelogSpacing.md)) {
+        Text(
+            text = heading,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        slots.forEach { slot ->
+            val target = SuggestionTarget.forSlot(slot.slot)
+            PersonSlotField(
+                slot = slot,
+                format = state.format,
+                suggestions = state.suggestionsFor(target),
+                onNameChanged = { name -> actions.onPersonNameChanged(slot.slot, name) },
+                onSuggestionSelected = { suggestion -> actions.onSuggestionSelected(target, suggestion) },
+                onFocusChanged = { isFocused -> actions.onSuggestionFocusChanged(target, isFocused) },
+            )
         }
     }
 }
@@ -356,44 +422,23 @@ private fun ScoresCard(
     onGameRemoved: (Int) -> Unit,
     onGameScoresChanged: (Int, String, String) -> Unit,
 ) {
-    val colors = MaterialTheme.colorScheme
     FormCard {
-        IconRow(
-            icon = R.drawable.ic_scoreboard,
-            groupLabel = stringResource(R.string.label_scores),
-            iconAlignment = Alignment.Top,
-            iconTopPadding = FIELD_ICON_TOP_PADDING,
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                games.forEachIndexed { index, row ->
-                    GameScoreRow(
-                        row = row,
-                        onScoresChanged = { myScore, opponentScore ->
-                            onGameScoresChanged(index, myScore, opponentScore)
-                        },
-                        onRemove = { onGameRemoved(index) },
-                    )
-                }
-                FilledTonalButton(
-                    onClick = onGameAdded,
-                    shape = MaterialTheme.shapes.medium,
-                    colors =
-                        ButtonDefaults.filledTonalButtonColors(
-                            containerColor = colors.primaryContainer,
-                            contentColor = colors.onPrimaryContainer,
-                        ),
-                    modifier = Modifier.fillMaxWidth().testTag(MatchEditTestTags.ADD_GAME),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_add),
-                        contentDescription = null,
-                        modifier = Modifier.size(ADD_ICON_SIZE),
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = stringResource(R.string.add_game), style = MaterialTheme.typography.labelLarge)
-                }
-            }
+        SectionLabel(icon = R.drawable.ic_scoreboard, text = stringResource(R.string.label_scores))
+        games.forEachIndexed { index, row ->
+            GameScoreRow(
+                row = row,
+                onScoresChanged = { myScore, opponentScore ->
+                    onGameScoresChanged(index, myScore, opponentScore)
+                },
+                onRemove = { onGameRemoved(index) },
+            )
         }
+        AddPill(
+            label = stringResource(R.string.add_game_pill),
+            description = stringResource(R.string.add_game),
+            onClick = onGameAdded,
+            modifier = Modifier.testTag(MatchEditTestTags.ADD_GAME),
+        )
     }
 }
 
@@ -403,34 +448,26 @@ private fun LocationCard(
     actions: MatchEditActions,
 ) {
     FormCard {
-        IconRow(
-            icon = R.drawable.ic_location,
-            iconAlignment = Alignment.Top,
-            iconTopPadding = FIELD_ICON_TOP_PADDING,
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                AutocompleteField(
-                    value = state.location,
-                    onValueChange = actions.onLocationChanged,
-                    suggestions = state.suggestionsFor(SuggestionTarget.LOCATION),
-                    onSuggestionSelected = { actions.onSuggestionSelected(SuggestionTarget.LOCATION, it) },
-                    onFocusChanged = { actions.onSuggestionFocusChanged(SuggestionTarget.LOCATION, it) },
-                    label = stringResource(R.string.label_location),
-                    placeholder = stringResource(R.string.location_hint),
-                    fieldTestTag = MatchEditTestTags.LOCATION,
-                    keyboardOptions =
-                        KeyboardOptions(
-                            capitalization = KeyboardCapitalization.Sentences,
-                            imeAction = ImeAction.Next,
-                        ),
-                )
-                RecentLocations(
-                    recent = state.recentLocations,
-                    current = state.location,
-                    onPicked = actions.onLocationChanged,
-                )
-            }
-        }
+        SectionLabel(icon = R.drawable.ic_location, text = stringResource(R.string.label_location))
+        AutocompleteField(
+            value = state.location,
+            onValueChange = actions.onLocationChanged,
+            suggestions = state.suggestionsFor(SuggestionTarget.LOCATION),
+            onSuggestionSelected = { actions.onSuggestionSelected(SuggestionTarget.LOCATION, it) },
+            onFocusChanged = { actions.onSuggestionFocusChanged(SuggestionTarget.LOCATION, it) },
+            label = stringResource(R.string.location_hint),
+            fieldTestTag = MatchEditTestTags.LOCATION,
+            keyboardOptions =
+                KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Sentences,
+                    imeAction = ImeAction.Next,
+                ),
+        )
+        RecentLocations(
+            recent = state.recentLocations,
+            current = state.location,
+            onPicked = actions.onLocationChanged,
+        )
     }
 }
 
@@ -446,7 +483,7 @@ private fun RecentLocations(
         return
     }
     FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(PicklelogSpacing.sm),
         verticalArrangement = Arrangement.Center,
     ) {
         Box(modifier = Modifier.heightIn(min = MIN_TOUCH_TARGET), contentAlignment = Alignment.Center) {
@@ -472,20 +509,15 @@ private fun NotesCard(
     onNotesChanged: (String) -> Unit,
 ) {
     FormCard {
-        IconRow(
-            icon = R.drawable.ic_notes,
-            iconAlignment = Alignment.Top,
-            iconTopPadding = FIELD_ICON_TOP_PADDING,
-        ) {
-            OutlinedTextField(
-                value = notes,
-                onValueChange = onNotesChanged,
-                label = { Text(stringResource(R.string.label_notes)) },
-                minLines = 3,
-                shape = MaterialTheme.shapes.medium,
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                modifier = Modifier.fillMaxWidth().testTag(MatchEditTestTags.NOTES),
-            )
-        }
+        SectionLabel(icon = R.drawable.ic_notes, text = stringResource(R.string.label_notes))
+        OutlinedTextField(
+            value = notes,
+            onValueChange = onNotesChanged,
+            label = { Text(stringResource(R.string.notes_hint)) },
+            minLines = 3,
+            shape = MaterialTheme.shapes.medium,
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+            modifier = Modifier.fillMaxWidth().testTag(MatchEditTestTags.NOTES),
+        )
     }
 }
