@@ -110,12 +110,17 @@ private val PICKLELOG_TYPOGRAPHY: Typography =
             BASE_TYPOGRAPHY.headlineLarge.copy(fontSize = 32.sp, lineHeight = 38.sp, fontWeight = FontWeight.Bold),
         headlineMedium =
             BASE_TYPOGRAPHY.headlineMedium.copy(fontSize = 28.sp, lineHeight = 34.sp, fontWeight = FontWeight.Bold),
-        headlineSmall = BASE_TYPOGRAPHY.headlineSmall.copy(fontWeight = FontWeight.Bold),
-        titleLarge = BASE_TYPOGRAPHY.titleLarge.copy(fontWeight = FontWeight.Bold),
+        headlineSmall =
+            BASE_TYPOGRAPHY.headlineSmall.copy(fontSize = 24.sp, lineHeight = 30.sp, fontWeight = FontWeight.Bold),
+        titleLarge =
+            BASE_TYPOGRAPHY.titleLarge.copy(fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.SemiBold),
         titleMedium = BASE_TYPOGRAPHY.titleMedium.copy(fontWeight = FontWeight.SemiBold),
         titleSmall = BASE_TYPOGRAPHY.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+        bodySmall = BASE_TYPOGRAPHY.bodySmall.copy(fontSize = 14.sp, lineHeight = 20.sp),
         labelLarge = BASE_TYPOGRAPHY.labelLarge.copy(fontWeight = FontWeight.SemiBold),
         labelMedium = BASE_TYPOGRAPHY.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+        labelSmall =
+            BASE_TYPOGRAPHY.labelSmall.copy(fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium),
     )
 
 private val PICKLELOG_SHAPES =
