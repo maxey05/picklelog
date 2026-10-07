@@ -132,6 +132,9 @@ class RoomMatchRepository(
 
     override fun observeMatchCount(): Flow<Int> = matchDao.observeMatchCount().flowOn(ioDispatcher)
 
+    override fun observeMatchNumber(id: Uuid): Flow<Int> =
+        matchDao.observeMatchNumber(id.toString()).flowOn(ioDispatcher)
+
     override fun observeFilteredMatchCount(
         filter: FilterState,
         search: SearchTerm?,
