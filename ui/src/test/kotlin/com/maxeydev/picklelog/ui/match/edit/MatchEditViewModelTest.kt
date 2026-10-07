@@ -211,6 +211,43 @@ class MatchEditViewModelTest {
     }
 
     @Test
+    fun `saving without a result shows the result error and writes nothing`() {
+        val viewModel = viewModel()
+
+        assertTrue(viewModel.uiState.value.isSaveTappable)
+        assertFalse(viewModel.uiState.value.showResultError)
+        viewModel.save()
+
+        assertTrue(viewModel.uiState.value.showResultError)
+        assertTrue(viewModel.uiState.value.isSaveTappable)
+        assertTrue(matches.saved.isEmpty())
+    }
+
+    @Test
+    fun `picking a result clears the result error`() {
+        val viewModel = viewModel()
+        viewModel.save()
+
+        viewModel.selectResult(MatchResult.LOSS)
+
+        assertFalse(viewModel.uiState.value.showResultError)
+        viewModel.save()
+        assertEquals(MatchResult.LOSS, matches.saved.single().result)
+    }
+
+    @Test
+    fun `a blocked form never offers a tappable save even without a result`() {
+        val viewModel = viewModel()
+        viewModel.changePersonName(PersonSlot.OPPONENT_1, "Dave")
+        viewModel.changePersonName(PersonSlot.PARTNER, "dave")
+
+        assertFalse(viewModel.uiState.value.isSaveTappable)
+        viewModel.save()
+
+        assertFalse(viewModel.uiState.value.showResultError)
+    }
+
+    @Test
     fun `the same person in two slots blocks save and writes nothing`() {
         val viewModel = viewModel()
         viewModel.selectResult(MatchResult.WIN)
