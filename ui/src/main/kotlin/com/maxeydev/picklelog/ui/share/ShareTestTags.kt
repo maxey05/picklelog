@@ -1,6 +1,6 @@
 package com.maxeydev.picklelog.ui.share
 
-import com.maxeydev.picklelog.domain.share.CardLayout
+import com.maxeydev.picklelog.domain.share.CardDetail
 import com.maxeydev.picklelog.domain.share.CardRatio
 import com.maxeydev.picklelog.domain.share.CardTheme
 
@@ -12,10 +12,12 @@ object ShareTestTags {
     const val RETRY = "share_retry"
     const val SHARE = "share_send"
     const val VARIANT_PICKER = "share_variant_picker"
+    const val STYLE_BUTTON = "share_style_button"
+    const val PHOTO_SWITCH = "share_photo_switch"
 
     fun ratio(ratio: CardRatio): String = "share_ratio_${ratio.name}"
 
     fun theme(theme: CardTheme): String = "share_theme_${theme.name}"
 
-    fun layout(layout: CardLayout): String = "share_layout_${layout.name}"
+    fun detail(detail: CardDetail): String = "share_detail_${detail.name}"
 }
