@@ -1,13 +1,5 @@
 package com.maxeydev.picklelog.ui.match.list
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,7 +14,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -33,31 +27,29 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.offset
-import androidx.compose.ui.unit.sp
 import com.maxeydev.picklelog.ui.R
 import com.maxeydev.picklelog.ui.dashboard.DashboardHeader
 import com.maxeydev.picklelog.ui.dashboard.DashboardUiState
-import com.maxeydev.picklelog.ui.theme.PicklelogFonts
+import com.maxeydev.picklelog.ui.theme.PicklelogSpacing
+import com.maxeydev.picklelog.ui.theme.PicklelogTextStyles
 import com.maxeydev.picklelog.ui.theme.PicklelogTheme
 import com.maxeydev.picklelog.ui.theme.StatusBarIcons
 
-private val APP_BAR_MIN_HEIGHT = 56.dp
-private val EXPANDED_SEARCH_TOP_PADDING = 16.dp
+private val APP_BAR_MIN_HEIGHT = 48.dp
+private val EXPANDED_SEARCH_TOP_PADDING = PicklelogSpacing.md
 private val COLLAPSED_SEARCH_TOP_PADDING = 12.dp
 private val COLLAPSED_DASHBOARD_TOP_PADDING = 12.dp
-private const val COLLAPSE_MILLIS = 320
-private val CollapseEasing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
-private val HEADER_HORIZONTAL_PADDING = 20.dp
+private val HEADER_HORIZONTAL_PADDING = PicklelogSpacing.gutter
 private const val DIVIDER_ALPHA = 0.22f
 
 @Composable
-fun HomeHeader(
+internal fun HomeHeader(
     dashboard: DashboardUiState,
+    progress: CollapseProgress,
     isCollapsed: Boolean,
     showDetails: Boolean,
     searchText: String,
@@ -67,20 +59,12 @@ fun HomeHeader(
     modifier: Modifier = Modifier,
 ) {
     val colors = PicklelogTheme.colors
-    val searchTopPadding =
-        animateDpAsState(
-            targetValue = if (isCollapsed) COLLAPSED_SEARCH_TOP_PADDING else EXPANDED_SEARCH_TOP_PADDING,
-            animationSpec = tween(durationMillis = COLLAPSE_MILLIS, easing = CollapseEasing),
-            label = "homeHeaderSearchTopPadding",
-        )
-    val dashboardTopPadding =
-        animateDpAsState(
-            targetValue = if (isCollapsed) COLLAPSED_DASHBOARD_TOP_PADDING else 0.dp,
-            animationSpec = tween(durationMillis = COLLAPSE_MILLIS, easing = CollapseEasing),
-            label = "homeHeaderDashboardTopPadding",
-        )
+    val showAppBar by remember(progress) { derivedStateOf { progress.value < 1f } }
     StatusBarIcons(useLightIcons = true)
-    val gradient = Brush.verticalGradient(listOf(colors.headerTop, colors.headerBottom))
+    val gradient =
+        remember(colors.headerTop, colors.headerBottom) {
+            Brush.verticalGradient(listOf(colors.headerTop, colors.headerBottom))
+        }
     Surface(
         color = Color.Transparent,
         contentColor = colors.onHeader,
@@ -90,22 +74,10 @@ fun HomeHeader(
             modifier =
                 Modifier
                     .statusBarsPadding()
-                    .padding(bottom = if (showDetails) 20.dp else 0.dp),
+                    .padding(bottom = PicklelogSpacing.lg),
         ) {
-            AnimatedVisibility(
-                visible = !isCollapsed,
-                enter =
-                    expandVertically(
-                        animationSpec = tween(durationMillis = COLLAPSE_MILLIS, easing = CollapseEasing),
-                        expandFrom = Alignment.Top,
-                    ) + fadeIn(animationSpec = tween(durationMillis = COLLAPSE_MILLIS, easing = CollapseEasing)),
-                exit =
-                    shrinkVertically(
-                        animationSpec = tween(durationMillis = COLLAPSE_MILLIS, easing = CollapseEasing),
-                        shrinkTowards = Alignment.Top,
-                    ) + fadeOut(animationSpec = tween(durationMillis = COLLAPSE_MILLIS, easing = CollapseEasing)),
-            ) {
-                Column {
+            if (showAppBar) {
+                Column(modifier = Modifier.collapseVertically { progress.value }) {
                     HomeAppBar(onOpenSettings = onOpenSettings)
                     if (showDetails) {
                         HeaderDivider(color = colors.onHeader.copy(alpha = DIVIDER_ALPHA))
@@ -120,7 +92,8 @@ fun HomeHeader(
                     modifier =
                         Modifier
                             .padding(horizontal = HEADER_HORIZONTAL_PADDING)
-                            .animatedTopPadding(dashboardTopPadding),
+                            .progressTopPadding(progress, 0.dp, COLLAPSED_DASHBOARD_TOP_PADDING),
+                    collapseFraction = { progress.value },
                 )
                 MatchSearchBar(
                     text = searchText,
@@ -128,16 +101,20 @@ fun HomeHeader(
                     modifier =
                         Modifier
                             .padding(horizontal = HEADER_HORIZONTAL_PADDING)
-                            .animatedTopPadding(searchTopPadding),
+                            .progressTopPadding(progress, EXPANDED_SEARCH_TOP_PADDING, COLLAPSED_SEARCH_TOP_PADDING),
                 )
             }
         }
     }
 }
 
-private fun Modifier.animatedTopPadding(padding: State<Dp>): Modifier =
+private fun Modifier.progressTopPadding(
+    progress: CollapseProgress,
+    expanded: Dp,
+    collapsed: Dp,
+): Modifier =
     layout { measurable, constraints ->
-        val top = padding.value.roundToPx()
+        val top = lerp(expanded, collapsed, progress.value).roundToPx()
         val placeable = measurable.measure(constraints.offset(vertical = -top))
         layout(placeable.width, placeable.height + top) {
             placeable.placeRelative(0, top)
@@ -151,7 +128,7 @@ private fun HeaderDivider(color: Color) {
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = HEADER_HORIZONTAL_PADDING)
-                .padding(top = 8.dp, bottom = 16.dp)
+                .padding(top = PicklelogSpacing.xs, bottom = PicklelogSpacing.md)
                 .height(1.dp)
                 .background(color),
     )
@@ -164,18 +141,12 @@ private fun HomeAppBar(onOpenSettings: (() -> Unit)?) {
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = APP_BAR_MIN_HEIGHT)
-                .padding(start = HEADER_HORIZONTAL_PADDING, end = 8.dp),
+                .padding(start = HEADER_HORIZONTAL_PADDING, end = PicklelogSpacing.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = stringResource(R.string.home_title),
-            style =
-                TextStyle(
-                    fontFamily = PicklelogFonts.wordmark,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 28.sp,
-                    lineHeight = 32.sp,
-                ),
+            style = PicklelogTextStyles.displaySmall,
             modifier = Modifier.weight(1f).padding(top = 4.dp).semantics { heading() },
         )
         if (onOpenSettings != null) {
