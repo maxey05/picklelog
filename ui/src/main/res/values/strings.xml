@@ -5,7 +5,7 @@
     <string name="new_match">Log a match</string>
 
     <string name="list_empty_title">No matches yet</string>
-    <string name="list_empty_body">Welcome to Picklelog! Start by logging a match.</string>
+    <string name="list_empty_body">Log your first match to start your record. Play at least once a week to build a streak.</string>
     <string name="list_empty_action">Log your first match</string>
     <string name="list_versus_one">vs %1$s</string>
     <string name="list_versus_two">vs %1$s &amp; %2$s</string>
@@ -38,7 +38,7 @@
     <string name="sort_opponent_a_to_z">Opponent A–Z</string>
     <string name="sort_location_a_to_z">Location A–Z</string>
     <string name="sort_duration_shortest">Shortest first</string>
-    <string name="sort_duration_longest">Longest first</string>
+    <string name="sort_duration_longest">Longest match first</string>
 
     <string name="search_label">Search matches</string>
     <string name="search_placeholder">Search opponents, places, notes</string>
@@ -126,8 +126,7 @@
     <string name="stats_win_rate">Win rate</string>
     <string name="stats_percent">%1$d%%</string>
     <string name="stats_no_value">—</string>
-    <string name="stats_streaks">Streaks · all matches</string>
-    <string name="stats_streak_scope_note">Streaks always count every match, even when filters are on.</string>
+    <string name="stats_streaks">Streak</string>
     <string name="stats_current_streak">Current streak</string>
     <string name="stats_longest_streak">Longest streak</string>
     <plurals name="stats_weeks">
@@ -135,35 +134,31 @@
         <item quantity="other">%1$d weeks</item>
     </plurals>
     <string name="stats_no_streak">None yet</string>
-    <string name="stats_current_is_longest">This is your longest streak ever.</string>
-    <string name="stats_by_format">Win rate by format</string>
+    <string name="stats_current_is_longest">Your longest streak ever</string>
+    <string name="stats_by_format">By format</string>
     <string name="stats_split_record">%1$d–%2$d</string>
     <string name="stats_split_empty">No matches</string>
     <string name="stats_pro_title">More with Pro</string>
-    <string name="stats_pro_locked">Locked · Pro</string>
-    <string name="stats_pro_head_to_head">Head-to-head record by opponent</string>
+    <string name="stats_pro_head_to_head">Record against each opponent</string>
     <string name="stats_pro_partner">Win rate by partner</string>
     <string name="stats_pro_location">Win rate by location</string>
-    <string name="stats_pro_paddle">Win rate by paddle</string>
     <string name="stats_pro_monthly">Matches and win rate by month</string>
     <string name="stats_advanced_title">Advanced stats</string>
     <string name="stats_advanced_empty">Log a match and your breakdowns will appear here.</string>
     <string name="stats_advanced_head_to_head">Head-to-head by opponent</string>
     <string name="stats_advanced_partner">Win rate by partner</string>
     <string name="stats_advanced_location">Win rate by location</string>
-    <string name="stats_advanced_paddle">Win rate by paddle</string>
     <string name="stats_advanced_monthly">Matches and win rate by month</string>
     <string name="stats_advanced_no_opponents">No opponents logged yet.</string>
     <string name="stats_advanced_no_partners">No doubles partners logged yet.</string>
     <string name="stats_advanced_no_locations">No locations logged yet.</string>
-    <string name="stats_advanced_no_paddles">No paddles logged yet.</string>
     <string name="stats_advanced_small_sample">Too few matches for a win rate</string>
     <string name="stats_advanced_unknown_person">Unknown player</string>
     <string name="stats_advanced_show_all">Show all %1$d</string>
     <string name="stats_advanced_show_less">Show less</string>
     <string name="stats_advanced_month_gap">No matches</string>
-    <string name="stats_preview_title">Your record against %1$s</string>
-    <string name="stats_preview_cta">See it with Pro</string>
+    <string name="stats_preview_title">You vs %1$s</string>
+    <string name="stats_preview_cta">Unlock with Pro</string>
     <string name="stats_preview_a11y">Your record against %1$s is hidden. Double tap to see it with Pro.</string>
     <string name="skip_used_message">A streak skip covered the week of %1$s, so your streak is safe.</string>
     <plurals name="skip_used_remaining">
@@ -201,6 +196,13 @@
     <string name="edit_title_new">New match</string>
     <string name="edit_title_existing">Edit match</string>
     <string name="detail_title">Match</string>
+    <string name="detail_match_number">#%1$d</string>
+    <string name="detail_games_title">Games</string>
+    <string name="detail_points_total">%1$d–%2$d points</string>
+    <string name="label_time">Time</string>
+    <string name="label_played">Played</string>
+    <string name="detail_time_range">%1$s – %2$s</string>
+    <string name="time_range_next_day">%1$s (next day)</string>
 
     <string name="action_save">Save</string>
     <string name="action_close">Close</string>
@@ -232,6 +234,8 @@
     <string name="clear_end_time">Clear end time</string>
     <string name="duration_hours_minutes">%1$d h %2$d min</string>
     <string name="duration_minutes">%1$d min</string>
+    <string name="duration_short_hours_minutes">%1$dh %2$dm</string>
+    <string name="duration_short_minutes">%1$dm</string>
     <string name="duration_line">Duration: %1$s</string>
     <string name="duration_line_next_day">Duration: %1$s (ends the next day)</string>
 
@@ -269,6 +273,11 @@
     <string name="photo_move_earlier">Move photo %1$d earlier</string>
     <string name="photo_move_later">Move photo %1$d later</string>
     <string name="photo_remove">Remove photo %1$d</string>
+    <string name="photo_view">View photo</string>
+    <string name="photo_viewer_close">Close photo</string>
+    <string name="photo_viewer_counter">%1$d of %2$d</string>
+    <string name="photo_viewer_previous">Previous photo</string>
+    <string name="photo_viewer_next">Next photo</string>
     <string name="photo_unreadable">Couldn\'t read that photo — it may be damaged or no longer available. The match can still be saved without it.</string>
     <string name="photo_error_dismiss">OK</string>
     <string name="camera_rationale_title">Use your camera?</string>
@@ -288,7 +297,7 @@
     <string name="log_another">Log another</string>
 
     <string name="action_share">Share</string>
-    <string name="share_title">Share card</string>
+    <string name="share_title">Share match</string>
     <string name="share_action">Share</string>
     <string name="share_chooser_title">Share your match</string>
     <string name="share_preview_description">Share card preview: %1$s</string>
@@ -296,8 +305,10 @@
     <string name="share_retry">Try again</string>
     <string name="share_send_failed">Couldn\'t prepare the image to share. Check that your phone has free storage, then try again.</string>
     <string name="card_brand">Picklelog</string>
-    <string name="card_partner">with %1$s</string>
-    <string name="card_score_separator">" · "</string>
+    <string name="card_caption_with">With</string>
+    <string name="card_caption_time">Time</string>
+    <string name="card_caption_against">Against</string>
+    <string name="card_caption_games">Games</string>
     <string name="card_ratio_label">Size</string>
     <string name="card_ratio_tall">Story</string>
     <string name="card_ratio_square">Square</string>
@@ -307,9 +318,13 @@
     <string name="card_theme_court">Court</string>
     <string name="card_theme_sunset">Sunset</string>
     <string name="card_theme_pro_locked">%1$s · Pro</string>
-    <string name="card_layout_label">Photo</string>
-    <string name="card_layout_photo">With photo</string>
-    <string name="card_layout_no_photo">No photo</string>
+    <string name="card_style_button">Style: %1$s</string>
+    <string name="card_show_title">Show on card</string>
+    <string name="card_detail_game_scores">Game scores</string>
+    <string name="card_detail_opponents">Opponent names</string>
+    <string name="card_detail_partner">Partner name</string>
+    <string name="card_detail_location">Location</string>
+    <string name="card_detail_photo">Photo</string>
     <string name="upgrade_photo_limit_title">One photo per match on the free version</string>
     <string name="upgrade_photo_limit_body">Your first photo is attached. Pro removes the limit so you can keep every photo from the day.</string>
     <string name="upgrade_pro_theme_title">That card style is part of Pro</string>
@@ -386,14 +401,14 @@
     <string name="name_field_label">Your name</string>
     <string name="name_field_required">A name is required.</string>
     <string name="name_field_hint">Shown on your dashboard and shared match cards.</string>
-    <string name="onboarding_logging_title">Log a Match in Seconds</string>
+    <string name="onboarding_logging_title">Log a match in seconds</string>
     <string name="onboarding_logging_lead">Track every match, every point, every memory.</string>
     <string name="onboarding_logging_body">Record scores, tag partners, save locations, and preserve game-day photos.</string>
-    <string name="onboarding_stats_title">Watch Your Game Add Up</string>
+    <string name="onboarding_stats_title">Watch your game add up</string>
     <string name="onboarding_stats_body">Your win/loss record, win rate, and weekly play streak update after every match. Keep the streak alive.</string>
-    <string name="onboarding_share_title">Share Your Wins</string>
+    <string name="onboarding_share_title">Share your wins</string>
     <string name="onboarding_share_body">Transform your matches into clean, beautiful cards and share your biggest wins directly to social media.</string>
-    <string name="onboarding_privacy_title">Yours, and Only Yours</string>
+    <string name="onboarding_privacy_title">Yours, and only yours</string>
     <string name="onboarding_privacy_body">No account, no ads, no subscription. Your matches stay on your phone and work fully offline.</string>
     <string name="onboarding_backup_note">Automatic backup depends on your Google storage and may not always run. You can export your matches anytime from Settings.</string>
     <string name="onboarding_next">Next</string>
@@ -416,7 +431,7 @@
     <string name="intro_art_card_score">11 – 7</string>
     <string name="intro_art_card_meta">Doubles · Sat, Oct 3</string>
     <string name="intro_art_wordmark">Picklelog</string>
-    <string name="onboarding_continue">Get Started</string>
+    <string name="onboarding_continue">Get started</string>
     <string name="onboarding_save_failed">Couldn\'t save your name. Try again.</string>
     <string name="settings_name_save">Save name</string>
     <string name="settings_dark_mode_label">Dark mode</string>
@@ -446,14 +461,11 @@
     <string name="about_privacy_point_permissions">The camera and notifications are used only if you turn them on.</string>
     <string name="about_licences_heading">Open-source software</string>
     <string name="settings_close">Close settings</string>
-    <string name="settings_more_info">More info</string>
-    <string name="settings_pro_more_info">More info about Picklelog Pro</string>
     <string name="settings_pro_row_free">Free · %1$d of %2$d matches</string>
     <string name="settings_pro_row_active">Unlocked on this device</string>
     <string name="settings_name_label">Name</string>
     <string name="settings_name_dialog_title">Your name</string>
     <string name="settings_backup_row">Export &amp; backup</string>
-    <string name="settings_backup_more_info">More info about export and backup</string>
     <string name="settings_clear_cache">Clear cache</string>
     <string name="settings_privacy">Privacy policy</string>
     <string name="settings_rate_us">Rate us</string>
