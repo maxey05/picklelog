@@ -32,6 +32,7 @@ fun ReminderTimeRow(
     SettingsRow(
         icon = R.drawable.ic_schedule,
         label = stringResource(R.string.settings_reminder_time_label),
+        showDivider = true,
         modifier =
             modifier
                 .clickable(role = Role.Button) { picking = true }
