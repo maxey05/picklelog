@@ -15,14 +15,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import kotlin.math.abs
 
 private const val MINIMUM_CONTRAST = 4.5
 private const val BACKGROUND_SAMPLE_X = 24
-private const val BADGE_INSET = 10
-private const val COLOUR_TOLERANCE = 30
-private val BOTTOM_TEXT = listOf("result", "meta", "opponents", "partner", "score", "location", "streak")
-private val TOP_TEXT = listOf("brand", "name")
+private const val MINIMUM_INK_PIXELS = 20
+private const val DARK_CARD_BACKGROUND = 0xFF0E3324.toInt()
+private val CARD_TEXT = listOf("meta", "name", "partner", "time", "opponents", "games", "location", "brand")
 
 @RunWith(AndroidJUnit4::class)
 class CardGoldenTest {
@@ -67,7 +65,7 @@ class CardGoldenTest {
     ) {
         assertEquals(diagnostics.toString(), 0, diagnostics.getJSONArray("overflowing").length())
         val rects = diagnostics.getJSONObject("rects")
-        (BOTTOM_TEXT + TOP_TEXT).filter { rects.has(it) }.forEach { id ->
+        CARD_TEXT.filter { rects.has(it) }.forEach { id ->
             val rect = diagnostics.rect(id)
             val top = rect.getDouble("top").toInt().coerceAtLeast(0)
             val bottom = rect.getDouble("bottom").toInt().coerceAtMost(bitmap.height - 1)
@@ -84,44 +82,22 @@ class CardGoldenTest {
 
         assertEquals(1080, bitmap.width)
         assertEquals(1920, bitmap.height)
-        val badge = diagnostics.rect("result")
-        val insideBadgeX = badge.getDouble("left").toInt() + BADGE_INSET
-        val badgeMiddleY = ((badge.getDouble("top") + badge.getDouble("bottom")) / 2).toInt()
-        val pixel = bitmap.getPixel(insideBadgeX, badgeMiddleY)
-        val expected = Color.rgb(0x1b, 0x7a, 0x3d)
-        val distance =
-            abs(Color.red(pixel) - Color.red(expected)) +
-                abs(Color.green(pixel) - Color.green(expected)) +
-                abs(Color.blue(pixel) - Color.blue(expected))
+        assertEquals(1.0, diagnostics.getDouble("scale") * diagnostics.getDouble("devicePixelRatio"), 0.0001)
+        val brand = diagnostics.rect("brand")
         assertTrue(
-            "the badge the page reports at design ($insideBadgeX, $badgeMiddleY) is not at that output pixel: " +
-                "found #${Integer.toHexString(pixel)}; diagnostics $diagnostics",
-            distance <= COLOUR_TOLERANCE,
+            "no brand ink where the page says the brand is; diagnostics $diagnostics",
+            countInkWithin(bitmap, brand, DARK_CARD_BACKGROUND) >= MINIMUM_INK_PIXELS,
         )
-        assertTrue("badge ${badge.getDouble("right")} runs off the card", badge.getDouble("right") <= 1080.0)
+        assertTrue("brand ${brand.getDouble("right")} runs off the card", brand.getDouble("right") <= 1080.0)
     }
 
     @Test
     fun a_second_card_from_the_same_webview_shows_the_new_match_not_the_previous_one() {
-        render(sampleCard(isWin = true))
+        render(sampleCard(opponents = listOf("Ana", "Ben")))
 
-        val (bitmap, diagnostics) = render(sampleCard(isWin = false, opponents = "vs Zed"))
+        val (_, diagnostics) = render(sampleCard(opponents = listOf("Zed")))
 
-        val badge = diagnostics.rect("result")
-        val pixel =
-            bitmap.getPixel(
-                badge.getDouble("left").toInt() + BADGE_INSET,
-                ((badge.getDouble("top") + badge.getDouble("bottom")) / 2).toInt(),
-            )
-        val lossRed = Color.rgb(0x8a, 0x23, 0x30)
-        val distance =
-            abs(Color.red(pixel) - Color.red(lossRed)) +
-                abs(Color.green(pixel) - Color.green(lossRed)) +
-                abs(Color.blue(pixel) - Color.blue(lossRed))
-        assertTrue(
-            "the second capture still shows the first card: badge is #${Integer.toHexString(pixel)}",
-            distance <= COLOUR_TOLERANCE,
-        )
+        assertEquals("Zed", diagnostics.getJSONObject("texts").getString("opponents"))
     }
 
     @Test
@@ -155,7 +131,7 @@ class CardGoldenTest {
             render(
                 sampleCard(
                     displayName = longName,
-                    opponents = "vs $longName & Bartholomew Montgomery-Fitzgerald III",
+                    opponents = listOf(longName, "Bartholomew Montgomery-Fitzgerald III"),
                     location = "The Community Recreation Center Pickleball Courts, North Wing, Building 7",
                     photo = photoDataUri(base = 245, spread = 10),
                 ),
@@ -169,21 +145,46 @@ class CardGoldenTest {
 
     @Test
     fun accented_names_and_emoji_render_as_given() {
-        val opponents = "vs José 🏓 Ñuñez & Zoë Łukasiewicz-李"
+        val opponents = listOf("José 🏓 Ñuñez", "Zoë Łukasiewicz-李")
         val (bitmap, diagnostics) = render(sampleCard(opponents = opponents, displayName = "Mãe 🥒"))
 
-        assertEquals(opponents, diagnostics.getJSONObject("texts").getString("opponents"))
+        assertEquals(opponents.joinToString("\n"), diagnostics.getJSONObject("texts").getString("opponents"))
         assertEquals("Mãe 🥒", diagnostics.getJSONObject("texts").getString("name"))
         assertLegible(bitmap, diagnostics)
     }
 
     @Test
-    fun a_doubles_card_shows_both_opponents_and_the_result_as_a_word() {
-        val (_, diagnostics) = render(sampleCard(opponents = "vs Ana & Ben", isWin = false))
+    fun a_doubles_card_lists_both_opponents_on_their_own_lines() {
+        val (_, diagnostics) = render(sampleCard(opponents = listOf("Ana", "Ben")))
+
+        assertEquals("Ana\nBen", diagnostics.getJSONObject("texts").getString("opponents"))
+    }
+
+    @Test
+    fun a_card_with_every_detail_hidden_still_fits_and_keeps_the_time_and_brand() {
+        val data = sampleCard().copy(partner = null, opponents = null, games = null, location = null)
+
+        val (bitmap, diagnostics) = render(data)
 
         val texts = diagnostics.getJSONObject("texts")
-        assertEquals("vs Ana & Ben", texts.getString("opponents"))
-        assertTrue(texts.getString("result").contains("Loss"))
+        assertFalse(texts.has("partner"))
+        assertFalse(texts.has("opponents"))
+        assertFalse(texts.has("games"))
+        assertFalse(texts.has("location"))
+        assertTrue(texts.has("time"))
+        assertTrue(texts.has("brand"))
+        assertLegible(bitmap, diagnostics)
+    }
+
+    @Test
+    fun the_court_illustration_is_only_on_the_tall_card_without_a_photo() {
+        val tall = render(sampleCard(ratio = CardRatio.TALL)).second
+        val square = render(sampleCard(ratio = CardRatio.SQUARE)).second
+        val withPhoto = render(sampleCard(photo = photoDataUri(base = 128, spread = 40))).second
+
+        assertTrue(tall.getBoolean("courtShown"))
+        assertFalse(square.getBoolean("courtShown"))
+        assertFalse(withPhoto.getBoolean("courtShown"))
     }
 
     @Test
@@ -191,9 +192,9 @@ class CardGoldenTest {
         val baseline = render(sampleCard()).second.getInt("elementCount")
         val hostile = "Dave \"Q\" O'Neil \\ </script><img src=x onerror=alert(1)><b>bold</b>"
 
-        val (_, diagnostics) = render(sampleCard(opponents = hostile))
+        val (_, diagnostics) = render(sampleCard(opponents = listOf(hostile, "Ben")))
 
-        assertEquals(hostile, diagnostics.getJSONObject("texts").getString("opponents"))
+        assertEquals("$hostile\nBen", diagnostics.getJSONObject("texts").getString("opponents"))
         assertEquals(baseline, diagnostics.getInt("elementCount"))
     }
 
@@ -226,10 +227,11 @@ class CardGoldenTest {
             GoldenContent.LONG_NAMES ->
                 base.copy(
                     displayName = LONG_NAME,
-                    opponents = "vs $LONG_NAME & Bartholomew Montgomery-Fitzgerald III",
+                    opponents = CardEntry("Against", listOf(LONG_NAME, "Bartholomew Montgomery-Fitzgerald III")),
                     location = "The Community Recreation Center Pickleball Courts, North Wing, Building 7",
                 )
-            GoldenContent.EMOJI_NAMES -> base.copy(displayName = "Mãe 🥒", opponents = EMOJI_OPPONENTS)
+            GoldenContent.EMOJI_NAMES ->
+                base.copy(displayName = "Mãe 🥒", opponents = CardEntry("Against", EMOJI_OPPONENTS))
         }
     }
 
@@ -325,18 +327,11 @@ class CardGoldenTest {
 
         assertEquals(1080, bitmap.width)
         assertEquals(1080, bitmap.height)
-        val badge = diagnostics.rect("result")
-        val pixel =
-            bitmap.getPixel(
-                badge.getDouble("left").toInt() + BADGE_INSET,
-                ((badge.getDouble("top") + badge.getDouble("bottom")) / 2).toInt(),
-            )
-        val expected = Color.rgb(0x1b, 0x7a, 0x3d)
-        val distance =
-            abs(Color.red(pixel) - Color.red(expected)) +
-                abs(Color.green(pixel) - Color.green(expected)) +
-                abs(Color.blue(pixel) - Color.blue(expected))
-        assertTrue("badge is not where the page says: #${Integer.toHexString(pixel)}", distance <= COLOUR_TOLERANCE)
+        assertEquals(1.0, diagnostics.getDouble("scale") * diagnostics.getDouble("devicePixelRatio"), 0.0001)
+        assertTrue(
+            "no brand ink where the page says the brand is; diagnostics $diagnostics",
+            countInkWithin(bitmap, diagnostics.rect("brand"), DARK_CARD_BACKGROUND) >= MINIMUM_INK_PIXELS,
+        )
     }
 
     @Test
@@ -351,9 +346,9 @@ class CardGoldenTest {
             squareMeta >= tallMeta * MINIMUM_TEXT_KEPT,
         )
         val nameBottom = square.rect("name").getDouble("bottom")
-        val resultTop = square.rect("result").getDouble("top")
-        assertTrue("the header and details overlap: $square", nameBottom < resultTop)
-        assertTrue("the square card has a huge empty middle: $square", resultTop < SQUARE_DETAILS_MUST_START_ABOVE)
+        val detailsTop = square.rect("partner").getDouble("top")
+        assertTrue("the header and details overlap: $square", nameBottom < detailsTop)
+        assertTrue("the square card has a huge empty middle: $square", detailsTop < SQUARE_DETAILS_MUST_START_ABOVE)
         assertEquals(0, square.getJSONArray("overflowing").length())
     }
 
@@ -375,4 +370,4 @@ private const val DARK_GREEN_MARGIN = 10
 private const val MINIMUM_TEXT_KEPT = 0.7
 private const val SQUARE_DETAILS_MUST_START_ABOVE = 540.0
 private const val LONG_NAME = "Maximiliano Alejandro de la Cruz-Villanueva y Santisteban"
-private const val EMOJI_OPPONENTS = "vs José 🏓 Ñuñez & Zoë Łukasiewicz-李"
+private val EMOJI_OPPONENTS = listOf("José 🏓 Ñuñez", "Zoë Łukasiewicz-李")
