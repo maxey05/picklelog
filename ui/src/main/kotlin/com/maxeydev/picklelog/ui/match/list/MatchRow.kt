@@ -1,23 +1,22 @@
 package com.maxeydev.picklelog.ui.match.list
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -30,6 +29,7 @@ import com.maxeydev.picklelog.domain.match.GameScore
 import com.maxeydev.picklelog.domain.match.MatchResult
 import com.maxeydev.picklelog.ui.R
 import com.maxeydev.picklelog.ui.common.MatchThumbnail
+import com.maxeydev.picklelog.ui.common.ResultBadge
 import com.maxeydev.picklelog.ui.match.currentLocale
 import com.maxeydev.picklelog.ui.match.formatLabel
 import com.maxeydev.picklelog.ui.match.formatMatchDateLong
@@ -39,8 +39,7 @@ import com.maxeydev.picklelog.ui.match.todayInDeviceZone
 import com.maxeydev.picklelog.ui.theme.PicklelogTheme
 import java.util.Locale
 
-private val ROW_MIN_HEIGHT = 72.dp
-private val BADGE_SIZE = 40.dp
+private val ROW_MIN_HEIGHT = 84.dp
 private val DATE_COLUMN_MIN_WIDTH = 48.dp
 
 @Composable
@@ -51,6 +50,7 @@ fun MatchRow(
 ) {
     val locale = currentLocale()
     val sentence = matchRowSentence(state, locale)
+    val cardShape = MaterialTheme.shapes.large
     val rowColor =
         if (state.result == MatchResult.WIN) {
             PicklelogTheme.colors.winRow
@@ -61,7 +61,9 @@ fun MatchRow(
         modifier =
             modifier
                 .fillMaxWidth()
+                .clip(cardShape)
                 .background(rowColor)
+                .border(width = 1.dp, color = PicklelogTheme.colors.cardBorder, shape = cardShape)
                 .heightIn(min = ROW_MIN_HEIGHT)
                 .clickable(onClickLabel = stringResource(R.string.open_match_details), onClick = onClick)
                 .semantics(mergeDescendants = true) { contentDescription = sentence }
@@ -98,7 +100,7 @@ private fun ResultColumn(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        ResultBadge(result = state.result)
+        ResultBadge(result = state.result, modifier = Modifier.testTag(MatchListTestTags.RESULT_BADGE))
         Text(
             text = dateText,
             style = MaterialTheme.typography.labelSmall,
@@ -106,26 +108,6 @@ private fun ResultColumn(
             maxLines = 1,
             modifier = Modifier.testTag(MatchListTestTags.ROW_DATE),
         )
-    }
-}
-
-@Composable
-private fun ResultBadge(result: MatchResult) {
-    val isWin = result == MatchResult.WIN
-    val colors = PicklelogTheme.colors
-    Surface(
-        color = if (isWin) colors.winBadge else colors.lossBadge,
-        contentColor = if (isWin) colors.onWinBadge else colors.onLossBadge,
-        shape = MaterialTheme.shapes.small,
-        modifier = Modifier.size(BADGE_SIZE).testTag(MatchListTestTags.RESULT_BADGE),
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = stringResource(if (isWin) R.string.result_letter_win else R.string.result_letter_loss),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-        }
     }
 }
 
