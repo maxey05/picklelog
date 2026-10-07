@@ -2,7 +2,11 @@ package com.maxeydev.picklelog.ui.navigation
 
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.core.animateDp
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -15,6 +19,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -98,7 +103,15 @@ private fun PicklelogNavGraph(
     onOpenLoggingHandled: () -> Unit,
 ) {
     val startDestination: Any = if (requiresOnboarding) OnboardingRoute else HomeRoute
-    NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
+    NavHost(
+        navController = navController,
+        startDestination = startDestination,
+        modifier = modifier,
+        enterTransition = { ScreenEnter },
+        exitTransition = { ScreenExit },
+        popEnterTransition = { ScreenPopEnter },
+        popExitTransition = { ScreenPopExit },
+    ) {
         composable<OnboardingRoute> {
             val viewModel: OnboardingViewModel = viewModel(factory = OnboardingViewModel.factory(dependencies))
             val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -282,6 +295,7 @@ private fun PicklelogNavGraph(
                             onRatioSelected = viewModel::selectRatio,
                             onThemeSelected = viewModel::selectTheme,
                             onLayoutSelected = viewModel::selectLayout,
+                            onDetailShownChanged = viewModel::setDetailShown,
                         )
                     },
             )
@@ -339,6 +353,15 @@ private fun PicklelogNavGraph(
                     transitionSpec = { sheetCornerSpec(targetState) },
                     label = "matchEditSheetCorner",
                 ) { state -> if (state == EnterExitState.Visible) 0.dp else SHEET_CORNER }
+            val sheetProgress =
+                transition.animateFloat(
+                    transitionSpec = { sheetCornerSpec(targetState) },
+                    label = "matchEditSheetProgress",
+                ) { state ->
+                    val topDestination = navController.currentBackStackEntry?.destination
+                    val isCoveredByPaywall = topDestination?.hasRoute<PaywallRoute>() == true
+                    if (state == EnterExitState.Visible || isCoveredByPaywall) 1f else 0f
+                }
             val viewModel: MatchEditViewModel = viewModel(factory = MatchEditViewModel.factory(dependencies))
             val state by viewModel.uiState.collectAsStateWithLifecycle()
             LaunchedEffect(state.isPaywallRequested) {
@@ -399,15 +422,25 @@ private fun PicklelogNavGraph(
                         },
                     )
                 }
-            MatchEditScreen(
-                state = state,
-                actions = actions,
-                modifier =
-                    Modifier.graphicsLayer {
-                        shape = RoundedCornerShape(topStart = sheetCorner.value, topEnd = sheetCorner.value)
-                        clip = true
-                    },
-            )
+            Box(modifier = Modifier.fillMaxSize()) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .graphicsLayer { alpha = SHEET_SCRIM_ALPHA * sheetProgress.value }
+                            .background(Color.Black),
+                )
+                MatchEditScreen(
+                    state = state,
+                    actions = actions,
+                    modifier =
+                        Modifier.graphicsLayer {
+                            translationY = (1f - sheetProgress.value) * size.height
+                            shape = RoundedCornerShape(topStart = sheetCorner.value, topEnd = sheetCorner.value)
+                            clip = true
+                        },
+                )
+            }
         }
         composable<MatchDetailRoute>(
             exitTransition = { stayUnderSheet() },
