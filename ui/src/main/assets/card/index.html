@@ -9,22 +9,46 @@
     <img id="photo" alt="" hidden>
     <div id="top-scrim"></div>
     <div id="bottom-scrim"></div>
-    <header id="top">
-        <div id="brand"></div>
+    <div id="content">
+        <div id="meta" class="fit single" hidden></div>
         <div id="name" class="fit single" hidden></div>
-    </header>
-    <main id="details">
-        <div id="result" class="badge">
-            <span id="result-symbol" aria-hidden="true"></span>
-            <span id="result-label"></span>
+        <div id="spacer">
+            <svg id="court" viewBox="0 0 120 220" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true">
+                <rect x="10" y="0" width="100" height="220" rx="2"></rect>
+                <path d="M2 110h116" stroke-width="5"></path>
+                <path d="M10 75h100"></path>
+                <path d="M10 145h100"></path>
+                <path d="M60 0v75"></path>
+                <path d="M60 145v75"></path>
+            </svg>
         </div>
-        <div id="meta" class="fit"></div>
-        <h1 id="opponents" class="fit clamp" hidden></h1>
-        <div id="partner" class="fit" hidden></div>
-        <div id="score" class="fit" hidden></div>
-        <div id="location" class="fit single" hidden></div>
-        <div id="streak" class="fit" hidden></div>
-    </main>
+        <div id="top-row" hidden>
+            <div id="partner" class="entry" hidden>
+                <span class="caption"></span>
+                <span class="values"></span>
+            </div>
+            <div id="time" class="entry" hidden>
+                <span class="caption"></span>
+                <span class="values"></span>
+            </div>
+        </div>
+        <div id="opponents" class="entry" hidden>
+            <span class="caption"></span>
+            <span class="values"></span>
+        </div>
+        <div id="games" class="entry" hidden>
+            <span class="caption"></span>
+            <span class="values"></span>
+        </div>
+        <div id="location" class="fit single" hidden>
+            <svg id="pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"></path>
+                <circle cx="12" cy="10" r="2.5"></circle>
+            </svg>
+            <span id="location-text"></span>
+        </div>
+        <div id="brand" class="fit single" hidden></div>
+    </div>
 </div>
 <script src="card.js"></script>
 </body>
