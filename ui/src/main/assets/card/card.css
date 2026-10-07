@@ -1,3 +1,9 @@
+@font-face {
+    font-family: "Baloo 2";
+    font-weight: 800;
+    src: url("baloo2-extrabold.ttf") format("truetype");
+}
+
 html,
 body {
     margin: 0;
@@ -6,7 +12,21 @@ body {
     background: #0b2b22;
 }
 
+[hidden] {
+    display: none !important;
+}
+
 #card {
+    --u: 4.576px;
+    --bg: #0e3324;
+    --text: #ffffff;
+    --muted: #a5e8c1;
+    --brand: #ffffff;
+    --court: rgba(165, 232, 193, 0.4);
+    --scrim-rgb: 0, 0, 0;
+    --scrim-top-a: 0.72;
+    --scrim-bottom-a: 0.78;
+    --scrim-end-a: 0.62;
     position: absolute;
     left: 0;
     top: 0;
@@ -15,8 +35,48 @@ body {
     overflow: hidden;
     transform-origin: 0 0;
     font-family: sans-serif;
-    color: #ffffff;
-    background: linear-gradient(160deg, #1f6f55 0%, #0b2b22 70%);
+    color: var(--text);
+    background: var(--bg);
+}
+
+#card.square {
+    --u: 3.375px;
+    height: 1080px;
+}
+
+#card.light {
+    --bg: #ffffff;
+    --text: #14231c;
+    --muted: #40554a;
+    --brand: #007a43;
+    --court: rgba(0, 122, 67, 0.3);
+    --scrim-rgb: 255, 255, 255;
+    --scrim-top-a: 0.8;
+    --scrim-bottom-a: 0.84;
+    --scrim-end-a: 0.66;
+}
+
+#card.court {
+    --bg: linear-gradient(160deg, #1d5fa8 0%, #0a2a4d 70%);
+    --muted: #cfe3f7;
+    --court: rgba(207, 227, 247, 0.4);
+    --scrim-rgb: 6, 30, 58;
+}
+
+#card.sunset {
+    --bg: linear-gradient(160deg, #b8431f 0%, #8e1f4f 55%, #2f1046 100%);
+    --muted: #ffd9c2;
+    --court: rgba(255, 217, 194, 0.4);
+    --scrim-rgb: 40, 10, 40;
+}
+
+#card.court.no-photo::after {
+    content: "";
+    position: absolute;
+    inset: 36px;
+    border: 6px solid rgba(255, 255, 255, 0.32);
+    border-radius: 12px;
+    pointer-events: none;
 }
 
 #photo {
@@ -33,7 +93,12 @@ body {
     top: 0;
     width: 100%;
     height: 420px;
-    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.72) 55%, rgba(0, 0, 0, 0) 100%);
+    background: linear-gradient(
+        to bottom,
+        rgba(var(--scrim-rgb), var(--scrim-top-a)) 0%,
+        rgba(var(--scrim-rgb), var(--scrim-top-a)) 55%,
+        rgba(var(--scrim-rgb), 0) 100%
+    );
 }
 
 #bottom-scrim {
@@ -42,115 +107,12 @@ body {
     bottom: 0;
     width: 100%;
     height: 1240px;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.78) 0%, rgba(0, 0, 0, 0.78) 85%, rgba(0, 0, 0, 0) 100%);
-}
-
-.no-photo #top-scrim,
-.no-photo #bottom-scrim {
-    display: none;
-}
-
-#top {
-    position: absolute;
-    left: 72px;
-    right: 72px;
-    top: 88px;
-}
-
-#brand {
-    font-size: 44px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-}
-
-#name {
-    margin-top: 12px;
-    font-size: 52px;
-    font-weight: 500;
-}
-
-#details {
-    position: absolute;
-    left: 72px;
-    right: 72px;
-    bottom: 140px;
-}
-
-.fit {
-    overflow-wrap: anywhere;
-    word-break: break-word;
-    max-width: 100%;
-}
-
-.clamp {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-    overflow: hidden;
-}
-
-.single {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 16px;
-    padding: 14px 32px;
-    border-radius: 999px;
-    font-size: 56px;
-    font-weight: 800;
-    letter-spacing: 4px;
-    text-transform: uppercase;
-    color: #ffffff;
-    border: 4px solid #ffffff;
-}
-
-#card.win #result {
-    background: #1b7a3d;
-}
-
-#card.loss #result {
-    background: #8a2330;
-}
-
-#meta {
-    margin-top: 40px;
-    font-size: 48px;
-    font-weight: 500;
-}
-
-#opponents {
-    margin: 28px 0 0 0;
-    font-size: 96px;
-    line-height: 1.1;
-    font-weight: 800;
-}
-
-#partner,
-#score,
-#location,
-#streak {
-    margin-top: 24px;
-    font-size: 52px;
-    font-weight: 500;
-}
-
-#score {
-    font-size: 64px;
-    font-weight: 700;
-}
-
-[hidden] {
-    display: none !important;
-}
-
-#card.square {
-    height: 1080px;
+    background: linear-gradient(
+        to top,
+        rgba(var(--scrim-rgb), var(--scrim-bottom-a)) 0%,
+        rgba(var(--scrim-rgb), var(--scrim-bottom-a)) 85%,
+        rgba(var(--scrim-rgb), 0) 100%
+    );
 }
 
 #card.square #top-scrim {
@@ -159,120 +121,164 @@ body {
 
 #card.square #bottom-scrim {
     height: 100%;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.8) 60%, rgba(0, 0, 0, 0.62) 100%);
+    background: linear-gradient(
+        to top,
+        rgba(var(--scrim-rgb), var(--scrim-bottom-a)) 0%,
+        rgba(var(--scrim-rgb), var(--scrim-bottom-a)) 60%,
+        rgba(var(--scrim-rgb), var(--scrim-end-a)) 100%
+    );
 }
 
-#card.square #top {
-    left: 64px;
-    right: 64px;
-    top: 64px;
+.no-photo #top-scrim,
+.no-photo #bottom-scrim {
+    display: none;
 }
 
-#card.square #brand {
-    font-size: 36px;
-}
-
-#card.square #name {
-    margin-top: 8px;
-    font-size: 44px;
-}
-
-#card.square #details {
-    left: 64px;
-    right: 64px;
-    bottom: 64px;
-}
-
-#card.square .badge {
-    gap: 12px;
-    padding: 10px 26px;
-    font-size: 44px;
-}
-
-#card.square #meta {
-    margin-top: 24px;
-    font-size: 38px;
-}
-
-#card.square #opponents {
-    margin-top: 16px;
-    font-size: 68px;
-}
-
-#card.square .clamp {
-    -webkit-line-clamp: 2;
-}
-
-#card.square #partner,
-#card.square #location,
-#card.square #streak {
-    margin-top: 12px;
-    font-size: 40px;
-}
-
-#card.square #score {
-    margin-top: 12px;
-    font-size: 48px;
-}
-
-#card.light {
-    color: #14231d;
-    background: linear-gradient(160deg, #f6f3ea 0%, #dcece3 70%);
-}
-
-#card.light #top-scrim {
-    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.8) 55%, rgba(255, 255, 255, 0) 100%);
-}
-
-#card.light #bottom-scrim {
-    background: linear-gradient(to top, rgba(255, 255, 255, 0.84) 0%, rgba(255, 255, 255, 0.84) 85%, rgba(255, 255, 255, 0) 100%);
-}
-
-#card.light.square #bottom-scrim {
-    background: linear-gradient(to top, rgba(255, 255, 255, 0.84) 0%, rgba(255, 255, 255, 0.84) 60%, rgba(255, 255, 255, 0.66) 100%);
-}
-
-#card.light .badge {
-    border-color: transparent;
-}
-
-#card.court {
-    background: linear-gradient(160deg, #1d5fa8 0%, #0a2a4d 70%);
-}
-
-#card.court.no-photo::after {
-    content: "";
+#content {
     position: absolute;
-    inset: 36px;
-    border: 6px solid rgba(255, 255, 255, 0.32);
-    border-radius: 12px;
-    pointer-events: none;
+    inset: 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+    padding: calc(24 * var(--u)) calc(20 * var(--u));
+    gap: calc(14 * var(--u));
 }
 
-#card.court #top-scrim {
-    background: linear-gradient(to bottom, rgba(6, 30, 58, 0.72) 0%, rgba(6, 30, 58, 0.72) 55%, rgba(6, 30, 58, 0) 100%);
+#card.square #content {
+    padding: calc(18 * var(--u)) calc(20 * var(--u));
+    gap: calc(10 * var(--u));
 }
 
-#card.court #bottom-scrim {
-    background: linear-gradient(to top, rgba(6, 30, 58, 0.78) 0%, rgba(6, 30, 58, 0.78) 85%, rgba(6, 30, 58, 0) 100%);
+.fit {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    max-width: 100%;
 }
 
-#card.court.square #bottom-scrim {
-    background: linear-gradient(to top, rgba(6, 30, 58, 0.8) 0%, rgba(6, 30, 58, 0.8) 60%, rgba(6, 30, 58, 0.62) 100%);
+.single {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-#card.sunset {
-    background: linear-gradient(160deg, #b8431f 0%, #8e1f4f 55%, #2f1046 100%);
+#meta {
+    font-size: calc(11 * var(--u));
+    line-height: calc(14 * var(--u));
+    font-weight: 600;
+    letter-spacing: calc(0.8 * var(--u));
+    text-transform: uppercase;
+    color: var(--muted);
 }
 
-#card.sunset #top-scrim {
-    background: linear-gradient(to bottom, rgba(40, 10, 40, 0.72) 0%, rgba(40, 10, 40, 0.72) 55%, rgba(40, 10, 40, 0) 100%);
+#name {
+    margin-top: calc(-8 * var(--u));
+    font-size: calc(13 * var(--u));
+    line-height: calc(17 * var(--u));
+    font-weight: 600;
 }
 
-#card.sunset #bottom-scrim {
-    background: linear-gradient(to top, rgba(40, 10, 40, 0.78) 0%, rgba(40, 10, 40, 0.78) 85%, rgba(40, 10, 40, 0) 100%);
+#spacer {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--court);
 }
 
-#card.sunset.square #bottom-scrim {
-    background: linear-gradient(to top, rgba(40, 10, 40, 0.8) 0%, rgba(40, 10, 40, 0.8) 60%, rgba(40, 10, 40, 0.62) 100%);
+#court {
+    width: calc(84 * var(--u));
+    height: calc(96 * var(--u));
+    transform: perspective(calc(260 * var(--u))) rotateX(42deg);
+}
+
+#card.square #court,
+#card:not(.no-photo) #court {
+    display: none;
+}
+
+#top-row {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: calc(8 * var(--u));
+}
+
+.entry {
+    display: flex;
+    flex-direction: column;
+    gap: calc(2 * var(--u));
+    min-width: 0;
+}
+
+.caption {
+    font-size: calc(10 * var(--u));
+    line-height: calc(13 * var(--u));
+    font-weight: 600;
+    letter-spacing: calc(0.8 * var(--u));
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.values {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.value {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    font-size: calc(16 * var(--u));
+    line-height: calc(20 * var(--u));
+    font-weight: 700;
+    color: var(--text);
+}
+
+#opponents .value {
+    font-size: calc(13 * var(--u));
+    line-height: calc(17 * var(--u));
+    font-weight: 600;
+}
+
+#games .values {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    column-gap: calc(8 * var(--u));
+}
+
+#location {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(4 * var(--u));
+    font-size: calc(12 * var(--u));
+    line-height: calc(16 * var(--u));
+    font-weight: 500;
+    color: var(--muted);
+}
+
+#pin {
+    flex: none;
+    width: calc(13 * var(--u));
+    height: calc(13 * var(--u));
+}
+
+#location-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#brand {
+    font-family: "Baloo 2", sans-serif;
+    font-weight: 800;
+    font-size: calc(20 * var(--u));
+    line-height: calc(22 * var(--u));
+    text-transform: lowercase;
+    color: var(--brand);
 }
