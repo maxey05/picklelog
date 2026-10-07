@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.height
@@ -14,6 +15,7 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -21,6 +23,7 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -34,14 +37,16 @@ import androidx.compose.ui.unit.dp
 import com.maxeydev.picklelog.domain.datetime.AppDate
 import com.maxeydev.picklelog.domain.datetime.AppTime
 import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.common.AddPill
 import com.maxeydev.picklelog.ui.common.dashedBorder
 import com.maxeydev.picklelog.ui.match.currentLocale
 import com.maxeydev.picklelog.ui.match.formatMatchDate
 import com.maxeydev.picklelog.ui.match.formatMatchTime
 import com.maxeydev.picklelog.ui.match.toUtcEpochMillis
+import com.maxeydev.picklelog.ui.match.todayInDeviceZone
 import com.maxeydev.picklelog.ui.match.utcEpochMillisToAppDate
 
-private val PILL_HEIGHT = 44.dp
+private val PILL_HEIGHT = 40.dp
 private val MIN_TOUCH_TARGET = 48.dp
 private val FALLBACK_PICKER_TIME = AppTime(12, 0)
 
@@ -72,8 +77,7 @@ fun DateTimeField(
     val endText = endTime?.let { formatMatchTime(it, locale) }
     FlowRow(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         DateTimePill(
             text = dateText,
@@ -87,22 +91,30 @@ fun DateTimeField(
             description = stringResource(R.string.time_button_description, startLabel, startText ?: notSet),
             onClick = { editing = DateTimeEditor.START },
         )
-        Box(
-            modifier = Modifier.height(MIN_TOUCH_TARGET).clearAndSetSemantics { },
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = stringResource(R.string.time_range_separator),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+        if (endText != null) {
+            Box(
+                modifier = Modifier.height(MIN_TOUCH_TARGET).clearAndSetSemantics { },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = stringResource(R.string.time_range_separator),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            DateTimePill(
+                text = endText,
+                isSet = true,
+                description = stringResource(R.string.time_button_description, endLabel, endText),
+                onClick = { editing = DateTimeEditor.END },
+            )
+        } else {
+            AddPill(
+                label = stringResource(R.string.add_end_time),
+                description = stringResource(R.string.time_button_description, endLabel, notSet),
+                onClick = { editing = DateTimeEditor.END },
             )
         }
-        DateTimePill(
-            text = endText ?: endLabel,
-            isSet = endText != null,
-            description = stringResource(R.string.time_button_description, endLabel, endText ?: notSet),
-            onClick = { editing = DateTimeEditor.END },
-        )
     }
     when (editing) {
         DateTimeEditor.DATE ->
@@ -170,7 +182,7 @@ private fun DateTimePill(
             modifier = if (isSet) Modifier else Modifier.dashedBorder(colors.outline, PILL_HEIGHT / 2),
         ) {
             Box(
-                modifier = Modifier.heightIn(min = PILL_HEIGHT).padding(horizontal = 12.dp),
+                modifier = Modifier.heightIn(min = PILL_HEIGHT).padding(horizontal = 16.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(text = text, style = MaterialTheme.typography.labelLarge, maxLines = 1)
@@ -186,7 +198,13 @@ private fun MatchDatePickerDialog(
     onConfirm: (AppDate) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val pickerState = rememberDatePickerState(initialSelectedDateMillis = initial.toUtcEpochMillis())
+    val today = remember { todayInDeviceZone() }
+    val selectableDates = remember(today) { PastDatesOnly(today.toUtcEpochMillis(), today.year) }
+    val pickerState =
+        rememberDatePickerState(
+            initialSelectedDateMillis = initial.toUtcEpochMillis(),
+            selectableDates = selectableDates,
+        )
     DatePickerDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
@@ -209,6 +227,24 @@ private fun MatchDatePickerDialog(
             }
         },
     ) {
-        DatePicker(state = pickerState)
+        Column {
+            DatePicker(state = pickerState)
+            Text(
+                text = stringResource(R.string.date_future_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 24.dp),
+            )
+        }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+private class PastDatesOnly(
+    private val lastSelectableMillis: Long,
+    private val lastSelectableYear: Int,
+) : SelectableDates {
+    override fun isSelectableDate(utcTimeMillis: Long): Boolean = utcTimeMillis <= lastSelectableMillis
+
+    override fun isSelectableYear(year: Int): Boolean = year <= lastSelectableYear
 }
