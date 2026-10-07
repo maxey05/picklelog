@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -48,16 +49,19 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import com.maxeydev.picklelog.domain.entitlement.FreeTier
 import com.maxeydev.picklelog.ui.R
-import com.maxeydev.picklelog.ui.theme.PicklelogTheme
+import com.maxeydev.picklelog.ui.theme.PicklelogSpacing
 
 private const val DRAWER_WIDTH_FRACTION = 0.84f
 private const val SCRIM_ALPHA = 0.48f
 private val DRAWER_MAX_WIDTH = 360.dp
-private val DRAWER_SHAPE = RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp)
+private val DRAWER_SHAPE = RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp)
+private val PRO_ROW_MIN_HEIGHT = 72.dp
+private val PRO_ICON_SIZE = 24.dp
 
 @Composable
 fun SettingsDrawerHost(
@@ -125,8 +129,8 @@ fun SettingsDrawer(
                     Modifier
                         .weight(1f)
                         .verticalScroll(rememberScrollState())
-                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                        .padding(start = PicklelogSpacing.lg, end = PicklelogSpacing.lg, bottom = PicklelogSpacing.lg),
+                verticalArrangement = Arrangement.spacedBy(PicklelogSpacing.md),
             ) {
                 ProCard(hasPro = state.hasPro, savedMatches = state.savedMatches, onSeePro = actions.onSeePro)
                 SettingsCard {
@@ -138,11 +142,16 @@ fun SettingsDrawer(
                         onSave = actions.onSaveName,
                         onCancel = actions.onNameEditCancelled,
                     )
-                    DarkModeRow(darkTheme = state.darkTheme, onDarkThemeChanged = actions.onDarkThemeChanged)
+                    DarkModeRow(
+                        darkTheme = state.darkTheme,
+                        onDarkThemeChanged = actions.onDarkThemeChanged,
+                        showDivider = true,
+                    )
                     ReminderToggle(
                         enabled = state.reminderEnabled,
                         onEnable = actions.onEnableReminder,
                         onDisable = actions.onDisableReminder,
+                        showDivider = true,
                     )
                     if (state.reminderEnabled) {
                         ReminderTimeRow(time = state.reminderTime, onTimeChanged = actions.onReminderTimeChanged)
@@ -169,12 +178,17 @@ private fun DrawerHeader(
     onClose: () -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 8.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 56.dp)
+                .padding(start = PicklelogSpacing.xl, end = PicklelogSpacing.sm, top = PicklelogSpacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.SemiBold,
             modifier = Modifier.weight(1f).semantics { heading() },
         )
         IconButton(onClick = onClose, modifier = Modifier.testTag(SettingsTestTags.CLOSE)) {
@@ -192,25 +206,38 @@ private fun ProCard(
     savedMatches: Int,
     onSeePro: () -> Unit,
 ) {
+    val clickModifier =
+        if (hasPro) {
+            Modifier
+        } else {
+            Modifier.clickable(role = Role.Button, onClick = onSeePro).testTag(SettingsTestTags.SEE_PRO)
+        }
     Surface(
         shape = SETTINGS_CARD_SHAPE,
-        color = PicklelogTheme.colors.winRow,
+        color = MaterialTheme.colorScheme.secondaryContainer,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.fillMaxWidth().testTag(SettingsTestTags.PRO_CARD),
     ) {
         Row(
-            modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
+            modifier =
+                clickModifier
+                    .heightIn(min = PRO_ROW_MIN_HEIGHT)
+                    .padding(horizontal = PicklelogSpacing.lg, vertical = PicklelogSpacing.sm),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(PicklelogSpacing.lg),
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_crown),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(PRO_ICON_SIZE),
             )
             Column(modifier = Modifier.weight(1f).semantics(mergeDescendants = true) { }) {
-                Text(text = stringResource(R.string.settings_pro_heading), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = stringResource(R.string.settings_pro_heading),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
                 Text(
                     text =
                         if (hasPro) {
@@ -228,11 +255,7 @@ private fun ProCard(
                 )
             }
             if (!hasPro) {
-                MoreInfoLink(
-                    description = stringResource(R.string.settings_pro_more_info),
-                    onClick = onSeePro,
-                    modifier = Modifier.testTag(SettingsTestTags.SEE_PRO),
-                )
+                TrailingChevron()
             }
         }
     }
@@ -245,28 +268,26 @@ private fun DataCard(
 ) {
     val context = LocalContext.current
     SettingsCard {
-        SettingsRow(icon = R.drawable.ic_upload, label = stringResource(R.string.settings_backup_row)) {
-            MoreInfoLink(
-                description = stringResource(R.string.settings_backup_more_info),
-                onClick = actions.onOpenBackup,
-                modifier = Modifier.testTag(SettingsTestTags.BACKUP_MORE_INFO),
-            )
-        }
+        SettingsRow(
+            icon = R.drawable.ic_upload,
+            label = stringResource(R.string.settings_backup_row),
+            navigates = true,
+            modifier =
+                Modifier
+                    .clickable(role = Role.Button, onClick = actions.onOpenBackup)
+                    .testTag(SettingsTestTags.BACKUP_MORE_INFO),
+        )
         SettingsRow(
             icon = R.drawable.ic_delete,
             label = stringResource(R.string.settings_clear_cache),
+            value = state.cacheBytes?.let { bytes -> Formatter.formatShortFileSize(context, bytes) },
+            valueModifier = Modifier.testTag(SettingsTestTags.CACHE_SIZE),
+            showDivider = true,
             modifier =
                 Modifier
                     .clickable(enabled = !state.isClearingCache, role = Role.Button, onClick = actions.onClearCache)
                     .testTag(SettingsTestTags.CLEAR_CACHE),
-        ) {
-            state.cacheBytes?.let { bytes ->
-                TrailingValue(
-                    text = Formatter.formatShortFileSize(context, bytes),
-                    modifier = Modifier.testTag(SettingsTestTags.CACHE_SIZE),
-                )
-            }
-        }
+        )
     }
 }
 
@@ -279,30 +300,32 @@ private fun InfoCard(
         SettingsRow(
             icon = R.drawable.ic_shield,
             label = stringResource(R.string.settings_privacy),
+            navigates = true,
             modifier =
                 Modifier
                     .clickable(role = Role.Button, onClick = actions.onOpenPrivacy)
                     .testTag(SettingsTestTags.PRIVACY_OPEN),
-        ) {
-            TrailingChevron()
-        }
+        )
         SettingsRow(
             icon = R.drawable.ic_star,
             label = stringResource(R.string.settings_rate_us),
+            showDivider = true,
             modifier =
                 Modifier
                     .clickable(role = Role.Button, onClick = actions.onRateUs)
                     .testTag(SettingsTestTags.RATE_US),
+            trailing = { TrailingIcon(R.drawable.ic_open_in_new) },
         )
         SettingsRow(
             icon = R.drawable.ic_info,
             label = stringResource(R.string.settings_about),
+            value = stringResource(R.string.settings_version_short, versionName),
+            navigates = true,
+            showDivider = true,
             modifier =
                 Modifier
                     .clickable(role = Role.Button, onClick = actions.onOpenAbout)
                     .testTag(SettingsTestTags.ABOUT_OPEN),
-        ) {
-            TrailingValue(text = stringResource(R.string.settings_version_short, versionName))
-        }
+        )
     }
 }
