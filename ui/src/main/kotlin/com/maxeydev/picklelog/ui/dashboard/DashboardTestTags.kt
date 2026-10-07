@@ -7,6 +7,9 @@ object DashboardTestTags {
     const val WIN_PERCENT = "dashboard_win_percent"
     const val STREAK = "dashboard_streak"
     const val FILTER_INDICATOR = "dashboard_filter_indicator"
+    const val INFO_BUTTON = "dashboard_info_button"
+    const val INFO_SHEET = "dashboard_info_sheet"
+    const val INFO_DISMISS = "dashboard_info_dismiss"
     const val STATS_SCREEN = "stats_screen"
     const val STATS_MATCHES = "stats_matches"
     const val STATS_RECORD = "stats_record"
@@ -26,7 +29,6 @@ object DashboardTestTags {
     const val GROUP_HEAD_TO_HEAD = "head_to_head"
     const val GROUP_PARTNER = "partner"
     const val GROUP_LOCATION = "location"
-    const val GROUP_PADDLE = "paddle"
     const val GROUP_MONTH = "month"
 
     fun proRow(index: Int): String = "stats_pro_row_$index"
