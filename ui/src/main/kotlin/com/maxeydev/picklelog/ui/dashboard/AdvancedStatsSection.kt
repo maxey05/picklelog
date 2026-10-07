@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -20,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.maxeydev.picklelog.domain.stats.LabelRecord
 import com.maxeydev.picklelog.domain.stats.MonthRecord
 import com.maxeydev.picklelog.domain.stats.PersonRecord
@@ -28,6 +26,7 @@ import com.maxeydev.picklelog.domain.stats.WinLoss
 import com.maxeydev.picklelog.domain.stats.percentIfEnoughMatches
 import com.maxeydev.picklelog.ui.R
 import com.maxeydev.picklelog.ui.match.currentLocale
+import com.maxeydev.picklelog.ui.theme.PicklelogSpacing
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -51,17 +50,20 @@ fun AdvancedStatsSection(
     val unknownPerson = stringResource(R.string.stats_advanced_unknown_person)
     Column(
         modifier = modifier.testTag(DashboardTestTags.STATS_ADVANCED_SECTION),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(PicklelogSpacing.xl),
     ) {
-        HorizontalDivider()
-        SectionTitle(stringResource(R.string.stats_advanced_title))
         if (advanced.isEmpty) {
-            Text(
-                text = stringResource(R.string.stats_advanced_empty),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.testTag(DashboardTestTags.STATS_ADVANCED_EMPTY),
-            )
+            StatsGroup(title = stringResource(R.string.stats_advanced_title)) {
+                Text(
+                    text = stringResource(R.string.stats_advanced_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier =
+                        Modifier
+                            .padding(horizontal = PicklelogSpacing.xs)
+                            .testTag(DashboardTestTags.STATS_ADVANCED_EMPTY),
+                )
+            }
         } else {
             BreakdownGroup(
                 title = stringResource(R.string.stats_advanced_head_to_head),
@@ -80,12 +82,6 @@ fun AdvancedStatsSection(
                 group = DashboardTestTags.GROUP_LOCATION,
                 emptyText = stringResource(R.string.stats_advanced_no_locations),
                 rows = advanced.byLocation.map { it.toRow() },
-            )
-            BreakdownGroup(
-                title = stringResource(R.string.stats_advanced_paddle),
-                group = DashboardTestTags.GROUP_PADDLE,
-                emptyText = stringResource(R.string.stats_advanced_no_paddles),
-                rows = advanced.byPaddle.map { it.toRow() },
             )
             MonthlyGroup(advanced.monthly)
         }
@@ -106,14 +102,13 @@ private fun BreakdownGroup(
     emptyText: String,
     rows: List<BreakdownRow>,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        SectionTitle(title)
+    StatsGroup(title = title) {
         if (rows.isEmpty()) {
             EmptyNote(text = emptyText, testTag = DashboardTestTags.advancedEmpty(group))
         } else {
             ExpandableRows(group = group, total = rows.size, collapsedCount = COLLAPSED_ROWS) { visible ->
                 rows.take(visible).forEachIndexed { index, row ->
-                    RecordRow(row = row, testTag = DashboardTestTags.advancedRow(group, index))
+                    RecordRow(row = row, testTag = DashboardTestTags.advancedRow(group, index), showDivider = index > 0)
                 }
             }
         }
@@ -124,8 +119,7 @@ private fun BreakdownGroup(
 private fun MonthlyGroup(months: List<MonthRecord>) {
     val group = DashboardTestTags.GROUP_MONTH
     val locale = currentLocale()
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        SectionTitle(stringResource(R.string.stats_advanced_monthly))
+    StatsGroup(title = stringResource(R.string.stats_advanced_monthly)) {
         ExpandableRows(group = group, total = months.size, collapsedCount = COLLAPSED_MONTHS) { visible ->
             months.take(visible).forEachIndexed { index, month ->
                 val label = monthLabel(month, locale)
@@ -137,6 +131,7 @@ private fun MonthlyGroup(months: List<MonthRecord>) {
                         value = stringResource(R.string.stats_no_value),
                         supporting = stringResource(R.string.stats_advanced_month_gap),
                         testTag = tag,
+                        showDivider = index > 0,
                     )
                 } else {
                     StatRow(
@@ -144,6 +139,7 @@ private fun MonthlyGroup(months: List<MonthRecord>) {
                         value = valueOf(record),
                         supporting = pluralStringResource(R.plurals.dashboard_match_count, record.total, record.total),
                         testTag = tag,
+                        showDivider = index > 0,
                     )
                 }
             }
@@ -159,7 +155,9 @@ private fun ExpandableRows(
     content: @Composable (visible: Int) -> Unit,
 ) {
     var expanded by rememberSaveable(group) { mutableStateOf(false) }
-    content(if (expanded) total else collapsedCount)
+    StatsCard {
+        content(if (expanded) total else collapsedCount)
+    }
     if (total > collapsedCount) {
         TextButton(
             onClick = { expanded = !expanded },
@@ -180,6 +178,7 @@ private fun ExpandableRows(
 private fun RecordRow(
     row: BreakdownRow,
     testTag: String,
+    showDivider: Boolean,
 ) {
     StatRow(
         label = row.label,
@@ -191,6 +190,7 @@ private fun RecordRow(
                 stringResource(R.string.stats_split_record, row.record.wins, row.record.losses)
             },
         testTag = testTag,
+        showDivider = showDivider,
     )
 }
 
@@ -212,7 +212,7 @@ private fun EmptyNote(
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = MIN_ROW_HEIGHT)
-                .padding(vertical = 12.dp)
+                .padding(horizontal = PicklelogSpacing.xs, vertical = PicklelogSpacing.md)
                 .testTag(testTag),
     )
 }
