@@ -7,7 +7,7 @@
     var ratio = "TALL";
     var theme = "DARK";
     var THEME_CLASSES = { LIGHT: "light", COURT: "court", SUNSET: "sunset" };
-    var TEXT_FIELDS = ["brand", "name", "meta", "opponents", "partner", "score", "location", "streak"];
+    var TEXT_FIELDS = ["brand", "name", "meta", "partner", "time", "opponents", "games", "location"];
 
     function byId(id) {
         return document.getElementById(id);
@@ -18,6 +18,33 @@
         var text = typeof value === "string" ? value.trim() : "";
         element.textContent = text;
         element.hidden = text.length === 0;
+    }
+
+    function clean(value) {
+        return typeof value === "string" ? value.trim() : "";
+    }
+
+    function setEntry(id, entry) {
+        var element = byId(id);
+        var values = entry && Array.isArray(entry.values) ? entry.values.map(clean).filter(Boolean) : [];
+        var container = element.querySelector(".values");
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
+        }
+        element.querySelector(".caption").textContent = entry ? clean(entry.caption) : "";
+        values.forEach(function (value) {
+            var line = document.createElement("span");
+            line.className = "value";
+            line.textContent = value;
+            container.appendChild(line);
+        });
+        element.hidden = values.length === 0;
+    }
+
+    function setLocation(value) {
+        var text = clean(value);
+        byId("location-text").textContent = text;
+        byId("location").hidden = text.length === 0;
     }
 
     function cssPixelsPerOutputPixel() {
@@ -56,14 +83,17 @@
         var overflowing = [];
         var rects = {};
         var texts = {};
-        TEXT_FIELDS.concat(["result"]).forEach(function (id) {
+        TEXT_FIELDS.forEach(function (id) {
             var element = byId(id);
             if (element.hidden) {
                 return;
             }
             var rect = designRect(element, scale);
             rects[id] = rect;
-            texts[id] = element.textContent;
+            var lines = element.querySelectorAll(".value");
+            texts[id] = lines.length > 0
+                ? Array.prototype.map.call(lines, function (line) { return line.textContent; }).join("\n")
+                : element.textContent;
             var outside = rect.left < -1 || rect.top < -1 || rect.right > DESIGN_WIDTH + 1 ||
                 rect.bottom > designHeight + 1;
             var widerThanBox = element.scrollWidth > element.clientWidth + 1 &&
@@ -84,7 +114,8 @@
             ratio: ratio,
             theme: theme,
             designHeight: designHeight,
-            photoShown: !byId("photo").hidden
+            photoShown: !byId("photo").hidden,
+            courtShown: getComputedStyle(byId("court")).display !== "none"
         };
     }
 
@@ -101,15 +132,12 @@
         setText("brand", data.brand);
         setText("name", data.displayName);
         setText("meta", data.meta);
-        setText("opponents", data.opponents);
-        setText("partner", data.partner);
-        setText("score", data.score);
-        setText("location", data.location);
-        setText("streak", data.streak);
-        byId("result-label").textContent = data.result;
-        byId("result-symbol").textContent = data.isWin ? "✓" : "✕";
-        card.classList.toggle("win", data.isWin === true);
-        card.classList.toggle("loss", data.isWin !== true);
+        setEntry("partner", data.partner);
+        setEntry("time", data.time);
+        setEntry("opponents", data.opponents);
+        setEntry("games", data.games);
+        setLocation(data.location);
+        byId("top-row").hidden = byId("partner").hidden && byId("time").hidden;
         if (typeof data.photo === "string" && data.photo.indexOf("data:image/") === 0) {
             photo.src = data.photo;
             photo.hidden = false;
@@ -120,7 +148,9 @@
             card.classList.add("no-photo");
         }
         var scale = fitToViewport();
-        var fonts = document.fonts ? document.fonts.ready : Promise.resolve();
+        var fonts = document.fonts
+            ? document.fonts.load('800 92px "Baloo 2"').then(function () { return document.fonts.ready; }).catch(function () {})
+            : Promise.resolve();
         Promise.all([fonts, decoded(photo)]).then(function () {
             scale = fitToViewport();
             document.body.getBoundingClientRect();
