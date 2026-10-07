@@ -48,3 +48,15 @@ fun durationLine(
         stringResource(R.string.duration_line, amount)
     }
 }
+
+@Composable
+fun durationShort(duration: Duration): String {
+    val totalMinutes = duration.inWholeMinutes
+    val hours = (totalMinutes / MINUTES_PER_HOUR).toInt()
+    val minutes = (totalMinutes % MINUTES_PER_HOUR).toInt()
+    return if (hours > 0) {
+        stringResource(R.string.duration_short_hours_minutes, hours, minutes)
+    } else {
+        stringResource(R.string.duration_short_minutes, minutes)
+    }
+}
