@@ -58,6 +58,7 @@ fun EraseDataSection(
             icon = R.drawable.ic_warning,
             label = stringResource(R.string.settings_erase_open),
             contentColor = MaterialTheme.colorScheme.error,
+            iconTint = MaterialTheme.colorScheme.error,
             modifier =
                 Modifier
                     .clickable(role = Role.Button) { step = EraseStep.ASK }
