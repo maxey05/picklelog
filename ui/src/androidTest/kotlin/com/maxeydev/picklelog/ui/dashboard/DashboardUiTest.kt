@@ -276,7 +276,7 @@ class DashboardUiTest {
             }
         }
 
-        compose.onNodeWithText("This is your longest streak ever.", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithText("Your longest streak ever", useUnmergedTree = true).assertIsDisplayed()
         compose.onAllNodesWithTag(DashboardTestTags.STATS_LONGEST_STREAK).assertCountEquals(0)
     }
 
@@ -318,7 +318,7 @@ class DashboardUiTest {
 
         compose.onNodeWithTag(DashboardTestTags.STATS_LOCKED_PREVIEW).assertIsDisplayed()
         val name = compose.onNodeWithTag(DashboardTestTags.STATS_LOCKED_PREVIEW_NAME, useUnmergedTree = true)
-        name.assert(hasText("Your record against Dave"))
+        name.assert(hasText("You vs Dave"))
         compose.onNodeWithText("3–0", substring = true, useUnmergedTree = true).assertDoesNotExist()
         compose.onNodeWithText("100%", substring = true, useUnmergedTree = true).assertDoesNotExist()
         compose.onNodeWithTag(DashboardTestTags.STATS_LOCKED_PREVIEW).performClick()
@@ -434,7 +434,7 @@ class DashboardUiTest {
 
     private fun SemanticsNodeInteraction.performScrollToAndAssertLocked() {
         performScrollTo()
-        assert(hasText("Locked · Pro", substring = true))
+        assert(hasText("Pro", substring = true))
     }
 
     @Test
