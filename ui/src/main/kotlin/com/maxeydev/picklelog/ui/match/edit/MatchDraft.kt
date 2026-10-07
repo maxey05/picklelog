@@ -201,7 +201,9 @@ data class MatchDraft(
 
     fun hasIncompleteGame(): Boolean = games.any { it.isIncomplete }
 
-    fun canSave(): Boolean = result != null && duplicateSlots().isEmpty() && !hasIncompleteGame()
+    fun canSaveIgnoringResult(): Boolean = duplicateSlots().isEmpty() && !hasIncompleteGame()
+
+    fun canSave(): Boolean = result != null && canSaveIgnoringResult()
 
     companion object {
         fun forNewMatch(
