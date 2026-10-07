@@ -1,14 +1,25 @@
 package com.maxeydev.picklelog.ui.dashboard
 
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -16,31 +27,51 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.maxeydev.picklelog.domain.stats.WinLoss
 import com.maxeydev.picklelog.domain.streak.StreakInsurance
 import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.theme.PicklelogSpacing
+import com.maxeydev.picklelog.ui.theme.PicklelogTextStyles
+import com.maxeydev.picklelog.ui.theme.PicklelogTheme
 
-private val LOCK_ICON_SIZE = 20.dp
-internal val MIN_ROW_HEIGHT = 48.dp
+private val ROW_ICON_SIZE = 24.dp
+private val PRO_ICON_SIZE = 20.dp
+private val ROW_DIVIDER_INSET = 48.dp
+private val PRO_ROW_HEIGHT = 56.dp
+private const val PERCENT_SCALE = 100f
+private val BAR_WIDTH = 96.dp
+private val BAR_HEIGHT = 8.dp
+private val PERCENT_MIN_WIDTH = 48.dp
+private const val STACKED_FONT_SCALE = 1.3f
+internal val MIN_ROW_HEIGHT = 64.dp
+private val STREAK_VALUE_STYLE = PicklelogTextStyles.hero.copy(fontSize = 24.sp, lineHeight = 28.sp)
 
 private val PRO_SECTIONS =
     listOf(
         R.string.stats_pro_head_to_head,
         R.string.stats_pro_partner,
         R.string.stats_pro_location,
-        R.string.stats_pro_paddle,
         R.string.stats_pro_monthly,
     )
 
@@ -56,7 +87,13 @@ fun ExpandedStatsScreen(
         modifier = modifier.testTag(DashboardTestTags.STATS_SCREEN),
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.stats_title)) },
+                title = {
+                    Text(
+                        text = stringResource(R.string.stats_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -75,8 +112,13 @@ fun ExpandedStatsScreen(
                         .padding(innerPadding)
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                        .padding(
+                            start = PicklelogSpacing.gutter,
+                            end = PicklelogSpacing.gutter,
+                            top = PicklelogSpacing.xs,
+                            bottom = PicklelogSpacing.xxl,
+                        ),
+                verticalArrangement = Arrangement.spacedBy(PicklelogSpacing.xl),
             ) {
                 FilterIndicator(filter = state.filter, opponentName = state.filteredOpponentName)
                 RecordSection(state)
@@ -97,9 +139,37 @@ fun ExpandedStatsScreen(
 internal fun SectionTitle(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.semantics { heading() },
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = PicklelogSpacing.xs).semantics { heading() },
     )
+}
+
+@Composable
+internal fun StatsCard(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        border = BorderStroke(1.dp, PicklelogTheme.colors.cardBorder),
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Column(content = content)
+    }
+}
+
+@Composable
+internal fun StatsGroup(
+    title: String,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(PicklelogSpacing.sm)) {
+        SectionTitle(title)
+        content()
+    }
 }
 
 @Composable
@@ -107,29 +177,59 @@ internal fun StatRow(
     label: String,
     value: String,
     testTag: String,
+    modifier: Modifier = Modifier,
     supporting: String? = null,
+    showDivider: Boolean = false,
+    @DrawableRes icon: Int? = null,
+    iconTint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    valueStyle: TextStyle = MaterialTheme.typography.titleMedium,
 ) {
-    Row(
+    Column(
         modifier =
-            Modifier
+            modifier
                 .fillMaxWidth()
-                .heightIn(min = MIN_ROW_HEIGHT)
                 .testTag(testTag)
                 .semantics(mergeDescendants = true) {},
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, style = MaterialTheme.typography.bodyLarge)
-            supporting?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+        if (showDivider) {
+            HorizontalDivider(
+                color = PicklelogTheme.colors.cardBorder,
+                modifier = Modifier.padding(start = PicklelogSpacing.lg),
+            )
+        }
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = MIN_ROW_HEIGHT)
+                    .padding(horizontal = PicklelogSpacing.lg, vertical = PicklelogSpacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(PicklelogSpacing.md),
+        ) {
+            if (icon != null) {
+                Icon(
+                    painter = painterResource(icon),
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(ROW_ICON_SIZE),
                 )
             }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                supporting?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Text(text = value, style = valueStyle)
         }
-        Text(text = value, style = MaterialTheme.typography.titleMedium)
     }
 }
 
@@ -137,25 +237,81 @@ internal fun StatRow(
 internal fun percentText(record: WinLoss): String =
     record.winPercent?.let { stringResource(R.string.stats_percent, it) } ?: stringResource(R.string.stats_no_value)
 
+private class RecordCell(
+    val value: String,
+    val label: String,
+    val testTag: String,
+    val isAccent: Boolean = false,
+)
+
 @Composable
 private fun RecordSection(state: DashboardUiState) {
     val overall = state.stats.overall
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        SectionTitle(stringResource(R.string.stats_record))
-        StatRow(
-            label = stringResource(R.string.stats_matches),
-            value = overall.total.toString(),
-            testTag = DashboardTestTags.STATS_MATCHES,
+    val cells =
+        listOf(
+            RecordCell(
+                value = overall.total.toString(),
+                label = stringResource(R.string.stats_matches),
+                testTag = DashboardTestTags.STATS_MATCHES,
+            ),
+            RecordCell(
+                value = stringResource(R.string.stats_split_record, overall.wins, overall.losses),
+                label = stringResource(R.string.stats_wins_losses),
+                testTag = DashboardTestTags.STATS_RECORD,
+            ),
+            RecordCell(
+                value = percentText(overall),
+                label = stringResource(R.string.stats_win_rate),
+                testTag = DashboardTestTags.STATS_WIN_RATE,
+                isAccent = true,
+            ),
         )
-        StatRow(
-            label = stringResource(R.string.stats_wins_losses),
-            value = stringResource(R.string.stats_split_record, overall.wins, overall.losses),
-            testTag = DashboardTestTags.STATS_RECORD,
+    val isStacked = LocalDensity.current.fontScale > STACKED_FONT_SCALE
+    StatsGroup(title = stringResource(R.string.stats_record)) {
+        StatsCard {
+            if (isStacked) {
+                cells.forEachIndexed { index, cell ->
+                    if (index > 0) {
+                        HorizontalDivider(color = PicklelogTheme.colors.cardBorder)
+                    }
+                    RecordCellView(cell = cell, modifier = Modifier.fillMaxWidth())
+                }
+            } else {
+                Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+                    cells.forEachIndexed { index, cell ->
+                        if (index > 0) {
+                            VerticalDivider(color = PicklelogTheme.colors.cardBorder)
+                        }
+                        RecordCellView(cell = cell, modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecordCellView(
+    cell: RecordCell,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier =
+            modifier
+                .testTag(cell.testTag)
+                .semantics(mergeDescendants = true) {}
+                .padding(PicklelogSpacing.lg),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text = cell.value,
+            style = PicklelogTextStyles.hero,
+            color = if (cell.isAccent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
         )
-        StatRow(
-            label = stringResource(R.string.stats_win_rate),
-            value = percentText(overall),
-            testTag = DashboardTestTags.STATS_WIN_RATE,
+        Text(
+            text = cell.label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -171,64 +327,71 @@ private fun weeksText(weeks: Int): String =
 @Composable
 private fun StreakSection(state: DashboardUiState) {
     val streak = state.streak
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        SectionTitle(stringResource(R.string.stats_streaks))
-        if (state.isFiltered) {
-            Text(
-                text = stringResource(R.string.stats_streak_scope_note),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        if (streak.isCurrentTheLongest) {
-            StatRow(
-                label = stringResource(R.string.stats_current_streak),
-                value = weeksText(streak.current),
-                supporting = stringResource(R.string.stats_current_is_longest),
-                testTag = DashboardTestTags.STATS_CURRENT_IS_LONGEST,
-            )
-        } else {
-            StatRow(
-                label = stringResource(R.string.stats_current_streak),
-                value = weeksText(streak.current),
-                testTag = DashboardTestTags.STATS_CURRENT_STREAK,
-            )
-            StatRow(
-                label = stringResource(R.string.stats_longest_streak),
-                value = weeksText(streak.longest),
-                testTag = DashboardTestTags.STATS_LONGEST_STREAK,
-            )
-        }
-        if (state.isPro) {
-            StatRow(
-                label = stringResource(R.string.stats_skips_label),
-                value =
-                    if (state.skipsHeld > 0) {
-                        pluralStringResource(R.plurals.stats_skips_held, state.skipsHeld, state.skipsHeld)
-                    } else {
-                        stringResource(R.string.stats_skips_none)
-                    },
-                supporting = stringResource(R.string.stats_skips_explainer, StreakInsurance.MAX_HELD),
-                testTag = DashboardTestTags.STATS_SKIPS_HELD,
-            )
+    StatsGroup(title = stringResource(R.string.stats_streaks)) {
+        StatsCard {
+            if (streak.isCurrentTheLongest) {
+                StatRow(
+                    label = stringResource(R.string.stats_current_streak),
+                    value = weeksText(streak.current),
+                    supporting = stringResource(R.string.stats_current_is_longest),
+                    testTag = DashboardTestTags.STATS_CURRENT_IS_LONGEST,
+                    icon = R.drawable.ic_flame,
+                    iconTint = PicklelogTheme.colors.streakFlame,
+                    valueStyle = STREAK_VALUE_STYLE,
+                )
+            } else {
+                StatRow(
+                    label = stringResource(R.string.stats_current_streak),
+                    value = weeksText(streak.current),
+                    testTag = DashboardTestTags.STATS_CURRENT_STREAK,
+                    icon = R.drawable.ic_flame,
+                    iconTint = PicklelogTheme.colors.streakFlame,
+                    valueStyle = STREAK_VALUE_STYLE,
+                )
+                StatRow(
+                    label = stringResource(R.string.stats_longest_streak),
+                    value = weeksText(streak.longest),
+                    testTag = DashboardTestTags.STATS_LONGEST_STREAK,
+                    showDivider = true,
+                    icon = R.drawable.ic_trophy,
+                    valueStyle = STREAK_VALUE_STYLE,
+                )
+            }
+            if (state.isPro) {
+                StatRow(
+                    label = stringResource(R.string.stats_skips_label),
+                    value =
+                        if (state.skipsHeld > 0) {
+                            pluralStringResource(R.plurals.stats_skips_held, state.skipsHeld, state.skipsHeld)
+                        } else {
+                            stringResource(R.string.stats_skips_none)
+                        },
+                    supporting = stringResource(R.string.stats_skips_explainer, StreakInsurance.MAX_HELD),
+                    testTag = DashboardTestTags.STATS_SKIPS_HELD,
+                    showDivider = true,
+                    icon = R.drawable.ic_shield,
+                )
+            }
         }
     }
 }
 
 @Composable
 private fun FormatSection(state: DashboardUiState) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        SectionTitle(stringResource(R.string.stats_by_format))
-        SplitRow(
-            label = stringResource(R.string.format_singles),
-            record = state.stats.singles,
-            testTag = DashboardTestTags.STATS_SINGLES,
-        )
-        SplitRow(
-            label = stringResource(R.string.format_doubles),
-            record = state.stats.doubles,
-            testTag = DashboardTestTags.STATS_DOUBLES,
-        )
+    StatsGroup(title = stringResource(R.string.stats_by_format)) {
+        StatsCard {
+            SplitRow(
+                label = stringResource(R.string.format_singles),
+                record = state.stats.singles,
+                testTag = DashboardTestTags.STATS_SINGLES,
+            )
+            SplitRow(
+                label = stringResource(R.string.format_doubles),
+                record = state.stats.doubles,
+                testTag = DashboardTestTags.STATS_DOUBLES,
+                showDivider = true,
+            )
+        }
     }
 }
 
@@ -237,52 +400,127 @@ private fun SplitRow(
     label: String,
     record: WinLoss,
     testTag: String,
+    showDivider: Boolean = false,
 ) {
-    StatRow(
-        label = label,
-        value = percentText(record),
-        supporting =
-            if (record.hasMatches) {
-                stringResource(R.string.stats_split_record, record.wins, record.losses)
-            } else {
-                stringResource(R.string.stats_split_empty)
-            },
-        testTag = testTag,
-    )
+    val fraction = (record.winPercent ?: 0) / PERCENT_SCALE
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .testTag(testTag)
+                .semantics(mergeDescendants = true) {},
+    ) {
+        if (showDivider) {
+            HorizontalDivider(
+                color = PicklelogTheme.colors.cardBorder,
+                modifier = Modifier.padding(start = PicklelogSpacing.lg),
+            )
+        }
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = MIN_ROW_HEIGHT)
+                    .padding(horizontal = PicklelogSpacing.lg, vertical = PicklelogSpacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(PicklelogSpacing.md),
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text =
+                        if (record.hasMatches) {
+                            stringResource(R.string.stats_split_record, record.wins, record.losses)
+                        } else {
+                            stringResource(R.string.stats_split_empty)
+                        },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Box(
+                modifier =
+                    Modifier
+                        .width(BAR_WIDTH)
+                        .height(BAR_HEIGHT)
+                        .clip(MaterialTheme.shapes.extraSmall)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+            ) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(fraction)
+                            .background(MaterialTheme.colorScheme.primary),
+                )
+            }
+            Text(
+                text = percentText(record),
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.End,
+                modifier = Modifier.widthIn(min = PERCENT_MIN_WIDTH),
+            )
+        }
+    }
 }
 
 @Composable
 private fun LockedProSection() {
-    Column(
+    StatsGroup(
+        title = stringResource(R.string.stats_pro_title),
         modifier = Modifier.testTag(DashboardTestTags.STATS_PRO_SECTION),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        HorizontalDivider()
-        SectionTitle(stringResource(R.string.stats_pro_title))
-        PRO_SECTIONS.forEachIndexed { index, title ->
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = MIN_ROW_HEIGHT)
-                        .testTag(DashboardTestTags.proRow(index))
-                        .semantics(mergeDescendants = true) {},
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_lock),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(LOCK_ICON_SIZE),
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = stringResource(title), style = MaterialTheme.typography.bodyLarge)
-                    Text(
-                        text = stringResource(R.string.stats_pro_locked),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+        StatsCard {
+            PRO_SECTIONS.forEachIndexed { index, title ->
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .testTag(DashboardTestTags.proRow(index))
+                            .semantics(mergeDescendants = true) {},
+                ) {
+                    if (index > 0) {
+                        HorizontalDivider(
+                            color = PicklelogTheme.colors.cardBorder,
+                            modifier = Modifier.padding(start = ROW_DIVIDER_INSET),
+                        )
+                    }
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = PRO_ROW_HEIGHT)
+                                .padding(horizontal = PicklelogSpacing.lg, vertical = PicklelogSpacing.sm),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(PicklelogSpacing.md),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_lock),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(PRO_ICON_SIZE),
+                        )
+                        Text(
+                            text = stringResource(title),
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        ) {
+                            Text(
+                                text = stringResource(R.string.stats_pro_tag),
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.padding(horizontal = PicklelogSpacing.sm, vertical = 2.dp),
+                            )
+                        }
+                    }
                 }
             }
         }
