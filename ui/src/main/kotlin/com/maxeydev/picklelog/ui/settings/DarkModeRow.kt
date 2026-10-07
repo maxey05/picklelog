@@ -15,11 +15,13 @@ fun DarkModeRow(
     darkTheme: Boolean?,
     onDarkThemeChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    showDivider: Boolean = false,
 ) {
     val checked = darkTheme ?: isSystemInDarkTheme()
     SettingsRow(
         icon = R.drawable.ic_dark_mode,
         label = stringResource(R.string.settings_dark_mode_label),
+        showDivider = showDivider,
         modifier =
             modifier
                 .toggleable(value = checked, role = Role.Switch, onValueChange = onDarkThemeChanged)
