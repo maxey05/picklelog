@@ -1,7 +1,6 @@
 package com.maxeydev.picklelog.ui.paywall
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -99,21 +98,6 @@ fun PaywallScreen(
             ) {
                 PlanTable()
                 FreeUsage(savedMatches = state.savedMatches)
-                state.message?.let { message ->
-                    Text(
-                        text = stringResource(message.text),
-                        color =
-                            if (message == StoreMessage.UNLOCKED) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                        modifier =
-                            Modifier
-                                .testTag(PaywallTestTags.STORE_MESSAGE)
-                                .semantics { liveRegion = LiveRegionMode.Polite },
-                    )
-                }
             }
         }
     }
@@ -147,10 +131,11 @@ private fun ProHeader(onClose: () -> Unit) {
                             .background(PicklelogTheme.colors.headerPill),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Image(
-                        painter = painterResource(R.drawable.illustration_mascot),
+                    Icon(
+                        painter = painterResource(R.drawable.ic_crown),
                         contentDescription = null,
-                        modifier = Modifier.size(60.dp),
+                        tint = PicklelogTheme.colors.onHeader,
+                        modifier = Modifier.size(36.dp),
                     )
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -195,7 +180,7 @@ private fun planRows(): List<PlanRow> {
 private fun PlanTable() {
     val rows = planRows()
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceContainerLowest,
         border = BorderStroke(1.dp, PicklelogTheme.colors.cardBorder),
         modifier = Modifier.fillMaxWidth(),
@@ -363,6 +348,25 @@ private fun PurchaseActions(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
+        state.message?.let { message ->
+            Text(
+                text = stringResource(message.text),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                color =
+                    if (message == StoreMessage.UNLOCKED) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
+                        .testTag(PaywallTestTags.STORE_MESSAGE)
+                        .semantics { liveRegion = LiveRegionMode.Polite },
+            )
+        }
         Button(
             onClick = onBuy,
             enabled = state.canBuy,
