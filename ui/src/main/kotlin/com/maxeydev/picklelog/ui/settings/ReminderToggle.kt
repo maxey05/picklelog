@@ -42,6 +42,7 @@ fun ReminderToggle(
     onEnable: () -> Unit,
     onDisable: () -> Unit,
     modifier: Modifier = Modifier,
+    showDivider: Boolean = false,
 ) {
     val context = LocalContext.current
     var allowed by remember { mutableStateOf(notificationsAllowed(context)) }
@@ -49,12 +50,18 @@ fun ReminderToggle(
     Column(modifier = modifier.fillMaxWidth()) {
         if (StreakNotification.requiresRuntimePermission()) {
             val (permission, prompt) = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS, onEnable)
-            ReminderSwitchRow(checked = enabled && allowed, onTurnOn = permission::request, onTurnOff = onDisable)
+            ReminderSwitchRow(
+                checked = enabled && allowed,
+                showDivider = showDivider,
+                onTurnOn = permission::request,
+                onTurnOff = onDisable,
+            )
             RuntimePermissionDialogs(prompt = prompt, permission = permission)
         } else {
             var showSettings by rememberSaveable { mutableStateOf(false) }
             ReminderSwitchRow(
                 checked = enabled && allowed,
+                showDivider = showDivider,
                 onTurnOn = { if (allowed) onEnable() else showSettings = true },
                 onTurnOff = onDisable,
             )
@@ -79,6 +86,7 @@ fun ReminderToggle(
 @Composable
 private fun ReminderSwitchRow(
     checked: Boolean,
+    showDivider: Boolean,
     onTurnOn: () -> Unit,
     onTurnOff: () -> Unit,
 ) {
@@ -86,6 +94,7 @@ private fun ReminderSwitchRow(
         icon = R.drawable.ic_notifications,
         label = stringResource(R.string.settings_reminder_label),
         supporting = if (checked) stringResource(R.string.settings_reminder_supporting) else null,
+        showDivider = showDivider,
         modifier =
             Modifier
                 .toggleable(
