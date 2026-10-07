@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="header_info_open">What\'s this?</string>
+    <string name="header_info_title">What your header shows</string>
+    <string name="header_info_subtitle">These numbers update every time you log a match.</string>
+    <string name="header_info_win_rate_title">Win rate</string>
+    <string name="header_info_win_rate_body">The share of your matches you won.</string>
+    <string name="header_info_record_title">Record</string>
+    <string name="header_info_record_body">Total wins and losses.</string>
+    <string name="header_info_recent_title">Recent results</string>
+    <string name="header_info_recent_body">Your last 5 matches, oldest on the left. Filled is a win, hollow is a loss.</string>
+    <string name="header_info_streak_title">Streak</string>
+    <string name="header_info_streak_body">Weeks in a row with at least one match. It always counts every match, even when filters are on.</string>
+    <string name="header_info_filters">When filters are on, win rate and record show only the filtered matches.</string>
+    <string name="header_info_dismiss">Got it</string>
+</resources>
