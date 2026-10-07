@@ -73,6 +73,37 @@ class MatchDetailViewModelTest {
         }
 
     @Test
+    fun `the match number is its position in date order`() =
+        runTest {
+            val earlier = match.copy(id = Uuid.random(), date = AppDate.parse("2026-09-01"))
+            val sameDayLater =
+                match.copy(
+                    id = Uuid.random(),
+                    createdAt = AppInstant.fromEpochMilliseconds(2_000),
+                )
+            val later = match.copy(id = Uuid.random(), date = AppDate.parse("2026-10-01"))
+            matches = FakeMatchRepository(listOf(later, match, earlier, sameDayLater))
+
+            assertEquals(2, subscribedViewModel(match.id).uiState.value.matchNumber)
+            assertEquals(1, subscribedViewModel(earlier.id).uiState.value.matchNumber)
+            assertEquals(3, subscribedViewModel(sameDayLater.id).uiState.value.matchNumber)
+            assertEquals(4, subscribedViewModel(later.id).uiState.value.matchNumber)
+        }
+
+    @Test
+    fun `deleting an earlier match renumbers the later ones`() =
+        runTest {
+            val earlier = match.copy(id = Uuid.random(), date = AppDate.parse("2026-09-01"))
+            matches = FakeMatchRepository(listOf(match, earlier))
+            val viewModel = subscribedViewModel(match.id)
+            assertEquals(2, viewModel.uiState.value.matchNumber)
+
+            matches.deleteMatch(earlier.id)
+
+            assertEquals(1, viewModel.uiState.value.matchNumber)
+        }
+
+    @Test
     fun `requesting delete asks for confirmation and deletes nothing yet`() =
         runTest {
             val viewModel = subscribedViewModel()
