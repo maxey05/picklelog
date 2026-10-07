@@ -5,20 +5,21 @@ package com.maxeydev.picklelog.ui.share
 import androidx.lifecycle.SavedStateHandle
 import com.maxeydev.picklelog.domain.datetime.AppDate
 import com.maxeydev.picklelog.domain.datetime.AppInstant
+import com.maxeydev.picklelog.domain.match.GameScore
 import com.maxeydev.picklelog.domain.match.Match
 import com.maxeydev.picklelog.domain.match.MatchFormat
 import com.maxeydev.picklelog.domain.match.MatchResult
+import com.maxeydev.picklelog.domain.person.Person
 import com.maxeydev.picklelog.domain.photo.PhotoRef
+import com.maxeydev.picklelog.domain.share.CardDetail
 import com.maxeydev.picklelog.domain.share.CardFormat
 import com.maxeydev.picklelog.domain.share.CardLayout
 import com.maxeydev.picklelog.domain.share.CardRatio
 import com.maxeydev.picklelog.domain.share.CardTheme
-import com.maxeydev.picklelog.domain.streak.InsuredStreakEngine
 import com.maxeydev.picklelog.ui.fakes.FakeCardFormatStore
 import com.maxeydev.picklelog.ui.fakes.FakeCardRenderer
 import com.maxeydev.picklelog.ui.fakes.FakeMatchRepository
 import com.maxeydev.picklelog.ui.fakes.FakeProfileRepository
-import com.maxeydev.picklelog.ui.fakes.FixedClock
 import com.maxeydev.picklelog.ui.navigation.MATCH_ID_ARGUMENT
 import com.maxeydev.picklelog.ui.paywall.UpgradeReason
 import kotlinx.coroutines.Dispatchers
@@ -26,7 +27,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
-import kotlinx.datetime.TimeZone
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -55,6 +55,10 @@ class SharePreviewViewModelTest {
     private fun match(
         date: String,
         photos: List<PhotoRef> = emptyList(),
+        opponents: List<Person> = emptyList(),
+        partner: Person? = null,
+        games: List<GameScore> = emptyList(),
+        location: String? = null,
     ): Match =
         Match(
             id = Uuid.random(),
@@ -64,20 +68,34 @@ class SharePreviewViewModelTest {
             createdAt = AppInstant.fromEpochMilliseconds(0),
             updatedAt = AppInstant.fromEpochMilliseconds(0),
             photos = photos,
+            opponents = opponents,
+            partner = partner,
+            games = games,
+            location = location,
+        )
+
+    private fun person(name: String): Person = Person(Uuid.random(), name, AppInstant.fromEpochMilliseconds(0))
+
+    private fun fullMatch(): Match =
+        match(
+            "2026-03-02",
+            opponents = listOf(person("Ana"), person("Ben")),
+            partner = person("Cy"),
+            games = listOf(GameScore(1, 11, 9)),
+            location = "Ayala Triangle",
         )
 
     private fun viewModel(
         id: Uuid,
         matches: FakeMatchRepository,
         isPro: Boolean = false,
-        proSince: AppInstant? = null,
+        savedState: Map<String, Any?> = emptyMap(),
     ): SharePreviewViewModel =
         SharePreviewViewModel(
-            savedStateHandle = SavedStateHandle(mapOf(MATCH_ID_ARGUMENT to id.toString())),
+            savedStateHandle = SavedStateHandle(mapOf(MATCH_ID_ARGUMENT to id.toString()) + savedState),
             matchRepository = matches,
-            profileRepository = FakeProfileRepository(displayName = "Matty", isPro = isPro, proSince = proSince),
+            profileRepository = FakeProfileRepository(displayName = "Matty", isPro = isPro),
             formatStore = formats,
-            streakEngine = InsuredStreakEngine(FixedClock(AppInstant.parse("2026-03-04T12:00:00Z"))) { TimeZone.UTC },
             photoFile = { File("/nonexistent", it) },
             renderer = renderer,
             labels = FakeCardLabels(),
@@ -85,15 +103,17 @@ class SharePreviewViewModelTest {
         )
 
     @Test
-    fun `the card carries the whole history streak even for an older match`() {
-        val shared = match("2026-02-17")
-        val matches = FakeMatchRepository(listOf(shared, match("2026-02-24"), match("2026-03-02")))
+    fun `the card carries the match details and the display name`() {
+        val shared = fullMatch()
 
-        viewModel(shared.id, matches)
+        viewModel(shared.id, FakeMatchRepository(listOf(shared)))
 
         val data = renderer.rendered.single()
-        assertEquals("3-week streak", data.streak)
         assertEquals("Matty", data.displayName)
+        assertEquals(listOf("Ana", "Ben"), data.opponents?.values)
+        assertEquals(listOf("Cy"), data.partner?.values)
+        assertEquals(listOf("11–9"), data.games?.values)
+        assertEquals("Ayala Triangle", data.location)
     }
 
     @Test
@@ -258,15 +278,95 @@ class SharePreviewViewModelTest {
     }
 
     @Test
-    fun `a pro card carries the insured streak and a free card carries the plain one`() {
-        val shared = match("2026-02-17")
-        val history = listOf(match("2026-02-03"), match("2026-02-10"), shared)
-        val proSince = AppInstant.parse("2026-02-01T00:00:00Z")
+    fun `the details a match has are offered to hide and none start hidden`() {
+        val shared = fullMatch()
 
-        viewModel(shared.id, FakeMatchRepository(history), isPro = false)
-        viewModel(shared.id, FakeMatchRepository(history), isPro = true, proSince = proSince)
+        val state = viewModel(shared.id, FakeMatchRepository(listOf(shared))).uiState.value
 
-        assertNull(renderer.rendered[0].streak)
-        assertEquals("3-week streak", renderer.rendered[1].streak)
+        assertEquals(CardDetail.entries.toSet(), state.availableDetails)
+        assertTrue(state.hiddenDetails.isEmpty())
+    }
+
+    @Test
+    fun `a match with no extras offers nothing to hide`() {
+        val shared = match("2026-03-02")
+
+        val state = viewModel(shared.id, FakeMatchRepository(listOf(shared))).uiState.value
+
+        assertTrue(state.availableDetails.isEmpty())
+    }
+
+    @Test
+    fun `hiding a detail re-renders without it and showing it brings it back`() {
+        val shared = fullMatch()
+        val viewModel = viewModel(shared.id, FakeMatchRepository(listOf(shared)))
+
+        viewModel.setDetailShown(CardDetail.OPPONENTS, isShown = false)
+
+        assertEquals(2, renderer.rendered.size)
+        assertNull(renderer.rendered.last().opponents)
+        assertEquals(listOf("Cy"), renderer.rendered.last().partner?.values)
+        assertEquals(setOf(CardDetail.OPPONENTS), viewModel.uiState.value.hiddenDetails)
+
+        viewModel.setDetailShown(CardDetail.OPPONENTS, isShown = true)
+
+        assertEquals(3, renderer.rendered.size)
+        assertEquals(listOf("Ana", "Ben"), renderer.rendered.last().opponents?.values)
+        assertTrue(viewModel.uiState.value.hiddenDetails.isEmpty())
+    }
+
+    @Test
+    fun `setting a detail to what it already is does not re-render`() {
+        val shared = fullMatch()
+        val viewModel = viewModel(shared.id, FakeMatchRepository(listOf(shared)))
+
+        viewModel.setDetailShown(CardDetail.LOCATION, isShown = true)
+
+        assertEquals(1, renderer.rendered.size)
+    }
+
+    @Test
+    fun `hidden details survive a rebuilt view model through saved state`() {
+        val shared = fullMatch()
+        val matches = FakeMatchRepository(listOf(shared))
+        val handle = SavedStateHandle(mapOf(MATCH_ID_ARGUMENT to shared.id.toString()))
+        val first =
+            SharePreviewViewModel(
+                savedStateHandle = handle,
+                matchRepository = matches,
+                profileRepository = FakeProfileRepository(displayName = "Matty", isPro = false),
+                formatStore = formats,
+                photoFile = { File("/nonexistent", it) },
+                renderer = renderer,
+                labels = FakeCardLabels(),
+                ioDispatcher = Dispatchers.Main,
+            )
+        first.setDetailShown(CardDetail.LOCATION, isShown = false)
+
+        val restored =
+            SharePreviewViewModel(
+                savedStateHandle = handle,
+                matchRepository = matches,
+                profileRepository = FakeProfileRepository(displayName = "Matty", isPro = false),
+                formatStore = formats,
+                photoFile = { File("/nonexistent", it) },
+                renderer = renderer,
+                labels = FakeCardLabels(),
+                ioDispatcher = Dispatchers.Main,
+            )
+
+        assertEquals(setOf(CardDetail.LOCATION), restored.uiState.value.hiddenDetails)
+        assertNull(renderer.rendered.last().location)
+    }
+
+    @Test
+    fun `a retry keeps the hidden details`() {
+        val shared = fullMatch()
+        val viewModel = viewModel(shared.id, FakeMatchRepository(listOf(shared)))
+        viewModel.setDetailShown(CardDetail.GAME_SCORES, isShown = false)
+
+        viewModel.retry()
+
+        assertNull(renderer.rendered.last().games)
     }
 }
