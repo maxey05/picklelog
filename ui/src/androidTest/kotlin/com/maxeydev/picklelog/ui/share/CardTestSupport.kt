@@ -14,6 +14,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
+import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.random.Random
 
@@ -52,10 +53,9 @@ internal fun photoDataUri(
 internal fun sampleCard(
     brand: String = "Picklelog",
     displayName: String = "Matty",
-    opponents: String? = "vs Ana & Ben",
+    opponents: List<String> = listOf("Ana", "Ben"),
     location: String? = "Ayala Triangle Gardens",
     photo: String? = null,
-    isWin: Boolean = true,
     ratio: CardRatio = CardRatio.TALL,
     theme: CardTheme = CardTheme.DARK,
 ): CardData =
@@ -63,13 +63,11 @@ internal fun sampleCard(
         brand = brand,
         displayName = displayName,
         meta = "Doubles · Sep 20, 2026",
-        result = if (isWin) "Win" else "Loss",
-        isWin = isWin,
-        opponents = opponents,
-        partner = "with Cy",
-        score = "11–9 · 8–11 · 11–7",
+        partner = CardEntry("With", listOf("Cy")),
+        time = CardEntry("Time", listOf("1h 16m")),
+        opponents = opponents.takeIf { it.isNotEmpty() }?.let { CardEntry("Against", it) },
+        games = CardEntry("Games", listOf("11–9", "8–11", "11–7")),
         location = location,
-        streak = "3-week streak",
         photo = photo,
         ratio = ratio,
         theme = theme,
@@ -106,4 +104,30 @@ internal fun saveForReview(
 ) {
     val directory = goldenDirectory().apply { mkdirs() }
     File(directory, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+}
+
+internal fun countInkWithin(
+    bitmap: Bitmap,
+    rect: JSONObject,
+    background: Int,
+    minimumDistance: Int = 150,
+): Int {
+    val left = rect.getDouble("left").toInt().coerceAtLeast(0)
+    val right = rect.getDouble("right").toInt().coerceAtMost(bitmap.width - 1)
+    val top = rect.getDouble("top").toInt().coerceAtLeast(0)
+    val bottom = rect.getDouble("bottom").toInt().coerceAtMost(bitmap.height - 1)
+    var ink = 0
+    for (y in top..bottom step 2) {
+        for (x in left..right step 2) {
+            val pixel = bitmap.getPixel(x, y)
+            val distance =
+                abs(Color.red(pixel) - Color.red(background)) +
+                    abs(Color.green(pixel) - Color.green(background)) +
+                    abs(Color.blue(pixel) - Color.blue(background))
+            if (distance >= minimumDistance) {
+                ink++
+            }
+        }
+    }
+    return ink
 }
