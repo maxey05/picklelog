@@ -28,8 +28,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.theme.PicklelogSpacing
 
-private val ACTION_MIN_HEIGHT = 56.dp
+private val ACTION_MIN_HEIGHT = 48.dp
+private val EMPTY_IMAGE_SIZE = 160.dp
 private val NO_RESULTS_ICON_CIRCLE = 96.dp
 private val NO_RESULTS_ICON_SIZE = 48.dp
 private val ACTION_ICON_SIZE = 20.dp
@@ -45,17 +47,22 @@ fun MatchListEmptyState(
             modifier =
                 Modifier
                     .verticalScroll(rememberScrollState())
-                    .padding(24.dp)
+                    .padding(horizontal = PicklelogSpacing.xxl, vertical = PicklelogSpacing.xl)
                     .testTag(MatchListTestTags.EMPTY_STATE),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(PicklelogSpacing.lg),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(EMPTY_IMAGE_SIZE)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.shapes.large),
+            )
             Text(
                 text = stringResource(R.string.list_empty_title),
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.semantics { heading() },
+                modifier = Modifier.padding(top = PicklelogSpacing.sm).semantics { heading() },
             )
             Text(
                 text = stringResource(R.string.list_empty_body),
@@ -65,7 +72,7 @@ fun MatchListEmptyState(
             )
             Button(
                 onClick = onNewMatch,
-                shape = MaterialTheme.shapes.large,
+                shape = CircleShape,
                 modifier = Modifier.heightIn(min = ACTION_MIN_HEIGHT).testTag(MatchListTestTags.EMPTY_LOG_MATCH),
             ) {
                 Icon(
@@ -76,7 +83,7 @@ fun MatchListEmptyState(
                 Text(
                     text = stringResource(R.string.list_empty_action),
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(start = 8.dp),
+                    modifier = Modifier.padding(start = PicklelogSpacing.sm),
                 )
             }
         }
