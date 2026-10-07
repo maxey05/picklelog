@@ -4,12 +4,13 @@ package com.maxeydev.picklelog.ui.share
 
 import com.maxeydev.picklelog.domain.datetime.AppDate
 import com.maxeydev.picklelog.domain.datetime.AppInstant
+import com.maxeydev.picklelog.domain.datetime.AppTime
 import com.maxeydev.picklelog.domain.match.GameScore
 import com.maxeydev.picklelog.domain.match.Match
 import com.maxeydev.picklelog.domain.match.MatchFormat
 import com.maxeydev.picklelog.domain.match.MatchResult
 import com.maxeydev.picklelog.domain.person.Person
-import com.maxeydev.picklelog.domain.streak.StreakResult
+import com.maxeydev.picklelog.domain.share.CardDetail
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -28,6 +29,8 @@ class CardDataTest {
         partner: Person? = null,
         games: List<GameScore> = emptyList(),
         location: String? = null,
+        startTime: AppTime? = null,
+        endTime: AppTime? = null,
     ): Match =
         Match(
             id = Uuid.random(),
@@ -40,10 +43,12 @@ class CardDataTest {
             partner = partner,
             games = games,
             location = location,
+            startTime = startTime,
+            endTime = endTime,
         )
 
     @Test
-    fun `a doubles card names both opponents the partner the score and the whole history streak`() {
+    fun `a doubles card carries the partner the time the opponents the games and the location`() {
         val data =
             buildCardData(
                 match =
@@ -52,27 +57,96 @@ class CardDataTest {
                         partner = person("Cy"),
                         games = listOf(GameScore(2, 8, 11), GameScore(1, 11, 9)),
                         location = "  Ayala Triangle ",
+                        startTime = AppTime.parse("21:46"),
+                        endTime = AppTime.parse("23:02"),
                     ),
                 displayName = " Matty ",
-                streak = StreakResult(current = 3, longest = 5),
                 photoDataUri = null,
                 labels = FakeCardLabels(),
             )
 
         assertEquals("Matty", data.displayName)
-        assertEquals("vs Ana & Ben", data.opponents)
-        assertEquals("with Cy", data.partner)
-        assertEquals("11–9 · 8–11", data.score)
+        assertEquals(CardEntry("Against", listOf("Ana", "Ben")), data.opponents)
+        assertEquals(CardEntry("With", listOf("Cy")), data.partner)
+        assertEquals(CardEntry("Games", listOf("11–9", "8–11")), data.games)
+        assertEquals(CardEntry("Time", listOf("76m")), data.time)
         assertEquals("Ayala Triangle", data.location)
-        assertEquals("3-week streak", data.streak)
-        assertEquals("Win", data.result)
-        assertTrue(data.isWin)
+    }
+
+    @Test
+    fun `hidden details are left off the card and the rest stay`() {
+        val data =
+            buildCardData(
+                match =
+                    match(
+                        opponents = listOf(person("Ana")),
+                        partner = person("Cy"),
+                        games = listOf(GameScore(1, 11, 9)),
+                        location = "Ayala Triangle",
+                        startTime = AppTime.parse("21:46"),
+                        endTime = AppTime.parse("23:02"),
+                    ),
+                displayName = "Matty",
+                photoDataUri = null,
+                labels = FakeCardLabels(),
+                hidden = setOf(CardDetail.GAME_SCORES, CardDetail.OPPONENTS, CardDetail.PARTNER, CardDetail.LOCATION),
+            )
+
+        assertNull(data.games)
+        assertNull(data.opponents)
+        assertNull(data.partner)
+        assertNull(data.location)
+        assertEquals(CardEntry("Time", listOf("76m")), data.time)
+    }
+
+    @Test
+    fun `hiding one detail leaves the others untouched`() {
+        val full =
+            match(
+                opponents = listOf(person("Ana")),
+                partner = person("Cy"),
+                games = listOf(GameScore(1, 11, 9)),
+                location = "Ayala Triangle",
+            )
+
+        val data =
+            buildCardData(full, "Matty", null, FakeCardLabels(), hidden = setOf(CardDetail.LOCATION))
+
+        assertNull(data.location)
+        assertEquals(CardEntry("Against", listOf("Ana")), data.opponents)
+        assertEquals(CardEntry("With", listOf("Cy")), data.partner)
+        assertEquals(CardEntry("Games", listOf("11–9")), data.games)
+    }
+
+    @Test
+    fun `the card never says whether the match was won`() {
+        val win = buildCardData(match(result = MatchResult.WIN), "Matty", null, FakeCardLabels())
+        val loss = buildCardData(match(result = MatchResult.LOSS), "Matty", null, FakeCardLabels())
+
+        assertEquals(win, loss)
+    }
+
+    @Test
+    fun `the details a match can show follow what it has`() {
+        val bare = match(format = MatchFormat.SINGLES)
+        val full =
+            match(
+                opponents = listOf(person("Ana")),
+                partner = person("Cy"),
+                games = listOf(GameScore(1, 11, 9)),
+                location = "Ayala Triangle",
+            )
+        val blankLocation = match(location = "   ")
+
+        assertEquals(emptySet<CardDetail>(), bare.cardDetails())
+        assertEquals(CardDetail.entries.toSet(), full.cardDetails())
+        assertFalse(CardDetail.LOCATION in blankLocation.cardDetails())
     }
 
     @Test
     fun `the wordmark is on the card unless it is switched off`() {
-        val shown = buildCardData(match(), "Matty", StreakResult.NONE, null, FakeCardLabels())
-        val hidden = buildCardData(match(), "Matty", StreakResult.NONE, null, FakeCardLabels(), showWordmark = false)
+        val shown = buildCardData(match(), "Matty", null, FakeCardLabels())
+        val hidden = buildCardData(match(), "Matty", null, FakeCardLabels(), showWordmark = false)
 
         assertEquals("Picklelog", shown.brand)
         assertEquals("", hidden.brand)
@@ -85,7 +159,6 @@ class CardDataTest {
             buildCardData(
                 match = match(format = MatchFormat.SINGLES, result = MatchResult.LOSS, location = "   "),
                 displayName = "",
-                streak = StreakResult.NONE,
                 photoDataUri = null,
                 labels = FakeCardLabels(),
             )
@@ -93,12 +166,10 @@ class CardDataTest {
         assertEquals("", data.displayName)
         assertNull(data.opponents)
         assertNull(data.partner)
-        assertNull(data.score)
+        assertNull(data.games)
+        assertNull(data.time)
         assertNull(data.location)
-        assertNull(data.streak)
         assertNull(data.photo)
-        assertFalse(data.isWin)
-        assertEquals("Loss", data.result)
     }
 
     @Test
@@ -109,9 +180,7 @@ class CardDataTest {
                 brand = "Picklelog",
                 displayName = hostile,
                 meta = "m",
-                result = "Win",
-                isWin = true,
-                opponents = "vs José 🏓 Ñuñez & 李雷",
+                opponents = CardEntry("Against", listOf("José 🏓 Ñuñez", "李雷", hostile)),
             )
 
         val call = CardDataSerializer.renderCall(data, "0f1e2d3c-token")
@@ -128,7 +197,7 @@ class CardDataTest {
     @Test(expected = IllegalArgumentException::class)
     fun `a render token that is not a plain identifier is refused`() {
         CardDataSerializer.renderCall(
-            CardData(brand = "b", displayName = "", meta = "m", result = "r", isWin = true),
+            CardData(brand = "b", displayName = "", meta = "m"),
             "x\"); alert(1); (\"",
         )
     }
