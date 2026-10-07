@@ -5,17 +5,21 @@ import com.maxeydev.picklelog.domain.share.CardTheme
 import kotlinx.serialization.Serializable
 
 @Serializable
+data class CardEntry(
+    val caption: String,
+    val values: List<String>,
+)
+
+@Serializable
 data class CardData(
     val brand: String,
     val displayName: String,
     val meta: String,
-    val result: String,
-    val isWin: Boolean,
-    val opponents: String? = null,
-    val partner: String? = null,
-    val score: String? = null,
+    val partner: CardEntry? = null,
+    val time: CardEntry? = null,
+    val opponents: CardEntry? = null,
+    val games: CardEntry? = null,
     val location: String? = null,
-    val streak: String? = null,
     val photo: String? = null,
     val ratio: CardRatio = CardRatio.TALL,
     val theme: CardTheme = CardTheme.DARK,
