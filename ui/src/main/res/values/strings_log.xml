@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="label_result_required">Required</string>
+    <string name="result_required_message">Pick Win or Loss to save this match.</string>
+    <string name="label_when">When</string>
+    <string name="add_end_time">End time</string>
+    <string name="add_game_pill">Game</string>
+    <string name="date_future_hint">You can\'t log a match in the future!</string>
+    <string name="players_heading_partner">PARTNER</string>
+    <string name="players_heading_opponents">OPPONENTS</string>
+    <string name="notes_hint">What went well, what to work on</string>
+</resources>
