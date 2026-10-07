@@ -29,9 +29,11 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +42,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
@@ -55,7 +58,10 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.maxeydev.picklelog.domain.match.MatchResult
 import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.match.list.collapseVertically
 import com.maxeydev.picklelog.ui.match.resultLabel
+import com.maxeydev.picklelog.ui.theme.PicklelogSpacing
+import com.maxeydev.picklelog.ui.theme.PicklelogTextStyles
 import com.maxeydev.picklelog.ui.theme.PicklelogTheme
 import kotlinx.coroutines.delay
 
@@ -63,6 +69,7 @@ private val MIN_TOUCH_TARGET = 48.dp
 private val DOT_SIZE = 12.dp
 private val DOT_RING_WIDTH = 2.dp
 private val FLAME_SIZE = 16.dp
+private val INFO_ICON_SIZE = 16.dp
 private val DOT_SPACING = 6.dp
 private val FLAME_CENTER_X = 12.dp + FLAME_SIZE / 2
 private const val FLAME_FLARE_GAIN = 0.5f
@@ -154,6 +161,7 @@ fun DashboardHeader(
     isCollapsed: Boolean,
     onOpenStats: () -> Unit,
     modifier: Modifier = Modifier,
+    collapseFraction: () -> Float = { 0f },
 ) {
     if (state.isLoading || !state.hasAnyMatches) {
         return
@@ -161,9 +169,69 @@ fun DashboardHeader(
     val figures = rememberHeaderFigures(state)
     val openLabel = stringResource(R.string.dashboard_a11y_open)
     val summary = headerSummary(state)
-    Column(
+    var isInfoOpen by rememberSaveable { mutableStateOf(false) }
+    val showInfoButton by remember(collapseFraction) { derivedStateOf { collapseFraction() < 1f } }
+    Column(modifier = modifier.fillMaxWidth()) {
+        StatsSummary(
+            state = state,
+            figures = figures,
+            isCollapsed = isCollapsed,
+            openLabel = openLabel,
+            summary = summary,
+            onOpenStats = onOpenStats,
+        )
+        if (showInfoButton) {
+            InfoButton(
+                onClick = { isInfoOpen = true },
+                modifier = Modifier.align(Alignment.End).collapseVertically(collapseFraction),
+            )
+        }
+    }
+    if (isInfoOpen) {
+        HeaderInfoSheet(onDismiss = { isInfoOpen = false })
+    }
+}
+
+@Composable
+private fun InfoButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
         modifier =
             modifier
+                .minimumInteractiveComponentSize()
+                .clip(CircleShape)
+                .clickable(role = Role.Button, onClick = onClick)
+                .padding(horizontal = PicklelogSpacing.md, vertical = PicklelogSpacing.xs)
+                .testTag(DashboardTestTags.INFO_BUTTON),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(PicklelogSpacing.xs),
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_info),
+            contentDescription = null,
+            modifier = Modifier.size(INFO_ICON_SIZE),
+        )
+        Text(
+            text = stringResource(R.string.header_info_open),
+            style = MaterialTheme.typography.labelSmall,
+        )
+    }
+}
+
+@Composable
+private fun StatsSummary(
+    state: DashboardUiState,
+    figures: HeaderFigures,
+    isCollapsed: Boolean,
+    openLabel: String,
+    summary: String,
+    onOpenStats: () -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier
                 .fillMaxWidth()
                 .heightIn(min = MIN_TOUCH_TARGET)
                 .testTag(DashboardTestTags.HEADER)
@@ -324,7 +392,7 @@ private fun WinRateFigure(
         RollingText(
             value = stringResource(R.string.dashboard_win_percent_short, winPercent),
             step = figures.winRateStep,
-            style = if (isCompact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineMedium,
+            style = if (isCompact) MaterialTheme.typography.titleLarge else PicklelogTextStyles.hero,
             color = PicklelogTheme.colors.headerAccent,
         )
         Text(
@@ -358,7 +426,7 @@ private fun LastMatchesDots(results: List<MatchResult>) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(DOT_SPACING)) {
         Text(
             text = stringResource(R.string.dashboard_last_matches, results.size),
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.labelSmall,
             color = color,
         )
         AnimatedContent(
