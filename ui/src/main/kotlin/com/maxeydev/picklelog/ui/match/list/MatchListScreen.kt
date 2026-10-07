@@ -5,6 +5,7 @@ package com.maxeydev.picklelog.ui.match.list
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -19,11 +20,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -42,12 +41,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -60,12 +53,11 @@ import androidx.compose.ui.unit.dp
 import com.maxeydev.picklelog.domain.match.MatchSort
 import com.maxeydev.picklelog.ui.R
 import com.maxeydev.picklelog.ui.dashboard.DashboardUiState
-import com.maxeydev.picklelog.ui.theme.PicklelogTheme
+import com.maxeydev.picklelog.ui.theme.PicklelogSpacing
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlin.uuid.ExperimentalUuidApi
 
 private val LIST_BOTTOM_SPACE = 88.dp
-private val LIST_CARD_RADIUS = 20.dp
 private const val MATCH_ROW_CONTENT_TYPE = "match_row"
 private const val ROW_GLIDE_MILLIS = 360
 
@@ -99,6 +91,7 @@ fun MatchListScreen(
     val isEmptyState = state.isEmpty && searchText.isBlank()
     val showsList = !state.isLoading && !isEmptyState
     val isCollapsed = showsList && (searchText.isNotBlank() || (isScrolledCollapse && !state.hasNoResults))
+    val collapseProgress = rememberCollapseProgress(isCollapsed)
 
     SavedMatchSnackbarEffect(
         savedMatchId = state.savedMatchId,
@@ -129,7 +122,7 @@ fun MatchListScreen(
         contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            if (!state.isLoading) {
+            if (showsList) {
                 FloatingActionButton(
                     onClick = onNewMatch,
                     shape = MaterialTheme.shapes.large,
@@ -147,7 +140,9 @@ fun MatchListScreen(
     ) { innerPadding ->
         val layoutDirection = LocalLayoutDirection.current
         val bottomInset = innerPadding.calculateBottomPadding()
-        Column(
+        HomeHeaderLayout(
+            progress = collapseProgress,
+            isCollapsing = isCollapsed,
             modifier =
                 Modifier
                     .fillMaxSize()
@@ -156,45 +151,52 @@ fun MatchListScreen(
                         top = innerPadding.calculateTopPadding(),
                         end = innerPadding.calculateEndPadding(layoutDirection),
                     ),
-        ) {
-            HomeHeader(
-                dashboard = dashboard,
-                isCollapsed = isCollapsed,
-                showDetails = showsList,
-                searchText = searchText,
-                onSearchChanged = { text ->
-                    searchText = text
-                    filterActions.onSearchChanged(text)
-                },
-                onOpenStats = onOpenStats,
-                onOpenSettings = onOpenSettings,
-            )
-            notices()
-            when {
-                state.isLoading -> Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(bottom = bottomInset))
-                isEmptyState ->
-                    MatchListEmptyState(
-                        onNewMatch = onNewMatch,
-                        modifier = Modifier.weight(1f).fillMaxWidth().padding(bottom = bottomInset),
-                    )
-                else ->
-                    MatchListContent(
-                        state = state,
-                        listState = listState,
-                        onOpenMatch = onOpenMatch,
-                        onSortSelected = onSortSelected,
-                        onOpenFilters = { isFilterSheetOpen = true },
-                        onLastVisibleIndexChanged = onLastVisibleIndexChanged,
-                        onFiltersAndSearchCleared = {
-                            searchText = ""
-                            filterActions.onFiltersAndSearchCleared()
-                        },
-                        filterActions = filterActions,
-                        bottomInset = bottomInset,
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
-                    )
-            }
-        }
+            header = {
+                HomeHeader(
+                    dashboard = dashboard,
+                    progress = collapseProgress,
+                    isCollapsed = isCollapsed,
+                    showDetails = showsList,
+                    searchText = searchText,
+                    onSearchChanged = { text ->
+                        searchText = text
+                        filterActions.onSearchChanged(text)
+                    },
+                    onOpenStats = onOpenStats,
+                    onOpenSettings = onOpenSettings,
+                )
+            },
+            body = {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    notices()
+                    when {
+                        state.isLoading ->
+                            Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(bottom = bottomInset))
+                        isEmptyState ->
+                            MatchListEmptyState(
+                                onNewMatch = onNewMatch,
+                                modifier = Modifier.weight(1f).fillMaxWidth().padding(bottom = bottomInset),
+                            )
+                        else ->
+                            MatchListContent(
+                                state = state,
+                                listState = listState,
+                                onOpenMatch = onOpenMatch,
+                                onSortSelected = onSortSelected,
+                                onOpenFilters = { isFilterSheetOpen = true },
+                                onLastVisibleIndexChanged = onLastVisibleIndexChanged,
+                                onFiltersAndSearchCleared = {
+                                    searchText = ""
+                                    filterActions.onFiltersAndSearchCleared()
+                                },
+                                filterActions = filterActions,
+                                bottomInset = bottomInset,
+                                modifier = Modifier.weight(1f).fillMaxWidth(),
+                            )
+                    }
+                }
+            },
+        )
     }
     if (isFilterSheetOpen) {
         FilterSheet(
@@ -276,60 +278,30 @@ private fun MatchListContent(
                 modifier = Modifier.weight(1f).fillMaxWidth().padding(bottom = bottomInset),
             )
         } else {
-            Box(
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .padding(horizontal = 16.dp)
-                        .openBottomOutline(
-                            width = 1.dp,
-                            color = PicklelogTheme.colors.cardBorder,
-                            radius = LIST_CARD_RADIUS,
-                        )
-                        .clip(RoundedCornerShape(topStart = LIST_CARD_RADIUS, topEnd = LIST_CARD_RADIUS)),
+            LazyColumn(
+                state = listState,
+                contentPadding =
+                    PaddingValues(
+                        start = PicklelogSpacing.gutter,
+                        end = PicklelogSpacing.gutter,
+                        top = PicklelogSpacing.xs,
+                        bottom = LIST_BOTTOM_SPACE + bottomInset,
+                    ),
+                verticalArrangement = Arrangement.spacedBy(PicklelogSpacing.sm),
+                modifier = Modifier.weight(1f).fillMaxWidth().testTag(MatchListTestTags.LIST),
             ) {
-                LazyColumn(
-                    state = listState,
-                    contentPadding = PaddingValues(bottom = LIST_BOTTOM_SPACE + bottomInset),
-                    modifier = Modifier.fillMaxSize().testTag(MatchListTestTags.LIST),
-                ) {
-                    itemsIndexed(
-                        items = state.matches,
-                        key = { _, row -> row.id },
-                        contentType = { _, _ -> MATCH_ROW_CONTENT_TYPE },
-                    ) { index, row ->
-                        Column(modifier = Modifier.animateItem(placementSpec = RowGlideSpec)) {
-                            if (index > 0) {
-                                HorizontalDivider(color = PicklelogTheme.colors.cardBorder)
-                            }
-                            MatchRow(state = row, onClick = { onOpenMatch(row.id) })
-                        }
-                    }
+                items(
+                    items = state.matches,
+                    key = { row -> row.id },
+                    contentType = { MATCH_ROW_CONTENT_TYPE },
+                ) { row ->
+                    MatchRow(
+                        state = row,
+                        onClick = { onOpenMatch(row.id) },
+                        modifier = Modifier.animateItem(placementSpec = RowGlideSpec),
+                    )
                 }
             }
         }
     }
 }
-
-private fun Modifier.openBottomOutline(
-    width: Dp,
-    color: Color,
-    radius: Dp,
-): Modifier =
-    drawWithContent {
-        drawContent()
-        val stroke = width.toPx()
-        val inset = stroke / 2f
-        val arc = (radius.toPx() - inset).coerceIn(0f, size.width / 2f)
-        val outline =
-            Path().apply {
-                moveTo(inset, size.height)
-                lineTo(inset, inset + arc)
-                arcTo(Rect(inset, inset, inset + 2f * arc, inset + 2f * arc), 180f, 90f, false)
-                lineTo(size.width - inset - arc, inset)
-                val rightArcStart = size.width - inset - 2f * arc
-                arcTo(Rect(rightArcStart, inset, size.width - inset, inset + 2f * arc), 270f, 90f, false)
-                lineTo(size.width - inset, size.height)
-            }
-        drawPath(path = outline, color = color, style = Stroke(width = stroke))
-    }
