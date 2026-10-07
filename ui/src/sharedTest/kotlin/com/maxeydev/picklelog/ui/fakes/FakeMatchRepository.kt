@@ -93,6 +93,16 @@ class FakeMatchRepository(
 
     override fun observeMatchCount(): Flow<Int> = matches.map { byId -> byId.size }
 
+    override fun observeMatchNumber(id: Uuid): Flow<Int> =
+        matches.map { byId ->
+            val target = byId[id] ?: return@map 0
+            val order =
+                compareBy<Match> { it.date }
+                    .thenBy { it.createdAt }
+                    .thenBy { it.id.toString() }
+            byId.values.count { order.compare(it, target) <= 0 }
+        }
+
     override fun observeFilteredMatchCount(
         filter: FilterState,
         search: SearchTerm?,
