@@ -2,9 +2,7 @@ package com.maxeydev.picklelog.ui.settings
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -16,7 +14,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.maxeydev.picklelog.ui.R
 import com.maxeydev.picklelog.ui.common.DisplayNameField
@@ -35,20 +32,13 @@ fun NameRow(
     SettingsRow(
         icon = R.drawable.ic_person,
         label = stringResource(R.string.settings_name_label),
+        value = displayName,
+        navigates = true,
         modifier =
             modifier
                 .clickable(role = Role.Button) { editing = true }
                 .testTag(SettingsTestTags.NAME_OPEN),
-    ) {
-        Text(
-            text = displayName,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.widthIn(max = 120.dp),
-        )
-    }
+    )
     if (editing) {
         val save = {
             onSave()
