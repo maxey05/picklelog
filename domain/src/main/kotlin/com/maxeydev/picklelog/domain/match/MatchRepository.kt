@@ -25,6 +25,8 @@ interface MatchRepository {
 
     fun observeMatchCount(): Flow<Int>
 
+    fun observeMatchNumber(id: Uuid): Flow<Int>
+
     fun observeFilteredMatchCount(
         filter: FilterState = FilterState.NONE,
         search: SearchTerm? = null,
