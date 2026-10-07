@@ -42,14 +42,16 @@ class MatchDetailViewModel(
     val uiState: StateFlow<MatchDetailUiState> =
         combine(
             matchRepository.observeById(matchId),
+            matchRepository.observeMatchNumber(matchId),
             savedStateHandle.getStateFlow(CONFIRMING_DELETE_KEY, false),
-        ) { match, isConfirmingDelete ->
+        ) { match, matchNumber, isConfirmingDelete ->
             if (match == null) {
                 MatchDetailUiState(isLoading = false, isGone = true)
             } else {
                 MatchDetailUiState(
                     isLoading = false,
                     match = match,
+                    matchNumber = matchNumber,
                     duration = deriveDuration(match.startTime, match.endTime),
                     endsNextDay = crossesMidnight(match.startTime, match.endTime),
                     isConfirmingDelete = isConfirmingDelete,
