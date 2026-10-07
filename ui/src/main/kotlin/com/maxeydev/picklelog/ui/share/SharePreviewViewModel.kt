@@ -10,17 +10,15 @@ import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.maxeydev.picklelog.domain.match.FilterState
 import com.maxeydev.picklelog.domain.match.MatchRepository
 import com.maxeydev.picklelog.domain.photo.primaryPhoto
 import com.maxeydev.picklelog.domain.profile.ProfileRepository
+import com.maxeydev.picklelog.domain.share.CardDetail
 import com.maxeydev.picklelog.domain.share.CardFormat
 import com.maxeydev.picklelog.domain.share.CardFormatStore
 import com.maxeydev.picklelog.domain.share.CardLayout
 import com.maxeydev.picklelog.domain.share.CardRatio
 import com.maxeydev.picklelog.domain.share.CardTheme
-import com.maxeydev.picklelog.domain.streak.InsuredStreakEngine
-import com.maxeydev.picklelog.domain.streak.streakInsuranceStart
 import com.maxeydev.picklelog.ui.PicklelogDependencies
 import com.maxeydev.picklelog.ui.navigation.MATCH_ID_ARGUMENT
 import com.maxeydev.picklelog.ui.paywall.UpgradeReason
@@ -38,12 +36,13 @@ import java.io.IOException
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+private const val HIDDEN_DETAILS_KEY = "share_hidden_details"
+
 class SharePreviewViewModel(
-    savedStateHandle: SavedStateHandle,
+    private val savedStateHandle: SavedStateHandle,
     private val matchRepository: MatchRepository,
     private val profileRepository: ProfileRepository,
     private val formatStore: CardFormatStore,
-    private val streakEngine: InsuredStreakEngine,
     private val photoFile: (String) -> File,
     private val renderer: CardRendering,
     private val labels: CardLabels,
@@ -56,7 +55,7 @@ class SharePreviewViewModel(
             },
         )
 
-    private val mutableUiState = MutableStateFlow(SharePreviewUiState())
+    private val mutableUiState = MutableStateFlow(SharePreviewUiState(hiddenDetails = restoreHiddenDetails()))
     val uiState: StateFlow<SharePreviewUiState> = mutableUiState.asStateFlow()
 
     private var renderJob: Job? = null
@@ -65,6 +64,11 @@ class SharePreviewViewModel(
         viewModelScope.launch {
             render(formatStore.observeFormat().first())
         }
+    }
+
+    private fun restoreHiddenDetails(): Set<CardDetail> {
+        val names = savedStateHandle.get<ArrayList<String>>(HIDDEN_DETAILS_KEY).orEmpty()
+        return CardDetail.entries.filter { it.name in names }.toSet()
     }
 
     fun reportShareFailed() {
@@ -102,6 +106,19 @@ class SharePreviewViewModel(
         changeFormat(mutableUiState.value.format.copy(layoutOverride = override))
     }
 
+    fun setDetailShown(
+        detail: CardDetail,
+        isShown: Boolean,
+    ) {
+        val current = mutableUiState.value.hiddenDetails
+        val updated = if (isShown) current - detail else current + detail
+        if (updated == current) {
+            return
+        }
+        savedStateHandle[HIDDEN_DETAILS_KEY] = ArrayList(updated.map { it.name })
+        render(mutableUiState.value.format, updated)
+    }
+
     private fun changeFormat(format: CardFormat) {
         if (format == mutableUiState.value.format) {
             return
@@ -110,10 +127,19 @@ class SharePreviewViewModel(
         render(format)
     }
 
-    private fun render(format: CardFormat) {
+    private fun render(
+        format: CardFormat,
+        hidden: Set<CardDetail> = mutableUiState.value.hiddenDetails,
+    ) {
         renderJob?.cancel()
         mutableUiState.update {
-            it.copy(isRendering = true, hasFailed = false, hasShareFailed = false, format = format)
+            it.copy(
+                isRendering = true,
+                hasFailed = false,
+                hasShareFailed = false,
+                format = format,
+                hiddenDetails = hidden,
+            )
         }
         renderJob =
             viewModelScope.launch {
@@ -123,11 +149,8 @@ class SharePreviewViewModel(
                     return@launch
                 }
                 val profile = profileRepository.observeProfile().first()
-                val history = matchRepository.observeStatLines(FilterState.NONE).first()
                 val isPro = profile.entitlement.isPro
                 val shown = format.forEntitlement(isPro)
-                val insuranceStart = profile.entitlement.streakInsuranceStart()
-                val streak = streakEngine.compute(history.map { it.date }, insuranceStart).streak
                 val primary = match.photos.primaryPhoto()
                 val layout = shown.layoutFor(hasPhoto = primary != null)
                 val photo =
@@ -135,7 +158,15 @@ class SharePreviewViewModel(
                         ?.takeIf { layout == CardLayout.PHOTO }
                         ?.let { loadPhotoDataUri(photoFile(it.relativePath)) }
                 val data =
-                    buildCardData(match, profile.displayName, streak, photo, labels, shown, showWordmark = !isPro)
+                    buildCardData(
+                        match = match,
+                        displayName = profile.displayName,
+                        photoDataUri = photo,
+                        labels = labels,
+                        format = shown,
+                        hidden = hidden,
+                        showWordmark = !isPro,
+                    )
                 val result = renderer.render(data)
                 mutableUiState.update { current ->
                     when (result) {
@@ -147,6 +178,7 @@ class SharePreviewViewModel(
                                 card = result.bitmap,
                                 cardDescription = describe(data),
                                 hasPhoto = primary != null,
+                                availableDetails = match.cardDetails(),
                             )
                         is CardRenderResult.Failed ->
                             current.copy(
@@ -154,6 +186,7 @@ class SharePreviewViewModel(
                                 card = null,
                                 hasFailed = true,
                                 hasPhoto = primary != null,
+                                availableDetails = match.cardDetails(),
                                 format = shown,
                                 isPro = isPro,
                             )
@@ -174,14 +207,15 @@ class SharePreviewViewModel(
     private fun describe(data: CardData): String =
         listOfNotNull(
             data.displayName.takeIf { it.isNotEmpty() },
-            data.result,
             data.meta,
-            data.opponents,
-            data.partner,
-            data.score,
+            data.partner?.spoken(),
+            data.time?.spoken(),
+            data.opponents?.spoken(),
+            data.games?.spoken(),
             data.location,
-            data.streak,
         ).joinToString(separator = ". ")
+
+    private fun CardEntry.spoken(): String = "$caption ${values.joinToString(", ")}"
 
     companion object {
         fun factory(
@@ -195,7 +229,6 @@ class SharePreviewViewModel(
                         matchRepository = dependencies.matchRepository,
                         profileRepository = dependencies.profileRepository,
                         formatStore = dependencies.cardFormatStore,
-                        streakEngine = InsuredStreakEngine(dependencies.clock, dependencies::currentTimeZone),
                         photoFile = dependencies::photoFile,
                         renderer = dependencies.cardRenderer,
                         labels = labels,
