@@ -1,26 +1,51 @@
 package com.maxeydev.picklelog.ui.share
 
-import androidx.annotation.StringRes
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.FilterChip
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.maxeydev.picklelog.domain.share.CardDetail
 import com.maxeydev.picklelog.domain.share.CardFormat
 import com.maxeydev.picklelog.domain.share.CardLayout
 import com.maxeydev.picklelog.domain.share.CardRatio
 import com.maxeydev.picklelog.domain.share.CardTheme
 import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.common.SegmentedToggle
+import com.maxeydev.picklelog.ui.theme.PicklelogTheme
+
+private val CONTROL_HEIGHT = 50.dp
+private val ROW_HEIGHT = 56.dp
+private val CHEVRON_SIZE = 20.dp
 
 @Composable
 fun VariantPicker(
@@ -28,68 +53,217 @@ fun VariantPicker(
     layout: CardLayout,
     hasPhoto: Boolean,
     isPro: Boolean,
+    hiddenDetails: Set<CardDetail>,
+    availableDetails: Set<CardDetail>,
     actions: VariantPickerActions,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier.fillMaxWidth().testTag(ShareTestTags.VARIANT_PICKER),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        OptionRow(
-            title = R.string.card_ratio_label,
-            options = CardRatio.entries,
-            selected = format.ratio,
-            label = { stringResource(ratioLabel(it)) },
-            tag = ShareTestTags::ratio,
-            onSelected = actions.onRatioSelected,
-        )
-        OptionRow(
-            title = R.string.card_theme_label,
-            options = CardTheme.entries,
-            selected = format.theme,
-            label = { themeText(it, isPro) },
-            tag = ShareTestTags::theme,
-            onSelected = actions.onThemeSelected,
-        )
-        if (hasPhoto) {
-            OptionRow(
-                title = R.string.card_layout_label,
-                options = CardLayout.entries,
-                selected = layout,
-                label = { stringResource(layoutLabel(it)) },
-                tag = ShareTestTags::layout,
-                onSelected = actions.onLayoutSelected,
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            LabeledControl(label = stringResource(R.string.card_ratio_label), modifier = Modifier.weight(1f)) {
+                RatioSegments(selected = format.ratio, onSelected = actions.onRatioSelected)
+            }
+            LabeledControl(label = stringResource(R.string.card_theme_label), modifier = Modifier.weight(1f)) {
+                StyleDropdown(selected = format.theme, isPro = isPro, onSelected = actions.onThemeSelected)
+            }
+        }
+        val details = CardDetail.entries.filter { it in availableDetails }
+        if (details.isNotEmpty() || hasPhoto) {
+            ShowOnCard(
+                details = details,
+                hiddenDetails = hiddenDetails,
+                hasPhoto = hasPhoto,
+                showsPhoto = layout == CardLayout.PHOTO,
+                actions = actions,
             )
         }
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun <T> OptionRow(
-    @StringRes title: Int,
-    options: List<T>,
-    selected: T,
-    label: @Composable (T) -> String,
-    tag: (T) -> String,
-    onSelected: (T) -> Unit,
+private fun LabeledControl(
+    label: String,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
 ) {
-    Text(
-        text = stringResource(title),
-        style = MaterialTheme.typography.labelLarge,
-        modifier = Modifier.semantics { heading() },
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 4.dp),
+        )
+        content()
+    }
+}
+
+@Composable
+private fun RatioSegments(
+    selected: CardRatio,
+    onSelected: (CardRatio) -> Unit,
+) {
+    SegmentedToggle(
+        options = CardRatio.entries,
+        selected = selected,
+        optionLabel = { ratio -> stringResource(ratioLabel(ratio)) },
+        optionTag = { ratio -> ShareTestTags.ratio(ratio) },
+        onSelected = onSelected,
     )
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        options.forEach { option ->
-            FilterChip(
-                selected = option == selected,
-                onClick = { onSelected(option) },
-                label = { Text(label(option)) },
-                modifier = Modifier.testTag(tag(option)),
-            )
+}
+
+@Composable
+private fun StyleDropdown(
+    selected: CardTheme,
+    isPro: Boolean,
+    onSelected: (CardTheme) -> Unit,
+) {
+    var isExpanded by rememberSaveable { mutableStateOf(false) }
+    val selectedName = stringResource(themeLabel(selected))
+    val description = stringResource(R.string.card_style_button, selectedName)
+    Box {
+        Surface(
+            onClick = { isExpanded = true },
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.surfaceContainerLowest,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = CONTROL_HEIGHT)
+                    .testTag(ShareTestTags.STYLE_BUTTON)
+                    .semantics {
+                        contentDescription = description
+                        role = Role.Button
+                    },
+        ) {
+            Row(
+                modifier = Modifier.heightIn(min = CONTROL_HEIGHT).padding(start = 16.dp, end = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(text = selectedName, style = MaterialTheme.typography.labelLarge)
+                Icon(
+                    painter = painterResource(R.drawable.ic_chevron_down),
+                    contentDescription = null,
+                    modifier = Modifier.size(CHEVRON_SIZE),
+                )
+            }
+        }
+        DropdownMenu(expanded = isExpanded, onDismissRequest = { isExpanded = false }) {
+            CardTheme.entries.forEach { theme ->
+                DropdownMenuItem(
+                    text = { Text(themeText(theme, isPro)) },
+                    onClick = {
+                        isExpanded = false
+                        onSelected(theme)
+                    },
+                    trailingIcon =
+                        if (theme == selected) {
+                            {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_check),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        } else {
+                            null
+                        },
+                    modifier = Modifier.testTag(ShareTestTags.theme(theme)),
+                )
+            }
         }
     }
 }
+
+@Composable
+private fun ShowOnCard(
+    details: List<CardDetail>,
+    hiddenDetails: Set<CardDetail>,
+    hasPhoto: Boolean,
+    showsPhoto: Boolean,
+    actions: VariantPickerActions,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(R.string.card_show_title),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 4.dp).semantics { heading() },
+        )
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surfaceContainerLowest,
+            border = BorderStroke(1.dp, PicklelogTheme.colors.cardBorder),
+        ) {
+            Column {
+                details.forEachIndexed { index, detail ->
+                    if (index > 0) {
+                        InsetDivider()
+                    }
+                    SwitchRow(
+                        label = stringResource(detailLabel(detail)),
+                        isChecked = detail !in hiddenDetails,
+                        onCheckedChange = { actions.onDetailShownChanged(detail, it) },
+                        modifier = Modifier.testTag(ShareTestTags.detail(detail)),
+                    )
+                }
+                if (hasPhoto) {
+                    if (details.isNotEmpty()) {
+                        InsetDivider()
+                    }
+                    SwitchRow(
+                        label = stringResource(R.string.card_detail_photo),
+                        isChecked = showsPhoto,
+                        onCheckedChange = { shown ->
+                            actions.onLayoutSelected(if (shown) CardLayout.PHOTO else CardLayout.NO_PHOTO)
+                        },
+                        modifier = Modifier.testTag(ShareTestTags.PHOTO_SWITCH),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun InsetDivider() {
+    HorizontalDivider(color = PicklelogTheme.colors.cardBorder, modifier = Modifier.padding(start = 16.dp))
+}
+
+@Composable
+private fun SwitchRow(
+    label: String,
+    isChecked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .heightIn(min = ROW_HEIGHT)
+                .toggleable(value = isChecked, role = Role.Switch, onValueChange = onCheckedChange)
+                .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text(text = label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Switch(checked = isChecked, onCheckedChange = null)
+    }
+}
+
+private fun detailLabel(detail: CardDetail): Int =
+    when (detail) {
+        CardDetail.GAME_SCORES -> R.string.card_detail_game_scores
+        CardDetail.OPPONENTS -> R.string.card_detail_opponents
+        CardDetail.PARTNER -> R.string.card_detail_partner
+        CardDetail.LOCATION -> R.string.card_detail_location
+    }
 
 private fun ratioLabel(ratio: CardRatio): Int =
     when (ratio) {
@@ -113,9 +287,3 @@ private fun themeText(
     val name = stringResource(themeLabel(theme))
     return if (theme.requiresPro && !isPro) stringResource(R.string.card_theme_pro_locked, name) else name
 }
-
-private fun layoutLabel(layout: CardLayout): Int =
-    when (layout) {
-        CardLayout.PHOTO -> R.string.card_layout_photo
-        CardLayout.NO_PHOTO -> R.string.card_layout_no_photo
-    }
