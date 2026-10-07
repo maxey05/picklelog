@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalUuidApi::class, ExperimentalLayoutApi::class)
+@file:OptIn(ExperimentalUuidApi::class)
 
 package com.maxeydev.picklelog.ui.dashboard
 
@@ -9,8 +9,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -27,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -43,6 +42,7 @@ import com.maxeydev.picklelog.ui.theme.PicklelogTheme
 import kotlin.uuid.ExperimentalUuidApi
 
 private const val MASK_ALPHA = 0.28f
+private const val STACKED_FONT_SCALE = 1.3f
 private val MASK_WIDTH = 72.dp
 private val MASK_HEIGHT = 20.dp
 private val BLUR_RADIUS = 7.dp
@@ -67,24 +67,42 @@ fun LockedPreview(
                     .testTag(DashboardTestTags.STATS_LOCKED_PREVIEW)
                     .semantics(mergeDescendants = true) { contentDescription = description },
         ) {
-            FlowRow(
-                modifier = Modifier.fillMaxWidth().padding(PicklelogSpacing.lg),
-                horizontalArrangement = Arrangement.spacedBy(PicklelogSpacing.md),
-                verticalArrangement = Arrangement.spacedBy(PicklelogSpacing.md),
-                itemVerticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(PicklelogSpacing.xs)) {
-                    Text(
-                        text = stringResource(R.string.stats_preview_title, name),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.testTag(DashboardTestTags.STATS_LOCKED_PREVIEW_NAME),
-                    )
-                    HiddenRecord()
+            val isStacked = LocalDensity.current.fontScale >= STACKED_FONT_SCALE
+            if (isStacked) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(PicklelogSpacing.lg),
+                    verticalArrangement = Arrangement.spacedBy(PicklelogSpacing.md),
+                ) {
+                    PreviewText(name = name)
+                    UnlockPill()
                 }
-                UnlockPill()
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(PicklelogSpacing.lg),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(PicklelogSpacing.md),
+                ) {
+                    PreviewText(name = name, modifier = Modifier.weight(1f))
+                    UnlockPill()
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun PreviewText(
+    name: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(PicklelogSpacing.xs)) {
+        Text(
+            text = stringResource(R.string.stats_preview_title, name),
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.testTag(DashboardTestTags.STATS_LOCKED_PREVIEW_NAME),
+        )
+        HiddenRecord()
     }
 }
 
