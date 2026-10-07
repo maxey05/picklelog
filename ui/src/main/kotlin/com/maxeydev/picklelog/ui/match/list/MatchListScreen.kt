@@ -41,6 +41,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -85,7 +89,7 @@ fun MatchListScreen(
     val listState = rememberLazyListState()
     var searchText by rememberSaveable { mutableStateOf("") }
     var isFilterSheetOpen by rememberSaveable { mutableStateOf(false) }
-    var isScrolledCollapse by remember { mutableStateOf(false) }
+    var isScrolledCollapse by rememberSaveable { mutableStateOf(false) }
     val queryKey = listOf(state.sort, state.filter, state.appliedSearch).toString()
     var queryOnScreen by rememberSaveable { mutableStateOf(queryKey) }
     val isEmptyState = state.isEmpty && searchText.isBlank()
@@ -99,16 +103,23 @@ fun MatchListScreen(
         onLogAnother = onLogAnother,
         onDismissed = onSavedConfirmationDismissed,
     )
-    LaunchedEffect(listState) {
-        snapshotFlow { listState.canScrollBackward to listState.canScrollForward }
-            .collect { (canScrollBackward, canScrollForward) ->
-                if (canScrollBackward) {
-                    isScrolledCollapse = true
-                } else if (canScrollForward) {
-                    isScrolledCollapse = false
+    val collapseConnection =
+        remember(listState) {
+            object : NestedScrollConnection {
+                override fun onPostScroll(
+                    consumed: Offset,
+                    available: Offset,
+                    source: NestedScrollSource,
+                ): Offset {
+                    if (consumed.y < 0f) {
+                        isScrolledCollapse = true
+                    } else if (available.y > 0f || (consumed.y > 0f && !listState.canScrollBackward)) {
+                        isScrolledCollapse = false
+                    }
+                    return Offset.Zero
                 }
             }
-    }
+        }
     LaunchedEffect(queryKey) {
         if (queryKey != queryOnScreen) {
             queryOnScreen = queryKey
@@ -167,7 +178,7 @@ fun MatchListScreen(
                 )
             },
             body = {
-                Column(modifier = Modifier.fillMaxSize()) {
+                Column(modifier = Modifier.fillMaxSize().nestedScroll(collapseConnection)) {
                     notices()
                     when {
                         state.isLoading ->
