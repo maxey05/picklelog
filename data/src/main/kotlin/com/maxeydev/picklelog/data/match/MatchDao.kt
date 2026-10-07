@@ -175,6 +175,13 @@ interface MatchDao {
         namePattern: String?,
     ): Flow<Int>
 
+    @Query(
+        "SELECT COUNT(*) FROM `match` m, `match` t WHERE t.id = :id AND (m.date < t.date OR " +
+            "(m.date = t.date AND (m.created_at < t.created_at OR " +
+            "(m.created_at = t.created_at AND m.id <= t.id))))",
+    )
+    fun observeMatchNumber(id: String): Flow<Int>
+
     @Query("SELECT * FROM `match` WHERE id = :id")
     fun observeById(id: String): Flow<MatchWithRelationsEntity?>
 
