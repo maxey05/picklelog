@@ -6,7 +6,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,7 +13,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePickerDialog
@@ -22,7 +21,6 @@ import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -47,7 +45,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.maxeydev.picklelog.domain.datetime.AppDate
@@ -56,18 +53,18 @@ import com.maxeydev.picklelog.domain.match.MatchFormat
 import com.maxeydev.picklelog.domain.match.MatchResult
 import com.maxeydev.picklelog.ui.R
 import com.maxeydev.picklelog.ui.common.PillChip
+import com.maxeydev.picklelog.ui.common.SegmentedToggle
 import com.maxeydev.picklelog.ui.match.formatLabel
 import com.maxeydev.picklelog.ui.match.toUtcEpochMillis
 import com.maxeydev.picklelog.ui.match.todayInDeviceZone
 import com.maxeydev.picklelog.ui.match.utcEpochMillisToAppDate
-import com.maxeydev.picklelog.ui.theme.PicklelogTheme
+import com.maxeydev.picklelog.ui.theme.PicklelogSpacing
 import kotlin.uuid.ExperimentalUuidApi
 
 private val MIN_TOUCH_TARGET = 48.dp
-private val FIELD_MIN_HEIGHT = 52.dp
-private val DONE_MIN_HEIGHT = 52.dp
-private val ICON_SIZE = 18.dp
-private val SHEET_HORIZONTAL_PADDING = 20.dp
+private val FIELD_MIN_HEIGHT = 56.dp
+private val DONE_MIN_HEIGHT = 48.dp
+private val ICON_SIZE = 20.dp
 
 @Composable
 fun FilterSheet(
@@ -91,10 +88,11 @@ fun FilterSheet(
                 Modifier
                     .weight(1f, fill = false)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = SHEET_HORIZONTAL_PADDING),
+                    .padding(horizontal = PicklelogSpacing.lg),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             FilterSection {
-                ChipChoice(
+                ToggleChoice(
                     label = stringResource(R.string.label_format),
                     options = listOf(null, MatchFormat.SINGLES, MatchFormat.DOUBLES),
                     selected = filter.format,
@@ -104,7 +102,7 @@ fun FilterSheet(
                 )
             }
             FilterSection {
-                ChipChoice(
+                ToggleChoice(
                     label = stringResource(R.string.label_result),
                     options = listOf(null, MatchResult.WIN, MatchResult.LOSS),
                     selected = filter.result,
@@ -121,7 +119,7 @@ fun FilterSheet(
                 )
             }
             FilterSection {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(PicklelogSpacing.md)) {
                     DropdownField(
                         label = stringResource(R.string.label_opponents),
                         shown =
@@ -157,14 +155,14 @@ fun FilterSheet(
                 }
             }
         }
-        Column(modifier = Modifier.padding(horizontal = SHEET_HORIZONTAL_PADDING)) {
-            SectionDivider()
+        Column(modifier = Modifier.padding(horizontal = PicklelogSpacing.lg)) {
             Button(
                 onClick = onDismiss,
+                shape = CircleShape,
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(top = 14.dp, bottom = 16.dp)
+                        .padding(top = PicklelogSpacing.lg, bottom = PicklelogSpacing.lg)
                         .heightIn(min = DONE_MIN_HEIGHT)
                         .testTag(MatchListTestTags.SHEET_DONE),
             ) {
@@ -178,20 +176,9 @@ fun FilterSheet(
 }
 
 @Composable
-private fun SectionDivider() {
-    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
-}
-
-@Composable
 private fun FilterSection(content: @Composable () -> Unit) {
-    Column {
-        SectionDivider()
-        Column(
-            modifier = Modifier.padding(vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            content()
-        }
+    Column(verticalArrangement = Arrangement.spacedBy(PicklelogSpacing.sm)) {
+        content()
     }
 }
 
@@ -201,21 +188,26 @@ private fun SheetHeader(
     onReset: () -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(start = SHEET_HORIZONTAL_PADDING, end = 16.dp, bottom = 6.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = MIN_TOUCH_TARGET)
+                .padding(horizontal = PicklelogSpacing.lg)
+                .padding(bottom = PicklelogSpacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = stringResource(R.string.filter_sheet_title),
             style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f).semantics { heading() },
         )
-        TextButton(
-            onClick = onReset,
-            enabled = canReset,
-            modifier = Modifier.heightIn(min = MIN_TOUCH_TARGET).testTag(MatchListTestTags.SHEET_CLEAR_ALL),
-        ) {
-            Text(stringResource(R.string.filter_reset))
+        if (canReset) {
+            TextButton(
+                onClick = onReset,
+                modifier = Modifier.heightIn(min = MIN_TOUCH_TARGET).testTag(MatchListTestTags.SHEET_CLEAR_ALL),
+            ) {
+                Text(stringResource(R.string.filter_reset))
+            }
         }
     }
 }
@@ -237,9 +229,8 @@ private fun SectionLabel(text: String) {
     )
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun <T> ChipChoice(
+private fun <T> ToggleChoice(
     label: String,
     options: List<T?>,
     selected: T?,
@@ -248,23 +239,13 @@ private fun <T> ChipChoice(
     onSelected: (T?) -> Unit,
 ) {
     SectionLabel(label)
-    FlowRow(
-        modifier = Modifier.fillMaxWidth().selectableGroup(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.Center,
-    ) {
-        options.forEach { option ->
-            val isSelected = option == selected
-            PillChip(
-                label = optionLabel(option),
-                isSelected = isSelected,
-                showsCheck = isSelected,
-                filled = true,
-                onClick = { onSelected(option) },
-                modifier = Modifier.testTag(optionTag(option)),
-            )
-        }
-    }
+    SegmentedToggle(
+        options = options,
+        selected = selected,
+        optionLabel = optionLabel,
+        optionTag = optionTag,
+        onSelected = onSelected,
+    )
 }
 
 @Composable
@@ -280,7 +261,7 @@ private fun DateSection(
     val label = stringResource(R.string.label_date)
     val shown = dateRangeLabel(filter) ?: stringResource(R.string.filter_any_date)
     val customDescription = stringResource(R.string.filter_picker_description, label, shown)
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(PicklelogSpacing.sm)) {
         SectionLabel(label)
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -406,7 +387,7 @@ private fun DropdownField(
     val fieldText = if (hasOptions) shown else emptyLabel
     val fieldDescription =
         stringResource(R.string.filter_picker_description, label, if (hasOptions) spokenValue else emptyLabel)
-    val borderColor = if (isExpanded) colors.primary else PicklelogTheme.colors.cardBorder
+    val borderColor = if (isExpanded) colors.primary else colors.outline
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionLabel(label)
         Box {
@@ -424,13 +405,16 @@ private fun DropdownField(
                         .semantics { contentDescription = fieldDescription },
             ) {
                 Row(
-                    modifier = Modifier.heightIn(min = FIELD_MIN_HEIGHT).padding(start = 14.dp, end = 12.dp),
+                    modifier =
+                        Modifier
+                            .heightIn(min = FIELD_MIN_HEIGHT)
+                            .padding(start = PicklelogSpacing.lg, end = PicklelogSpacing.md),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
                         text = fieldText,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyLarge,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         color = if (hasOptions) colors.onSurface else colors.onSurfaceVariant,
