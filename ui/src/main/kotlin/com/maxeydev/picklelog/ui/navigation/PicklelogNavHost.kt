@@ -1,8 +1,7 @@
 package com.maxeydev.picklelog.ui.navigation
 
 import androidx.compose.animation.EnterExitState
-import androidx.compose.animation.core.animateDp
-import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +17,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -67,7 +68,9 @@ import com.maxeydev.picklelog.ui.share.SharePreviewViewModel
 import com.maxeydev.picklelog.ui.share.VariantPickerActions
 import com.maxeydev.picklelog.ui.streak.MissedSkipNotice
 import com.maxeydev.picklelog.ui.streak.SkipUsedNotice
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 
 @Composable
@@ -111,6 +114,8 @@ private fun PicklelogNavGraph(
         exitTransition = { ScreenExit },
         popEnterTransition = { ScreenPopEnter },
         popExitTransition = { ScreenPopExit },
+        predictivePopEnterTransition = { ScreenPredictivePopEnter },
+        predictivePopExitTransition = { ScreenPredictivePopExit },
     ) {
         composable<OnboardingRoute> {
             val viewModel: OnboardingViewModel = viewModel(factory = OnboardingViewModel.factory(dependencies))
@@ -248,7 +253,10 @@ private fun PicklelogNavGraph(
         composable<StatsRoute> {
             val homeEntry = remember(it) { navController.getBackStackEntry<HomeRoute>() }
             val viewModel: DashboardViewModel =
-                viewModel(factory = DashboardViewModel.factory(dependencies, homeEntry.savedStateHandle))
+                viewModel(
+                    viewModelStoreOwner = homeEntry,
+                    factory = DashboardViewModel.factory(dependencies, homeEntry.savedStateHandle),
+                )
             val state by viewModel.uiState.collectAsStateWithLifecycle()
             ExpandedStatsScreen(
                 state = state,
@@ -347,23 +355,28 @@ private fun PicklelogNavGraph(
         composable<MatchEditRoute>(
             enterTransition = { SheetEnter },
             popExitTransition = { SheetExit },
-        ) {
-            val sheetCorner =
-                transition.animateDp(
-                    transitionSpec = { sheetCornerSpec(targetState) },
-                    label = "matchEditSheetCorner",
-                ) { state -> if (state == EnterExitState.Visible) 0.dp else SHEET_CORNER }
-            val sheetProgress =
-                transition.animateFloat(
-                    transitionSpec = { sheetCornerSpec(targetState) },
-                    label = "matchEditSheetProgress",
-                ) { state ->
-                    val topDestination = navController.currentBackStackEntry?.destination
-                    val isCoveredByPaywall = topDestination?.hasRoute<PaywallRoute>() == true
-                    if (state == EnterExitState.Visible || isCoveredByPaywall) 1f else 0f
-                }
+        ) { backStackEntry ->
             val viewModel: MatchEditViewModel = viewModel(factory = MatchEditViewModel.factory(dependencies))
             val state by viewModel.uiState.collectAsStateWithLifecycle()
+            var hasSheetOpened by rememberSaveable { mutableStateOf(false) }
+            val sheetProgress = remember { Animatable(if (hasSheetOpened) 1f else 0f) }
+            val isLeaving = transition.targetState == EnterExitState.PostExit
+            LaunchedEffect(isLeaving) {
+                if (isLeaving) {
+                    val isPopped = navController.currentBackStack.value.none { entry -> entry.id == backStackEntry.id }
+                    if (isPopped) {
+                        sheetProgress.animateTo(0f, SheetCloseSpec)
+                    }
+                } else if (sheetProgress.value < 1f) {
+                    withTimeoutOrNull(SHEET_READY_TIMEOUT_MILLIS) {
+                        snapshotFlow { viewModel.uiState.value.isLoading }.first { isLoading -> !isLoading }
+                    }
+                    withFrameNanos { }
+                    withFrameNanos { }
+                    sheetProgress.animateTo(1f, SheetOpenSpec)
+                    hasSheetOpened = true
+                }
+            }
             LaunchedEffect(state.isPaywallRequested) {
                 if (state.isPaywallRequested) {
                     viewModel.paywallOpened()
@@ -435,8 +448,10 @@ private fun PicklelogNavGraph(
                     actions = actions,
                     modifier =
                         Modifier.graphicsLayer {
-                            translationY = (1f - sheetProgress.value) * size.height
-                            shape = RoundedCornerShape(topStart = sheetCorner.value, topEnd = sheetCorner.value)
+                            val remaining = 1f - sheetProgress.value
+                            val corner = SHEET_CORNER * remaining
+                            translationY = remaining * size.height
+                            shape = RoundedCornerShape(topStart = corner, topEnd = corner)
                             clip = true
                         },
                 )
