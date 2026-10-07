@@ -3,6 +3,7 @@ package com.maxeydev.picklelog.ui.dashboard
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,6 +42,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -128,7 +130,7 @@ fun ExpandedStatsScreen(
                     AdvancedStatsSection(state)
                 } else {
                     LockedPreview(state = state, onSeePro = onSeePro)
-                    LockedProSection()
+                    LockedProSection(onSeePro = onSeePro)
                 }
             }
         }
@@ -469,7 +471,7 @@ private fun SplitRow(
 }
 
 @Composable
-private fun LockedProSection() {
+private fun LockedProSection(onSeePro: () -> Unit) {
     StatsGroup(
         title = stringResource(R.string.stats_pro_title),
         modifier = Modifier.testTag(DashboardTestTags.STATS_PRO_SECTION),
@@ -480,7 +482,11 @@ private fun LockedProSection() {
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .testTag(DashboardTestTags.proRow(index))
+                            .clickable(
+                                role = Role.Button,
+                                onClickLabel = stringResource(R.string.stats_preview_cta),
+                                onClick = onSeePro,
+                            ).testTag(DashboardTestTags.proRow(index))
                             .semantics(mergeDescendants = true) {},
                 ) {
                     if (index > 0) {
