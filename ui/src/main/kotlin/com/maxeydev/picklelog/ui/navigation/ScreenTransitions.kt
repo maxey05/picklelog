@@ -3,43 +3,38 @@ package com.maxeydev.picklelog.ui.navigation
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.ui.unit.IntOffset
 
-private const val SCREEN_MOVE_MILLIS = 300
-private const val SCREEN_FADE_OUT_MILLIS = 90
-private const val SCREEN_FADE_IN_MILLIS = 210
-private const val SCREEN_SHIFT_DIVISOR = 12
+private const val SCREEN_MOVE_MILLIS = 340
+private const val UNDERLAY_SHIFT_DIVISOR = 4
 
 private val ScreenEasing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
 
-private fun <T> moveSpec() = tween<T>(durationMillis = SCREEN_MOVE_MILLIS, easing = ScreenEasing)
-
-private fun <T> fadeOutSpec() = tween<T>(durationMillis = SCREEN_FADE_OUT_MILLIS, easing = LinearEasing)
-
-private fun <T> fadeInSpec() =
-    tween<T>(
-        durationMillis = SCREEN_FADE_IN_MILLIS,
-        delayMillis = SCREEN_FADE_OUT_MILLIS,
-        easing = LinearEasing,
-    )
+private val ScreenSpec: FiniteAnimationSpec<IntOffset> =
+    tween(durationMillis = SCREEN_MOVE_MILLIS, easing = ScreenEasing)
 
 internal val ScreenEnter: EnterTransition =
-    slideInHorizontally(animationSpec = moveSpec()) { fullWidth -> fullWidth / SCREEN_SHIFT_DIVISOR } +
-        fadeIn(animationSpec = fadeInSpec())
+    slideInHorizontally(animationSpec = ScreenSpec) { fullWidth -> fullWidth }
 
 internal val ScreenExit: ExitTransition =
-    slideOutHorizontally(animationSpec = moveSpec()) { fullWidth -> -fullWidth / SCREEN_SHIFT_DIVISOR } +
-        fadeOut(animationSpec = fadeOutSpec())
+    slideOutHorizontally(animationSpec = ScreenSpec) { fullWidth -> -fullWidth / UNDERLAY_SHIFT_DIVISOR }
 
 internal val ScreenPopEnter: EnterTransition =
-    slideInHorizontally(animationSpec = moveSpec()) { fullWidth -> -fullWidth / SCREEN_SHIFT_DIVISOR } +
-        fadeIn(animationSpec = fadeInSpec())
+    slideInHorizontally(animationSpec = ScreenSpec) { fullWidth -> -fullWidth / UNDERLAY_SHIFT_DIVISOR }
 
 internal val ScreenPopExit: ExitTransition =
-    slideOutHorizontally(animationSpec = moveSpec()) { fullWidth -> fullWidth / SCREEN_SHIFT_DIVISOR } +
-        fadeOut(animationSpec = fadeOutSpec())
+    slideOutHorizontally(animationSpec = ScreenSpec) { fullWidth -> fullWidth }
+
+private val PredictiveSpec: FiniteAnimationSpec<IntOffset> =
+    tween(durationMillis = SCREEN_MOVE_MILLIS, easing = LinearEasing)
+
+internal val ScreenPredictivePopEnter: EnterTransition =
+    slideInHorizontally(animationSpec = PredictiveSpec) { fullWidth -> -fullWidth / UNDERLAY_SHIFT_DIVISOR }
+
+internal val ScreenPredictivePopExit: ExitTransition =
+    slideOutHorizontally(animationSpec = PredictiveSpec) { fullWidth -> fullWidth }
