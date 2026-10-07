@@ -106,6 +106,7 @@ class MatchEditViewModel(
     private var suggestionResult: SuggestionResult? = null
     private var recentLocations: List<String> = emptyList()
     private var hasPhotoError = false
+    private var showResultError = false
     private var upgradePrompt: UpgradeReason? = null
     private var isPaywallRequested = false
     private val photoWatchers = mutableMapOf<String, Job>()
@@ -149,7 +150,10 @@ class MatchEditViewModel(
 
     fun selectFormat(format: MatchFormat) = updateDraft { it.withFormat(format) }
 
-    fun selectResult(result: MatchResult) = updateDraft { it.copy(result = result) }
+    fun selectResult(result: MatchResult) {
+        showResultError = false
+        updateDraft { it.copy(result = result) }
+    }
 
     fun selectDate(date: AppDate) = updateDraft { it.copy(date = date.toString()) }
 
@@ -263,7 +267,15 @@ class MatchEditViewModel(
 
     fun save() {
         val current = draft ?: return
-        if (!current.canSave() || isSaving || isFinished) {
+        if (isSaving || isFinished) {
+            return
+        }
+        if (current.result == null && current.canSaveIgnoringResult()) {
+            showResultError = true
+            mutableUiState.value = renderState()
+            return
+        }
+        if (!current.canSave()) {
             return
         }
         isSaving = true
@@ -451,6 +463,7 @@ class MatchEditViewModel(
             savedNewMatchId = savedNewMatchId,
             photoFilePath = { photoFile(it).path },
             hasPhotoError = hasPhotoError,
+            showResultError = showResultError,
             upgradePrompt = upgradePrompt,
             isPaywallRequested = isPaywallRequested,
         ) ?: MatchEditUiState(isLoading = !isFinished, isFinished = isFinished)
