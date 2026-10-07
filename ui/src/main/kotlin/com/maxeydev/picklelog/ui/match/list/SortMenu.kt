@@ -253,7 +253,7 @@ private fun SortMenuItem(
     onClick: () -> Unit,
 ) {
     val rowColor =
-        if (isActive) PicklelogTheme.colors.winRow else MaterialTheme.colorScheme.surfaceContainerLowest
+        if (isActive) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerLowest
     Row(
         modifier =
             Modifier
