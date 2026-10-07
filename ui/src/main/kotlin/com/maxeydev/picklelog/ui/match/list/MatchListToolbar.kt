@@ -37,6 +37,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.maxeydev.picklelog.domain.match.MatchSort
 import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.theme.PicklelogSpacing
 import com.maxeydev.picklelog.ui.theme.PicklelogTheme
 
 private val MIN_TOUCH_TARGET = 48.dp
@@ -52,7 +53,10 @@ fun MatchListToolbar(
     modifier: Modifier = Modifier,
 ) {
     FlowRow(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = PicklelogSpacing.gutter, vertical = PicklelogSpacing.md),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -147,7 +151,7 @@ private fun FilterButton(
                         .offset(x = 4.dp, y = (-4).dp)
                         .defaultMinSize(minWidth = COUNT_BADGE_MIN_SIZE, minHeight = COUNT_BADGE_MIN_SIZE)
                         .background(PicklelogTheme.colors.countBadge, CircleShape)
-                        .padding(horizontal = 5.dp),
+                        .padding(horizontal = PicklelogSpacing.xs),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
