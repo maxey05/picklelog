@@ -103,10 +103,6 @@ private val Heart by lazy {
     svgPath("M12 20.5s-8-4.8-8-10.4A4.6 4.6 0 0 1 12 7.3a4.6 4.6 0 0 1 8 2.8c0 5.6-8 10.4-8 10.4z")
 }
 private val CourtShape by lazy { svgPath("M40.84 54 L119.16 54 L146 126 L24 126 Z") }
-private val Shield by lazy {
-    svgPath("M12 2.5l8 3v6.2c0 5-3.4 8.6-8 9.8-4.6-1.2-8-4.8-8-9.8V5.5z")
-}
-private val ShieldCheck by lazy { svgPath("M8.2 12.2l2.6 2.6 5-5.2") }
 
 @Composable
 internal fun IntroIllustration(
@@ -114,6 +110,10 @@ internal fun IntroIllustration(
     modifier: Modifier = Modifier,
     topInset: Dp = 0.dp,
 ) {
+    if (page == IntroPage.PRIVACY) {
+        PrivacyMascot(topInset = topInset, modifier = modifier)
+        return
+    }
     val palette = introPalette()
     val labels = introArtLabels()
     val measurer = rememberTextMeasurer()
@@ -135,7 +135,7 @@ internal fun IntroIllustration(
                 IntroPage.LOGGING -> drawLoggingScene(palette, measurer, labels)
                 IntroPage.STATS -> drawStatsScene(palette, measurer, labels)
                 IntroPage.SHARE -> drawShareScene(palette, measurer, labels)
-                IntroPage.PRIVACY -> drawPrivacyScene(palette)
+                IntroPage.PRIVACY -> Unit
             }
         }
     }
@@ -435,23 +435,5 @@ private fun DrawScope.drawShareScene(
         drawCircle(palette.onGreen, 3f, Offset(-7.2f, 0f), style = Stroke(width = 2.4f))
         drawCircle(palette.onGreen, 3f, Offset(7.2f, -8.4f), style = Stroke(width = 2.4f))
         drawCircle(palette.onGreen, 3f, Offset(7.2f, 8.4f), style = Stroke(width = 2.4f))
-    }
-}
-
-private fun DrawScope.drawPrivacyScene(palette: IntroPalette) {
-    translate(128f, 70f) {
-        phoneFrame(palette, 134f, 236f, 28f)
-        box(palette.cardBorder, 51f, 20f, 32f, 4f, 2f)
-        withTransform(
-            {
-                translate(32f, 60f)
-                scale(70f / 24f, 70f / 24f, Offset.Zero)
-            },
-        ) {
-            drawPath(Shield, palette.green)
-            strokePath(ShieldCheck, palette.onGreen, 2f)
-        }
-        box(palette.emptyCell, 32f, 152f, 70f, 5f, 2.5f)
-        box(palette.emptyCell, 44f, 171f, 46f, 5f, 2.5f)
     }
 }
