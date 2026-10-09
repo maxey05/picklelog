@@ -418,7 +418,7 @@
     <string name="intro_art_logging_description">A phone showing large Win and Loss buttons, with score, partner and photo as optional extras</string>
     <string name="intro_art_stats_description">A month calendar shaded day by day with a win-loss record and win rate, a streak flame and a rising bar chart</string>
     <string name="intro_art_share_description">A match card showing an 11 to 7 doubles win with a court photo, and a share button</string>
-    <string name="intro_art_privacy_description">A phone showing a shield with a check mark</string>
+    <string name="intro_art_privacy_description">The Picklelog duck standing ready with its paddle</string>
     <string name="intro_art_win">W</string>
     <string name="intro_art_loss">L</string>
     <string name="intro_art_score">Score</string>
@@ -454,6 +454,7 @@
     <string name="about_version">Version %1$s</string>
     <string name="about_privacy_heading">Privacy</string>
     <string name="about_app_name">Picklelog</string>
+    <string name="about_mascot_description">Pet the duck</string>
     <string name="about_privacy_point_account">No account and no server.</string>
     <string name="about_privacy_point_device">Your matches, photos and name stay on this device.</string>
     <string name="about_privacy_point_tracking">No analytics and no ads.</string>
