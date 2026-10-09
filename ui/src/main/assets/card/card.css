@@ -274,6 +274,24 @@ body {
     white-space: nowrap;
 }
 
+#brand-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(5 * var(--u));
+    max-width: 100%;
+}
+
+#brand-mark {
+    flex: none;
+    width: auto;
+    height: calc(22 * var(--u));
+}
+
+#brand-row #brand {
+    min-width: 0;
+}
+
 #brand {
     font-family: "Baloo 2", sans-serif;
     font-weight: 800;
