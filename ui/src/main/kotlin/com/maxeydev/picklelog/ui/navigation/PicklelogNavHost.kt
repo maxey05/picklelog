@@ -1,5 +1,6 @@
 package com.maxeydev.picklelog.ui.navigation
 
+import android.annotation.SuppressLint
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
@@ -33,6 +34,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.maxeydev.picklelog.ui.PicklelogDependencies
+import com.maxeydev.picklelog.ui.common.rememberIsResumed
 import com.maxeydev.picklelog.ui.dashboard.DashboardViewModel
 import com.maxeydev.picklelog.ui.dashboard.ExpandedStatsScreen
 import com.maxeydev.picklelog.ui.match.detail.MatchDetailScreen
@@ -41,6 +43,7 @@ import com.maxeydev.picklelog.ui.match.edit.MatchEditActions
 import com.maxeydev.picklelog.ui.match.edit.MatchEditScreen
 import com.maxeydev.picklelog.ui.match.edit.MatchEditViewModel
 import com.maxeydev.picklelog.ui.match.edit.PhotoPickerActions
+import com.maxeydev.picklelog.ui.match.list.FirstMatchSheet
 import com.maxeydev.picklelog.ui.match.list.MatchListFilterActions
 import com.maxeydev.picklelog.ui.match.list.MatchListScreen
 import com.maxeydev.picklelog.ui.match.list.MatchListViewModel
@@ -49,6 +52,8 @@ import com.maxeydev.picklelog.ui.onboarding.OnboardingViewModel
 import com.maxeydev.picklelog.ui.paywall.CapWarningBanner
 import com.maxeydev.picklelog.ui.paywall.PaywallScreen
 import com.maxeydev.picklelog.ui.paywall.PaywallViewModel
+import com.maxeydev.picklelog.ui.paywall.ProUnlockedSheet
+import com.maxeydev.picklelog.ui.paywall.StoreMessage
 import com.maxeydev.picklelog.ui.settings.AboutScreen
 import com.maxeydev.picklelog.ui.settings.BackupActions
 import com.maxeydev.picklelog.ui.settings.BackupSettingsScreen
@@ -68,6 +73,7 @@ import com.maxeydev.picklelog.ui.share.SharePreviewViewModel
 import com.maxeydev.picklelog.ui.share.VariantPickerActions
 import com.maxeydev.picklelog.ui.streak.MissedSkipNotice
 import com.maxeydev.picklelog.ui.streak.SkipUsedNotice
+import com.maxeydev.picklelog.ui.streak.StreakMilestoneHost
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -106,6 +112,7 @@ private fun PicklelogNavGraph(
     onOpenLoggingHandled: () -> Unit,
 ) {
     val startDestination: Any = if (requiresOnboarding) OnboardingRoute else HomeRoute
+    var proSheetRestored by rememberSaveable { mutableStateOf<Boolean?>(null) }
     NavHost(
         navController = navController,
         startDestination = startDestination,
@@ -148,6 +155,8 @@ private fun PicklelogNavGraph(
             val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.factory(dependencies))
             val settingsState by settingsViewModel.uiState.collectAsStateWithLifecycle()
             val context = LocalContext.current
+            val isHomeResumed = rememberIsResumed(backStackEntry)
+            val isFirstMatchSaved = state.savedMatchId != null && state.totalCount == 1
             LaunchedEffect(settingsState.isErased) {
                 if (settingsState.isErased) {
                     settingsViewModel.erasedHandled()
@@ -194,7 +203,7 @@ private fun PicklelogNavGraph(
                 },
             ) {
                 MatchListScreen(
-                    state = state,
+                    state = if (isFirstMatchSaved) state.copy(savedMatchId = null) else state,
                     dashboard = dashboardState,
                     onOpenStats = { navController.navigate(StatsRoute) },
                     notices = {
@@ -247,6 +256,22 @@ private fun PicklelogNavGraph(
                                 onFiltersAndSearchCleared = viewModel::clearFiltersAndSearch,
                             )
                         },
+                )
+            }
+            StreakMilestoneHost(
+                streakWeeks = dashboardState.streak.current,
+                isLoaded = !dashboardState.isLoading,
+                isForeground = isHomeResumed,
+            )
+            if (isFirstMatchSaved && isHomeResumed) {
+                FirstMatchSheet(
+                    onDismiss = viewModel::dismissSavedConfirmation,
+                    onLogAnother = {
+                        state.savedMatchId?.let { savedMatchId ->
+                            viewModel.dismissSavedConfirmation()
+                            navController.navigate(MatchEditRoute(logAnotherFrom = savedMatchId))
+                        }
+                    },
                 )
             }
         }
@@ -313,6 +338,7 @@ private fun PicklelogNavGraph(
             val state by viewModel.uiState.collectAsStateWithLifecycle()
             LaunchedEffect(state.isUnlocked) {
                 if (state.isUnlocked) {
+                    proSheetRestored = state.message == StoreMessage.RESTORED
                     navController.popBackStack()
                 }
             }
@@ -363,6 +389,7 @@ private fun PicklelogNavGraph(
             val isLeaving = transition.targetState == EnterExitState.PostExit
             LaunchedEffect(isLeaving) {
                 if (isLeaving) {
+                    @SuppressLint("RestrictedApi")
                     val isPopped = navController.currentBackStack.value.none { entry -> entry.id == backStackEntry.id }
                     if (isPopped) {
                         sheetProgress.animateTo(0f, SheetCloseSpec)
@@ -479,6 +506,9 @@ private fun PicklelogNavGraph(
                 onDeleteDismissed = viewModel::dismissDelete,
             )
         }
+    }
+    proSheetRestored?.let { restored ->
+        ProUnlockedSheet(restored = restored, onDismiss = { proSheetRestored = null })
     }
     LaunchedEffect(openLogging) {
         if (openLogging) {
