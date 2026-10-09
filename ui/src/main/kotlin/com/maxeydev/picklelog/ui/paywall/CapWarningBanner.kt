@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -23,6 +24,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.maxeydev.picklelog.domain.entitlement.CapWarning
 import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.common.Mascot
+import com.maxeydev.picklelog.ui.common.MascotImage
+
+private val MASCOT_SIZE = 32.dp
 
 @Composable
 fun CapWarningBanner(
@@ -47,6 +52,9 @@ fun CapWarningBanner(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp),
         ) {
+            if (!isImminent) {
+                MascotImage(mascot = Mascot.HEAD_SMILE, modifier = Modifier.size(MASCOT_SIZE))
+            }
             Text(
                 text =
                     if (remainingFreeMatches == 0) {
