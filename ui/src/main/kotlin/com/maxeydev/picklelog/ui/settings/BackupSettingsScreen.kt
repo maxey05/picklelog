@@ -20,7 +20,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -48,9 +47,14 @@ import androidx.compose.ui.unit.dp
 import com.maxeydev.picklelog.domain.backup.ImportSummary
 import com.maxeydev.picklelog.domain.entitlement.FreeTier
 import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.common.BobbingMascot
+import com.maxeydev.picklelog.ui.common.Mascot
+import com.maxeydev.picklelog.ui.common.MascotImage
 import com.maxeydev.picklelog.ui.theme.PicklelogTheme
 
 private val IMPORT_MIME_TYPES = arrayOf("*/*")
+private val WORKING_MASCOT_SIZE = 24.dp
+private val MESSAGE_MASCOT_SIZE = 40.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -218,8 +222,12 @@ private fun ButtonLabel(
 @Composable
 private fun WorkingIndicator(label: Int) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        CircularProgressIndicator(modifier = Modifier.heightIn(max = 20.dp))
-        Text(text = stringResource(label), style = MaterialTheme.typography.labelSmall)
+        BobbingMascot(mascot = Mascot.HEAD_SMILE, modifier = Modifier.size(WORKING_MASCOT_SIZE))
+        Text(
+            text = stringResource(label),
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+        )
     }
 }
 
@@ -234,16 +242,23 @@ private fun MessageCard(
         shape = MaterialTheme.shapes.medium,
         modifier = Modifier.fillMaxWidth().testTag(BackupTestTags.MESSAGE),
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                text = stringResource(message.text),
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-            )
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.heightIn(min = 48.dp).testTag(BackupTestTags.MESSAGE_DISMISS),
-            ) {
-                Text(stringResource(R.string.backup_result_ok))
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            MascotImage(mascot = Mascot.HEAD_OOPS, modifier = Modifier.size(MESSAGE_MASCOT_SIZE))
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = stringResource(message.text),
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                )
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.heightIn(min = 48.dp).testTag(BackupTestTags.MESSAGE_DISMISS),
+                ) {
+                    Text(stringResource(R.string.backup_result_ok))
+                }
             }
         }
     }
