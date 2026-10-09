@@ -1,7 +1,10 @@
 package com.maxeydev.picklelog.ui.settings
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,12 +27,21 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -38,12 +50,28 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.common.Mascot
+import com.maxeydev.picklelog.ui.common.MascotImage
+import com.maxeydev.picklelog.ui.dashboard.motionScale
 import com.maxeydev.picklelog.ui.theme.PicklelogFonts
 import com.maxeydev.picklelog.ui.theme.PicklelogTheme
 
 private val HERO_SHAPE = RoundedCornerShape(20.dp)
 private val CHECK_BADGE_SIZE = 22.dp
 private val CHECK_ICON_SIZE = 14.dp
+private val MASCOT_TOUCH_SIZE = 112.dp
+private val MASCOT_SIZE = 104.dp
+private const val MASCOT_POP_SCALE = 1.1f
+private const val MASCOT_POP_UP_MILLIS = 140
+private const val MASCOT_POP_DOWN_MILLIS = 260
+
+private val MASCOT_FACES =
+    listOf(
+        Mascot.HEAD_SMILE,
+        Mascot.HEAD_JOY,
+        Mascot.HEAD_WINK,
+        Mascot.HEAD_CHEER,
+    )
 
 private val WORDMARK_STYLE =
     TextStyle(
@@ -122,6 +150,7 @@ private fun AboutHero(versionName: String) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
+            PettableMascot()
             Text(
                 text = stringResource(R.string.about_app_name),
                 style = WORDMARK_STYLE,
@@ -134,6 +163,40 @@ private fun AboutHero(versionName: String) {
                 modifier = Modifier.testTag(AboutTestTags.VERSION),
             )
         }
+    }
+}
+
+@Composable
+private fun PettableMascot() {
+    var pets by rememberSaveable { mutableIntStateOf(0) }
+    val scale = remember { Animatable(1f) }
+    val description = stringResource(R.string.about_mascot_description)
+    LaunchedEffect(pets) {
+        if (pets > 0 && motionScale() > 0f) {
+            scale.animateTo(MASCOT_POP_SCALE, tween(durationMillis = MASCOT_POP_UP_MILLIS))
+            scale.animateTo(1f, tween(durationMillis = MASCOT_POP_DOWN_MILLIS))
+        }
+    }
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier =
+            Modifier
+                .size(MASCOT_TOUCH_SIZE)
+                .clip(CircleShape)
+                .clickable(role = Role.Button) { pets++ }
+                .semantics { contentDescription = description }
+                .testTag(AboutTestTags.MASCOT),
+    ) {
+        MascotImage(
+            mascot = MASCOT_FACES[pets % MASCOT_FACES.size],
+            modifier =
+                Modifier
+                    .size(MASCOT_SIZE)
+                    .graphicsLayer {
+                        scaleX = scale.value
+                        scaleY = scale.value
+                    },
+        )
     }
 }
 
