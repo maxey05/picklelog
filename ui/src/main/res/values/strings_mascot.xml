@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mascot_sheet_dismiss">Got it</string>
+    <string name="first_match_title">Your log has hatched</string>
+    <string name="first_match_body">That\'s match one, and week one of your streak. Play once a week to keep it growing.</string>
+    <string name="streak_milestone_body_4">A month without missing a week.</string>
+    <string name="streak_milestone_body_8">Two months without missing a week.</string>
+    <string name="streak_milestone_body_12">Three months without missing a week.</string>
+    <string name="streak_milestone_body_26">Half a year without missing a week.</string>
+    <string name="streak_milestone_body_52">A full year without missing a week.</string>
+    <string name="pro_unlocked_body">Unlimited matches, advanced stats, streak insurance and more card styles are yours for good.</string>
+</resources>
