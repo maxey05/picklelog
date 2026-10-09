@@ -5,4 +5,5 @@ object AboutTestTags {
     const val VERSION = "about_version"
     const val PRIVACY = "about_privacy"
     const val LICENCES = "about_licences"
+    const val MASCOT = "about_mascot"
 }
