@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
 import android.os.Build
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
@@ -70,6 +71,7 @@ class StreakReminderNotifier(
         return NotificationCompat
             .Builder(context, StreakNotification.CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_streak)
+            .setLargeIcon(BitmapFactory.decodeResource(context.resources, R.drawable.mascot_head_cheer))
             .setContentTitle(context.getString(R.string.streak_notification_title))
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
