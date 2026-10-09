@@ -11,7 +11,6 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -20,6 +19,7 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.text.AnnotatedString
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.maxeydev.picklelog.domain.match.MatchResult
+import com.maxeydev.picklelog.ui.common.MascotSheetTestTags
 import com.maxeydev.picklelog.ui.fakes.FakeDependencies
 import com.maxeydev.picklelog.ui.match.edit.MatchEditTestTags
 import com.maxeydev.picklelog.ui.match.edit.PersonSlot
@@ -35,7 +35,6 @@ import kotlin.uuid.ExperimentalUuidApi
 
 private const val WAIT_MILLIS = 5_000L
 private const val LOG_ANOTHER = "Log another"
-private const val MATCH_SAVED = "Match saved"
 
 @RunWith(AndroidJUnit4::class)
 class LogAnotherFlowTest {
@@ -44,10 +43,6 @@ class LogAnotherFlowTest {
 
     private fun waitForTag(tag: String) {
         compose.waitUntil(WAIT_MILLIS) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty() }
-    }
-
-    private fun waitForText(text: String) {
-        compose.waitUntil(WAIT_MILLIS) { compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty() }
     }
 
     private fun editableText(value: String): SemanticsMatcher =
@@ -69,7 +64,7 @@ class LogAnotherFlowTest {
         compose.onNodeWithTag(MatchEditTestTags.NOTES).performTextInput("Windy on court 3")
         compose.onNodeWithTag(MatchEditTestTags.SAVE).performClick()
         compose.waitUntil(WAIT_MILLIS) { dependencies.matchRepository.saved.isNotEmpty() }
-        waitForText(MATCH_SAVED)
+        waitForTag(MatchListTestTags.FIRST_MATCH_SHEET)
     }
 
     @Test
@@ -114,8 +109,10 @@ class LogAnotherFlowTest {
         logFirstMatch(dependencies)
         val saved = dependencies.matchRepository.saved.single()
 
-        compose.onNodeWithContentDescription("Dismiss").performClick()
-        compose.waitUntil(WAIT_MILLIS) { compose.onAllNodesWithText(MATCH_SAVED).fetchSemanticsNodes().isEmpty() }
+        compose.onNodeWithTag(MascotSheetTestTags.DISMISS).performClick()
+        compose.waitUntil(WAIT_MILLIS) {
+            compose.onAllNodesWithTag(MatchListTestTags.FIRST_MATCH_SHEET).fetchSemanticsNodes().isEmpty()
+        }
 
         waitForTag(MatchListTestTags.row(saved.id.toString()))
         assertEquals(1, dependencies.matchRepository.current.size)
