@@ -69,6 +69,16 @@
         });
     }
 
+    function decodedBrandMark() {
+        var mark = byId("brand-mark");
+        if (byId("brand-row").hidden) {
+            return Promise.resolve();
+        }
+        return mark.decode().catch(function () {
+            mark.hidden = true;
+        });
+    }
+
     function designRect(element, scale) {
         var rect = element.getBoundingClientRect();
         return {
@@ -130,6 +140,7 @@
             card.classList.toggle(THEME_CLASSES[key], key === theme);
         });
         setText("brand", data.brand);
+        byId("brand-row").hidden = byId("brand").hidden;
         setText("name", data.displayName);
         setText("meta", data.meta);
         setEntry("partner", data.partner);
@@ -151,7 +162,7 @@
         var fonts = document.fonts
             ? document.fonts.load('800 92px "Baloo 2"').then(function () { return document.fonts.ready; }).catch(function () {})
             : Promise.resolve();
-        Promise.all([fonts, decoded(photo)]).then(function () {
+        Promise.all([fonts, decoded(photo), decodedBrandMark()]).then(function () {
             scale = fitToViewport();
             document.body.getBoundingClientRect();
             setTimeout(function () {
