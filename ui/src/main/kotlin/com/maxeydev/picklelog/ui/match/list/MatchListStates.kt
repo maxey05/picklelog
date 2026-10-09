@@ -28,12 +28,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.common.Mascot
+import com.maxeydev.picklelog.ui.common.MascotImage
 import com.maxeydev.picklelog.ui.theme.PicklelogSpacing
 
 private val ACTION_MIN_HEIGHT = 48.dp
 private val EMPTY_IMAGE_SIZE = 160.dp
 private val NO_RESULTS_ICON_CIRCLE = 96.dp
-private val NO_RESULTS_ICON_SIZE = 48.dp
+private val NO_RESULTS_MASCOT_SIZE = 72.dp
 private val ACTION_ICON_SIZE = 20.dp
 private val FAB_CLEARANCE = 96.dp
 
@@ -52,11 +54,9 @@ fun MatchListEmptyState(
             verticalArrangement = Arrangement.spacedBy(PicklelogSpacing.lg),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Box(
-                modifier =
-                    Modifier
-                        .size(EMPTY_IMAGE_SIZE)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.shapes.large),
+            MascotImage(
+                mascot = Mascot.READY,
+                modifier = Modifier.size(EMPTY_IMAGE_SIZE),
             )
             Text(
                 text = stringResource(R.string.list_empty_title),
@@ -113,11 +113,9 @@ fun NoResultsState(
                         .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_search_off),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(NO_RESULTS_ICON_SIZE),
+                MascotImage(
+                    mascot = Mascot.HEAD_OOPS,
+                    modifier = Modifier.size(NO_RESULTS_MASCOT_SIZE),
                 )
             }
             Text(
