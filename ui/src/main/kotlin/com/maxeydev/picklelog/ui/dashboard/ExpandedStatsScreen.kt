@@ -53,6 +53,8 @@ import androidx.compose.ui.unit.sp
 import com.maxeydev.picklelog.domain.stats.WinLoss
 import com.maxeydev.picklelog.domain.streak.StreakInsurance
 import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.common.Mascot
+import com.maxeydev.picklelog.ui.common.MascotImage
 import com.maxeydev.picklelog.ui.theme.PicklelogSpacing
 import com.maxeydev.picklelog.ui.theme.PicklelogTextStyles
 import com.maxeydev.picklelog.ui.theme.PicklelogTheme
@@ -65,6 +67,7 @@ private const val PERCENT_SCALE = 100f
 private val BAR_WIDTH = 96.dp
 private val BAR_HEIGHT = 8.dp
 private val PERCENT_MIN_WIDTH = 48.dp
+private val EMPTY_ROW_MASCOT_SIZE = 36.dp
 private const val STACKED_FONT_SCALE = 1.3f
 internal val MIN_ROW_HEIGHT = 64.dp
 private val STREAK_VALUE_STYLE = PicklelogTextStyles.hero.copy(fontSize = 24.sp, lineHeight = 28.sp)
@@ -427,6 +430,9 @@ private fun SplitRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(PicklelogSpacing.md),
         ) {
+            if (!record.hasMatches) {
+                MascotImage(mascot = Mascot.HEAD_SMILE, modifier = Modifier.size(EMPTY_ROW_MASCOT_SIZE))
+            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = label,
