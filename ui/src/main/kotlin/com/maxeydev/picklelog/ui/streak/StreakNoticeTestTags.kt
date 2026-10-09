@@ -6,4 +6,5 @@ object StreakNoticeTestTags {
     const val MISSED_SKIP = "missed_skip_notice"
     const val MISSED_SKIP_DISMISS = "missed_skip_dismiss"
     const val MISSED_SKIP_ACTION = "missed_skip_action"
+    const val MILESTONE_SHEET = "streak_milestone_sheet"
 }
