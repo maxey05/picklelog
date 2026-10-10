@@ -147,6 +147,11 @@ fun SettingsDrawer(
                         onDarkThemeChanged = actions.onDarkThemeChanged,
                         showDivider = true,
                     )
+                    SoundEffectsRow(
+                        enabled = state.soundEffects,
+                        onEnabledChanged = actions.onSoundEffectsChanged,
+                        showDivider = true,
+                    )
                     ReminderToggle(
                         enabled = state.reminderEnabled,
                         onEnable = actions.onEnableReminder,
@@ -315,6 +320,16 @@ private fun InfoCard(
                     .clickable(role = Role.Button, onClick = actions.onRateUs)
                     .testTag(SettingsTestTags.RATE_US),
             trailing = { TrailingIcon(R.drawable.ic_open_in_new) },
+        )
+        SettingsRow(
+            icon = R.drawable.ic_heart,
+            label = stringResource(R.string.settings_support),
+            navigates = true,
+            showDivider = true,
+            modifier =
+                Modifier
+                    .clickable(role = Role.Button, onClick = actions.onOpenSupport)
+                    .testTag(SettingsTestTags.SUPPORT_OPEN),
         )
         SettingsRow(
             icon = R.drawable.ic_info,
