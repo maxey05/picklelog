@@ -8,4 +8,6 @@ interface AppSettingsStore {
     suspend fun setDarkTheme(dark: Boolean)
 
     suspend fun setOnboardingComplete(complete: Boolean)
+
+    suspend fun setSoundEffectsEnabled(enabled: Boolean)
 }
