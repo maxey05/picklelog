@@ -26,6 +26,11 @@ class PicklelogColors(
     val cardBorder: Color,
     val countBadge: Color,
     val onCountBadge: Color,
+    val activityNone: Color,
+    val activityLow: Color,
+    val activityMid: Color,
+    val activityHigh: Color,
+    val activityPeak: Color,
 )
 
 internal val LIGHT_PICKLELOG_COLORS =
@@ -48,6 +53,11 @@ internal val LIGHT_PICKLELOG_COLORS =
         cardBorder = Color(0xFFDDE7E1),
         countBadge = Color(0xFFC7F4D5),
         onCountBadge = Color(0xFF0B3A24),
+        activityNone = Color(0xFFE8EFEB),
+        activityLow = Color(0xFFA5E8C1),
+        activityMid = Color(0xFF4FBF85),
+        activityHigh = Color(0xFF1F8557),
+        activityPeak = Color(0xFF00592F),
     )
 
 internal val DARK_PICKLELOG_COLORS =
@@ -70,6 +80,11 @@ internal val DARK_PICKLELOG_COLORS =
         cardBorder = Color(0xFF34433A),
         countBadge = Color(0xFFB4F2CB),
         onCountBadge = Color(0xFF00391F),
+        activityNone = Color(0xFF26332B),
+        activityLow = Color(0xFF1E6B47),
+        activityMid = Color(0xFF3FA773),
+        activityHigh = Color(0xFF7BD6A3),
+        activityPeak = Color(0xFFC7F4D5),
     )
 
 internal val LocalPicklelogColors = staticCompositionLocalOf { LIGHT_PICKLELOG_COLORS }
