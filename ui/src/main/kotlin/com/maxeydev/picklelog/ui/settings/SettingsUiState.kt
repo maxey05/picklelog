@@ -12,6 +12,7 @@ data class SettingsUiState(
     val displayName: String = "",
     val nameDraft: String = "",
     val darkTheme: Boolean? = null,
+    val soundEffects: Boolean = true,
     val cacheBytes: Long? = null,
     val isClearingCache: Boolean = false,
     val isErasing: Boolean = false,
