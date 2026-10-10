@@ -8,6 +8,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
+import android.media.AudioAttributes
+import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
@@ -17,7 +19,8 @@ import com.maxeydev.picklelog.domain.reminder.ReminderNotifier
 import com.maxeydev.picklelog.ui.R
 
 object StreakNotification {
-    const val CHANNEL_ID = "streak_reminders"
+    const val CHANNEL_ID = "streak_reminders_v2"
+    const val LEGACY_CHANNEL_ID = "streak_reminders"
     const val NOTIFICATION_ID = 2501
     const val EXTRA_OPEN_LOGGING = "com.maxeydev.picklelog.extra.OPEN_LOGGING"
     internal const val LAUNCH_REQUEST_CODE = 2501
@@ -85,11 +88,20 @@ class StreakReminderNotifier(
     }
 
     private fun ensureChannel(manager: NotificationManagerCompat) {
+        manager.deleteNotificationChannel(StreakNotification.LEGACY_CHANNEL_ID)
+        val sound = Uri.parse("android.resource://${context.packageName}/${R.raw.sfx_reminder_notification}")
+        val soundAttributes =
+            AudioAttributes
+                .Builder()
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
         val channel =
             NotificationChannelCompat
                 .Builder(StreakNotification.CHANNEL_ID, NotificationManagerCompat.IMPORTANCE_DEFAULT)
                 .setName(context.getString(R.string.streak_notification_channel_name))
                 .setDescription(context.getString(R.string.streak_notification_channel_description))
+                .setSound(sound, soundAttributes)
                 .build()
         manager.createNotificationChannel(channel)
     }
