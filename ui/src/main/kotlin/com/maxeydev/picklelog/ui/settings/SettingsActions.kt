@@ -9,6 +9,7 @@ class SettingsActions(
     val onOpenPrivacy: () -> Unit,
     val onOpenAbout: () -> Unit,
     val onRateUs: () -> Unit,
+    val onOpenSupport: () -> Unit,
     val onClearCache: () -> Unit,
     val onEnableReminder: () -> Unit,
     val onDisableReminder: () -> Unit,
@@ -17,6 +18,7 @@ class SettingsActions(
     val onSaveName: () -> Unit,
     val onNameEditCancelled: () -> Unit,
     val onDarkThemeChanged: (Boolean) -> Unit,
+    val onSoundEffectsChanged: (Boolean) -> Unit = {},
     val onEraseConfirmed: () -> Unit,
     val onEraseFailureDismissed: () -> Unit,
 )
