@@ -54,6 +54,9 @@ class MainActivity : ComponentActivity() {
                         )
                         onDispose { }
                     }
+                    LaunchedEffect(ready, loaded.soundEffectsEnabled) {
+                        ready.soundEffects.setEnabled(loaded.soundEffectsEnabled)
+                    }
                     PicklelogTheme(darkTheme = darkTheme) {
                         Surface(
                             modifier = Modifier.fillMaxSize(),
@@ -71,6 +74,7 @@ class MainActivity : ComponentActivity() {
                                 withFrameNanos { }
                                 Looper.myQueue().addIdleHandler {
                                     ready.warmCardRenderer()
+                                    ready.soundEffects.preload()
                                     false
                                 }
                             }
