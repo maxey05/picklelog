@@ -97,4 +97,20 @@ class DataStoreAppSettingsStoreTest {
             assertEquals(AppSettings(darkTheme = true, onboardingComplete = false), store.observe().first())
             job.cancelAndJoin()
         }
+
+    @Test
+    fun sound_effects_default_to_on_and_the_choice_survives_an_app_restart() =
+        runBlocking {
+            val firstLaunch = SupervisorJob()
+            val store = DataStoreAppSettingsStore(openDataStore(firstLaunch))
+            assertEquals(true, store.observe().first().soundEffectsEnabled)
+            store.setSoundEffectsEnabled(false)
+            firstLaunch.cancelAndJoin()
+
+            val secondLaunch = SupervisorJob()
+            val reopened = DataStoreAppSettingsStore(openDataStore(secondLaunch)).observe().first()
+
+            assertEquals(false, reopened.soundEffectsEnabled)
+            secondLaunch.cancelAndJoin()
+        }
 }
