@@ -33,6 +33,7 @@ import com.maxeydev.picklelog.ui.notification.StreakReminderNotifier
 import com.maxeydev.picklelog.ui.share.CardRenderer
 import com.maxeydev.picklelog.ui.share.CardRendering
 import com.maxeydev.picklelog.ui.share.WebViewWarmer
+import com.maxeydev.picklelog.ui.sound.SoundPoolSoundEffects
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -84,6 +85,7 @@ class AppContainer(
             timeZone = { currentTimeZone() },
         )
     override val appSettingsStore: AppSettingsStore = dataLayer.appSettingsStore
+    override val soundEffects: SoundPoolSoundEffects = SoundPoolSoundEffects(context)
     override val appCache: AppCache = DirectoryAppCache(context.cacheDir, Dispatchers.IO)
     override val onboarding: Onboarding =
         Onboarding(
