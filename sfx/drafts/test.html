@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Picklelog Sound Tester</title>
+<style>
+:root {
+  --bg: #f6f5f0;
+  --panel: #ffffff;
+  --ink: #1d2a1f;
+  --muted: #667066;
+  --line: #dfddd2;
+  --accent: #2f7d4f;
+  --accent-ink: #ffffff;
+  --hot: #e8b923;
+  --tap: #6b8f71;
+  --confirm: #3d7ea6;
+  --celebration: #c0762b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131a15;
+    --panel: #1b241d;
+    --ink: #e8efe8;
+    --muted: #8fa192;
+    --line: #2b382d;
+    --accent: #5fb985;
+    --accent-ink: #0d1a11;
+    --hot: #e8b923;
+    --tap: #7fa987;
+    --confirm: #66a9d1;
+    --celebration: #e09448;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131a15;
+  --panel: #1b241d;
+  --ink: #e8efe8;
+  --muted: #8fa192;
+  --line: #2b382d;
+  --accent: #5fb985;
+  --accent-ink: #0d1a11;
+  --hot: #e8b923;
+  --tap: #7fa987;
+  --confirm: #66a9d1;
+  --celebration: #e09448;
+}
+* { box-sizing: border-box; }
+html { color-scheme: light dark; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  padding-bottom: 96px;
+}
+header, main { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+header { padding-top: 24px; }
+h1 { margin: 0 0 4px; font-size: 24px; letter-spacing: -0.01em; }
+.lede { margin: 0 0 16px; color: var(--muted); }
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  margin: 0 -16px;
+  padding: 10px 16px;
+}
+.bar-inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  align-items: center;
+  max-width: 980px;
+  margin: 0 auto;
+}
+.ctl { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.ctl input[type="range"] { width: 120px; accent-color: var(--accent); }
+.ctl input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; }
+.ctl label { cursor: pointer; }
+.spacer { flex: 1; }
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.btn {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 6px 12px;
+  min-height: 36px;
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.btn:focus-visible, .play:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.switch { display: inline-flex; align-items: center; gap: 8px; }
+.switch button {
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--line);
+  position: relative;
+  padding: 0;
+}
+.switch button::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--panel);
+  transition: transform 0.15s;
+}
+.switch button[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
+.switch button[aria-checked="true"]::after { transform: translateX(20px); }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 4px; }
+.filters input, .filters select {
+  font: inherit;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 10px;
+  min-height: 36px;
+}
+.filters input { flex: 1; min-width: 160px; }
+section { margin-top: 28px; }
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+.grid { display: grid; gap: 8px; }
+.cue {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--tap);
+  border-radius: 10px;
+  padding: 10px 12px;
+  transition: background 0.12s;
+}
+.cue[data-tier="confirm"] { border-left-color: var(--confirm); }
+.cue[data-tier="celebration"] { border-left-color: var(--celebration); }
+.cue.playing { background: color-mix(in srgb, var(--accent) 14%, var(--panel)); }
+.cue.missing { opacity: 0.5; border-style: dashed; }
+.play {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: var(--accent-ink);
+  display: grid;
+  place-items: center;
+}
+.play svg { width: 18px; height: 18px; fill: currentColor; margin-left: 2px; }
+.play:active { transform: scale(0.94); }
+.name { font-weight: 600; font-size: 15px; word-break: break-all; }
+.desc { color: var(--muted); font-size: 13px; }
+.meta { text-align: right; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  margin-left: 6px;
+  vertical-align: 1px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+}
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.scenarios { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.scn h3 { margin: 0 0 2px; font-size: 15px; }
+.scn p { margin: 0 0 8px; color: var(--muted); font-size: 13px; }
+.steps { list-style: none; margin: 8px 0 0; padding: 0; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.steps li { display: flex; gap: 8px; padding: 1px 0; }
+.steps li.fired { color: var(--accent); font-weight: 600; }
+.steps .t { width: 52px; text-align: right; }
+.duck {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 3px solid var(--hot);
+  background: color-mix(in srgb, var(--hot) 22%, var(--panel));
+  font-weight: 700;
+  font-size: 14px;
+  transition: transform 0.08s;
+}
+.duck:active { transform: scale(0.93); }
+.counter { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; }
+.note { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+.keys { font-size: 12px; color: var(--muted); margin-top: 10px; }
+kbd {
+  font: 11px ui-monospace, Menlo, Consolas, monospace;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0 5px;
+  background: var(--panel);
+}
+.hidden { display: none !important; }
+.status {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: var(--bg);
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 13px;
+  max-width: calc(100vw - 32px);
+}
+.warn { border-color: var(--hot); }
+@media (max-width: 560px) {
+  .cue { grid-template-columns: 44px 1fr; }
+  .meta { grid-column: 2; text-align: left; }
+  .ctl input[type="range"] { width: 90px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Picklelog Sound Tester</h1>
+  <p class="lede">Draft cues from the sound effects plan. Tap a cue to hear it, or run a full flow to hear how cues stack with the app's real timing.</p>
+</header>
+<div class="bar">
+  <div class="bar-inner">
+    <div class="ctl switch">
+      <button id="master" role="switch" aria-checked="true" aria-label="Sound effects"></button>
+      <label for="master">Sound effects (G1)</label>
+    </div>
+    <div class="ctl">
+      <label for="vol">Volume</label>
+      <input id="vol" type="range" min="0" max="100" value="80">
+      <span id="volOut">80%</span>
+    </div>
+    <div class="ctl"><input id="jitter" type="checkbox" checked><label for="jitter">Pitch variation ±3%</label></div>
+    <div class="ctl"><input id="limit" type="checkbox" checked><label for="limit">80 ms repeat limit</label></div>
+    <div class="ctl"><input id="overlap" type="checkbox" checked><label for="overlap">Allow overlap</label></div>
+    <div class="spacer"></div>
+    <button class="btn" id="stop">Stop all</button>
+    <button class="btn" id="theme">Theme</button>
+  </div>
+</div>
+<main>
+  <section id="compare">
+    <h2>Compare: match_saved</h2>
+    <div class="panel">
+      <div class="row" id="compareRow"></div>
+      <p class="note">Press <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> to switch quickly. The first is your original file, the other two are the plan's version and the closer-to-original run.</p>
+    </div>
+  </section>
+  <section id="flows">
+    <h2>Flows</h2>
+    <div class="scenarios" id="scenarios"></div>
+  </section>
+  <section id="duckSection">
+    <h2>Pet the duck (About screen)</h2>
+    <div class="panel row">
+      <button class="duck" id="duck">Pet</button>
+      <div>
+        <div class="counter">Pets: <span id="pets">0</span> · cycles duck_pet_1 to 4, 120 ms rate limit</div>
+        <p class="note">Tap fast to check that the voices feel good repeated and the rate limit keeps them from stacking.</p>
+      </div>
+    </div>
+  </section>
+  <div class="filters">
+    <input id="q" type="search" placeholder="Filter cues by name, ID or description" aria-label="Filter cues">
+    <select id="tier" aria-label="Filter by tier">
+      <option value="">All tiers</option>
+      <option value="tap">Tap</option>
+      <option value="confirm">Confirmation</option>
+      <option value="celebration">Celebration</option>
+    </select>
+  </div>
+  <div id="library"></div>
+  <p class="keys">Shortcuts: <kbd>Esc</kbd> stop all · <kbd>R</kbd> replay last cue · <kbd>M</kbd> sound switch</p>
+</main>
+<div class="status hidden" id="status" role="status"></div>
+<script>
+const DATA = {"cues": {"pock": {"name": "pock", "id": "G1", "tier": "tap", "desc": "Base motif: dry hollow paddle-on-ball pock. Also the sound-switch demo"}, "onboarding_step_1": {"name": "onboarding_step_1", "id": "O1", "tier": "tap", "desc": "Marimba pluck C, pager page 1"}, "onboarding_step_2": {"name": "onboarding_step_2", "id": "O1", "tier": "tap", "desc": "Marimba pluck D, pager page 2"}, "onboarding_step_3": {"name": "onboarding_step_3", "id": "O1", "tier": "tap", "desc": "Marimba pluck E, pager page 3"}, "onboarding_step_4": {"name": "onboarding_step_4", "id": "O1", "tier": "tap", "desc": "Marimba pluck G, pager page 4"}, "name_required": {"name": "name_required", "id": "O2", "tier": "confirm", "desc": "Rubbery two-wobble boing, 380 ms, matches the shake"}, "welcome": {"name": "welcome", "id": "O3", "tier": "celebration", "desc": "Pock, rising C-E-G marimba with chime, one duck peep, ~700 ms"}, "new_match": {"name": "new_match", "id": "H1", "tier": "tap", "desc": "Dry pock plus a faint 200 ms upward air swoosh"}, "log_another": {"name": "log_another", "id": "H1", "tier": "tap", "desc": "Shorter pock alone, for the snackbar action"}, "streak_up": {"name": "streak_up", "id": "H2", "tier": "celebration", "desc": "Flame whump peaking at 225 ms, then seven fading sparkle ticks; 900 ms"}, "tally": {"name": "tally", "id": "H3", "tier": "tap", "desc": "One soft marimba run rising over ~350 ms"}, "streak_milestone": {"name": "streak_milestone", "id": "H4", "tier": "celebration", "desc": "Paddle-smash crack then C-E-G-C marimba fanfare, 1.2 s"}, "streak_milestone_major": {"name": "streak_milestone_major", "id": "H4", "tier": "celebration", "desc": "Same, plus shimmer tail, for 26 and 52 weeks"}, "first_match": {"name": "first_match", "id": "H5", "tier": "celebration", "desc": "Soft shell crack, two duckling peeps, short rising pluck; 900 ms"}, "shuffle": {"name": "shuffle", "id": "H6", "tier": "tap", "desc": "Soft card-riffle, 120 ms"}, "tick_select": {"name": "tick_select", "id": "H7/E1-shared", "tier": "tap", "desc": "Shared toggle/chip tick, higher on select, 60 ms"}, "tick_clear": {"name": "tick_clear", "id": "H7", "tier": "tap", "desc": "Shared tick, lower on clear, 60 ms"}, "sweep": {"name": "sweep", "id": "H7/G4", "tier": "tap", "desc": "Soft 200 ms brush; filter Reset and Clear cache"}, "drawer_open": {"name": "drawer_open", "id": "H8", "tier": "tap", "desc": "150 ms soft slide, rising"}, "drawer_close": {"name": "drawer_close", "id": "H8", "tier": "tap", "desc": "150 ms soft slide, falling"}, "result_win": {"name": "result_win", "id": "E1", "tier": "tap", "desc": "Bright pock plus a quick rising third (C to E)"}, "result_loss": {"name": "result_loss", "id": "E1", "tier": "tap", "desc": "Same pock one whole step lower, one warm note, no falling tone"}, "format_singles": {"name": "format_singles", "id": "E2", "tier": "tap", "desc": "One pock"}, "format_doubles": {"name": "format_doubles", "id": "E2", "tier": "tap", "desc": "Two pocks 60 ms apart"}, "soft_error": {"name": "soft_error", "id": "E3", "tier": "confirm", "desc": "One low wood-block bonk, 120 ms, no buzz"}, "match_saved": {"name": "match_saved", "id": "E4", "tier": "confirm", "desc": "Pock, then rising two-note chime G to C in the reference's sine-bell timbre; 350 ms core"}, "match_saved_run": {"name": "match_saved_run", "id": "E4-alt", "tier": "confirm", "desc": "Alternative closer to the reference: pock into a quick A-C-D-E-G pentatonic chime run"}, "match_updated": {"name": "match_updated", "id": "E5", "tier": "tap", "desc": "The pock only, quieter"}, "pop_in": {"name": "pop_in", "id": "E6", "tier": "tap", "desc": "Rising bubble pop, 100 ms"}, "pop_out": {"name": "pop_out", "id": "E6", "tier": "tap", "desc": "Falling bubble pop, 100 ms"}, "snap": {"name": "snap", "id": "E7", "tier": "tap", "desc": "70 ms snap tick"}, "photo_added": {"name": "photo_added", "id": "E8", "tier": "tap", "desc": "Soft snap, 80 ms"}, "whisk": {"name": "whisk", "id": "E8", "tier": "tap", "desc": "Quick downward swish for photo remove, 120 ms"}, "delete": {"name": "delete", "id": "D1", "tier": "confirm", "desc": "250 ms soft paper crumple, falling slightly, neutral"}, "sheet_up": {"name": "sheet_up", "id": "D2", "tier": "tap", "desc": "The new_match swoosh without the pock"}, "card_ready": {"name": "card_ready", "id": "S1", "tier": "confirm", "desc": "Camera-shutter click plus a short sparkle, 400 ms"}, "card_swap": {"name": "card_swap", "id": "S2", "tier": "tap", "desc": "90 ms tick, quieter than card_ready"}, "share_send": {"name": "share_send", "id": "S3", "tier": "confirm", "desc": "250 ms upward whoosh"}, "pro_unlocked": {"name": "pro_unlocked", "id": "P1", "tier": "celebration", "desc": "C-E-G-C-E marimba arpeggio with chime layer and one friendly quack, 1.6 s"}, "pro_restored": {"name": "pro_restored", "id": "P2", "tier": "celebration", "desc": "First three notes of pro_unlocked, warmer, 900 ms"}, "toggle_on": {"name": "toggle_on", "id": "G2", "tier": "tap", "desc": "Pock pitched up, 70 ms"}, "toggle_off": {"name": "toggle_off", "id": "G2", "tier": "tap", "desc": "Pock pitched down, 70 ms"}, "reminder_on": {"name": "reminder_on", "id": "G3", "tier": "confirm", "desc": "Tiny bell, 250 ms"}, "erase_done": {"name": "erase_done", "id": "G5", "tier": "confirm", "desc": "Soft 400 ms poof, neutral"}, "export_ready": {"name": "export_ready", "id": "G6", "tier": "confirm", "desc": "Soft packed thump and zip click, 300 ms"}, "import_done": {"name": "import_done", "id": "G7", "tier": "confirm", "desc": "Two-note confirm chime, same timbre as match_saved"}, "duck_pet_1": {"name": "duck_pet_1", "id": "G8", "tier": "tap", "desc": "Peep"}, "duck_pet_2": {"name": "duck_pet_2", "id": "G8", "tier": "tap", "desc": "Chirp (two quick peeps)"}, "duck_pet_3": {"name": "duck_pet_3", "id": "G8", "tier": "tap", "desc": "Soft quack"}, "duck_pet_4": {"name": "duck_pet_4", "id": "G8", "tier": "tap", "desc": "Happy double-quack"}, "reminder_notification": {"name": "reminder_notification", "id": "Y1", "tier": "celebration", "desc": "Pock-pock and a soft quack, under 1.2 s"}}, "groups": [{"title": "Onboarding", "cues": ["onboarding_step_1", "onboarding_step_2", "onboarding_step_3", "onboarding_step_4", "name_required", "welcome"]}, {"title": "Home and dashboard", "cues": ["new_match", "log_another", "tally", "streak_up", "streak_milestone", "streak_milestone_major", "first_match", "shuffle", "tick_select", "tick_clear", "sweep", "drawer_open", "drawer_close"]}, {"title": "Logging and editing a match", "cues": ["result_win", "result_loss", "format_singles", "format_doubles", "soft_error", "match_saved", "match_saved_run", "match_updated", "pop_in", "pop_out", "snap", "photo_added", "whisk"]}, {"title": "Match detail", "cues": ["delete", "sheet_up"]}, {"title": "Share card", "cues": ["card_ready", "card_swap", "share_send"]}, {"title": "Paywall and Pro", "cues": ["pro_unlocked", "pro_restored"]}, {"title": "Settings, backup and About", "cues": ["pock", "toggle_on", "toggle_off", "reminder_on", "erase_done", "export_ready", "import_done", "duck_pet_1", "duck_pet_2", "duck_pet_3", "duck_pet_4"]}, {"title": "Outside the app", "cues": ["reminder_notification"]}], "scenarios": [{"title": "Save a match (no streak change)", "desc": "Save closes the sheet, Home appears, the numbers roll.", "steps": [{"at": 0, "name": "match_saved"}, {"at": 0.59, "name": "tally"}]}, {"title": "Save a match (streak rises)", "desc": "Adds the 900 ms streak burst 300 ms after Home appears. Tally is ducked to half volume.", "steps": [{"at": 0, "name": "match_saved"}, {"at": 0.59, "name": "tally", "gain": 0.5}, {"at": 0.65, "name": "streak_up"}]}, {"title": "Save a match (streak milestone)", "desc": "Milestone replaces streak_up.", "steps": [{"at": 0, "name": "match_saved"}, {"at": 0.59, "name": "tally", "gain": 0.5}, {"at": 0.65, "name": "streak_milestone"}]}, {"title": "Save the very first match", "desc": "No burst or roll runs on a first match, so first_match plays alone after the save.", "steps": [{"at": 0, "name": "match_saved"}, {"at": 0.6, "name": "first_match"}]}, {"title": "Four-tap log", "desc": "New match, Win, Doubles, then Save with a pause between taps.", "steps": [{"at": 0, "name": "new_match"}, {"at": 0.9, "name": "result_win"}, {"at": 1.6, "name": "format_doubles"}, {"at": 2.5, "name": "match_saved"}]}, {"title": "Forgot the result", "desc": "Save with no result chosen: soft error only, nothing else follows.", "steps": [{"at": 0, "name": "new_match"}, {"at": 1.2, "name": "soft_error"}]}, {"title": "Onboarding", "desc": "Four pages, then the name is accepted.", "steps": [{"at": 0, "name": "onboarding_step_1"}, {"at": 0.7, "name": "onboarding_step_2"}, {"at": 1.4, "name": "onboarding_step_3"}, {"at": 2.1, "name": "onboarding_step_4"}, {"at": 3.0, "name": "welcome"}]}, {"title": "Purchase then auto-save", "desc": "After a purchase the held match saves by itself. match_saved is delayed 1.6 s so the two never overlap.", "steps": [{"at": 0, "name": "pro_unlocked"}, {"at": 1.6, "name": "match_saved", "gain": 0.8}]}, {"title": "Share a card", "desc": "Card appears, an option changes, then the Share button.", "steps": [{"at": 0, "name": "card_ready"}, {"at": 1.4, "name": "card_swap"}, {"at": 2.2, "name": "card_swap"}, {"at": 3.0, "name": "share_send"}]}, {"title": "Result toggle back and forth", "desc": "Win, Loss, Win to compare how the two sit together.", "steps": [{"at": 0, "name": "result_win"}, {"at": 0.6, "name": "result_loss"}, {"at": 1.2, "name": "result_win"}]}, {"title": "Filter sheet fiddling", "desc": "Select, select, clear, reset: the shared tick family.", "steps": [{"at": 0, "name": "tick_select"}, {"at": 0.25, "name": "tick_select"}, {"at": 0.5, "name": "tick_clear"}, {"at": 0.9, "name": "sweep"}]}, {"title": "Stress: everything at once", "desc": "Worst case overlap check: save, burst, tally and a toggle landing together.", "steps": [{"at": 0, "name": "match_saved"}, {"at": 0.59, "name": "tally", "gain": 0.5}, {"at": 0.65, "name": "streak_up"}, {"at": 0.7, "name": "toggle_on"}, {"at": 0.75, "name": "tick_select"}]}]};
+const SPECIAL_REF = "../match_saved.wav";
+const state = { volume: 0.8, jitter: true, limit: true, overlap: true, on: true };
+const lastPlayed = {};
+const active = new Set();
+const durations = {};
+let lastName = null;
+let statusTimer = null;
+let runToken = 0;
+
+function fileFor(name) {
+  return name === "reference" ? SPECIAL_REF : name + ".wav";
+}
+
+function say(text) {
+  const el = document.getElementById("status");
+  el.textContent = text;
+  el.classList.remove("hidden");
+  clearTimeout(statusTimer);
+  statusTimer = setTimeout(() => el.classList.add("hidden"), 2200);
+}
+
+function flash(name) {
+  document.querySelectorAll('[data-cue="' + name + '"]').forEach((el) => {
+    el.classList.add("playing");
+    const ms = Math.max(160, (durations[name] || 0.3) * 1000);
+    setTimeout(() => el.classList.remove("playing"), ms);
+  });
+}
+
+function play(name, options) {
+  const opts = options || {};
+  if (!state.on && !opts.force) {
+    say("Sound effects are off");
+    return null;
+  }
+  const now = performance.now();
+  if (state.limit && lastPlayed[name] && now - lastPlayed[name] < (opts.limitMs || 80)) {
+    return null;
+  }
+  lastPlayed[name] = now;
+  if (!state.overlap && !opts.keep) {
+    stopAll();
+  }
+  const audio = new Audio(fileFor(name));
+  audio.volume = Math.max(0, Math.min(1, state.volume * (opts.gain || 1)));
+  if (state.jitter && !opts.noJitter) {
+    audio.preservesPitch = false;
+    audio.playbackRate = 1 + (Math.random() * 0.06 - 0.03);
+  }
+  active.add(audio);
+  const done = () => active.delete(audio);
+  audio.addEventListener("ended", done);
+  audio.addEventListener("error", () => {
+    done();
+    say("Could not load " + fileFor(name));
+  });
+  audio.play().catch(() => done());
+  lastName = name;
+  flash(name);
+  return audio;
+}
+
+function stopAll() {
+  runToken += 1;
+  active.forEach((a) => {
+    a.pause();
+    a.currentTime = 0;
+  });
+  active.clear();
+  document.querySelectorAll(".steps li.fired").forEach((li) => li.classList.remove("fired"));
+  document.querySelectorAll(".scn .btn.primary").forEach((b) => (b.textContent = "Play flow"));
+}
+
+const PLAY_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>';
+
+function cueRow(c) {
+  const row = document.createElement("div");
+  row.className = "cue";
+  row.dataset.cue = c.name;
+  row.dataset.tier = c.tier;
+  row.dataset.search = (c.name + " " + c.id + " " + c.desc + " " + c.tier).toLowerCase();
+  const btn = document.createElement("button");
+  btn.className = "play";
+  btn.setAttribute("aria-label", "Play " + c.name);
+  btn.innerHTML = PLAY_ICON;
+  btn.addEventListener("click", () => play(c.name));
+  const mid = document.createElement("div");
+  const nm = document.createElement("div");
+  nm.className = "name";
+  nm.textContent = c.name;
+  const tag = document.createElement("span");
+  tag.className = "tag";
+  tag.textContent = c.id;
+  nm.appendChild(tag);
+  const ds = document.createElement("div");
+  ds.className = "desc";
+  ds.textContent = c.desc;
+  mid.appendChild(nm);
+  mid.appendChild(ds);
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  meta.innerHTML = "<div>" + c.tier + '</div><div class="dur">...</div>';
+  row.appendChild(btn);
+  row.appendChild(mid);
+  row.appendChild(meta);
+  return row;
+}
+
+function buildLibrary() {
+  const lib = document.getElementById("library");
+  DATA.groups.forEach((g) => {
+    const sec = document.createElement("section");
+    sec.className = "group";
+    const h = document.createElement("h2");
+    h.textContent = g.title;
+    const grid = document.createElement("div");
+    grid.className = "grid";
+    g.cues.forEach((name) => {
+      const c = DATA.cues[name];
+      if (c) grid.appendChild(cueRow(c));
+    });
+    sec.appendChild(h);
+    sec.appendChild(grid);
+    lib.appendChild(sec);
+  });
+}
+
+function buildCompare() {
+  const row = document.getElementById("compareRow");
+  [
+    ["reference", "1  Original file", "your match_saved.wav"],
+    ["match_saved", "2  Plan version", "pock + G to C"],
+    ["match_saved_run", "3  Run version", "pock + A C D E G"]
+  ].forEach(([name, label, sub]) => {
+    const b = document.createElement("button");
+    b.className = "btn";
+    b.dataset.cue = name;
+    b.innerHTML = "<strong>" + label + "</strong> <span class=\"desc\">" + sub + "</span>";
+    b.addEventListener("click", () => play(name, { noJitter: true }));
+    row.appendChild(b);
+  });
+}
+
+function buildScenarios() {
+  const wrap = document.getElementById("scenarios");
+  DATA.scenarios.forEach((s) => {
+    const card = document.createElement("div");
+    card.className = "panel scn";
+    const h = document.createElement("h3");
+    h.textContent = s.title;
+    const p = document.createElement("p");
+    p.textContent = s.desc;
+    const btn = document.createElement("button");
+    btn.className = "btn primary";
+    btn.textContent = "Play flow";
+    const ol = document.createElement("ul");
+    ol.className = "steps";
+    const items = s.steps.map((st) => {
+      const li = document.createElement("li");
+      li.innerHTML = '<span class="t">' + (st.at * 1000).toFixed(0) + ' ms</span><span>' + st.name + (st.gain && st.gain !== 1 ? " (" + Math.round(st.gain * 100) + "%)" : "") + "</span>";
+      ol.appendChild(li);
+      return li;
+    });
+    btn.addEventListener("click", () => {
+      if (!state.on) {
+        say("Sound effects are off");
+        return;
+      }
+      stopAll();
+      const token = runToken;
+      btn.textContent = "Playing...";
+      let remaining = s.steps.length;
+      s.steps.forEach((st, i) => {
+        setTimeout(() => {
+          if (token !== runToken) return;
+          play(st.name, { gain: st.gain, keep: true, noJitter: !!s.exact, limitMs: 0 });
+          items[i].classList.add("fired");
+          remaining -= 1;
+          if (remaining === 0) {
+            setTimeout(() => {
+              if (token === runToken) {
+                btn.textContent = "Play flow";
+                items.forEach((li) => li.classList.remove("fired"));
+              }
+            }, (durations[st.name] || 0.5) * 1000 + 300);
+          }
+        }, st.at * 1000);
+      });
+    });
+    card.appendChild(h);
+    card.appendChild(p);
+    card.appendChild(btn);
+    card.appendChild(ol);
+    wrap.appendChild(card);
+  });
+}
+
+function preload() {
+  const names = Object.keys(DATA.cues).concat(["reference"]);
+  names.forEach((name) => {
+    const a = new Audio();
+    a.preload = "auto";
+    a.addEventListener("loadedmetadata", () => {
+      durations[name] = a.duration;
+      document.querySelectorAll('.cue[data-cue="' + name + '"] .dur').forEach((el) => {
+        el.textContent = Math.round(a.duration * 1000) + " ms";
+      });
+    });
+    a.addEventListener("error", () => {
+      document.querySelectorAll('.cue[data-cue="' + name + '"]').forEach((el) => {
+        el.classList.add("missing");
+        const d = el.querySelector(".dur");
+        if (d) d.textContent = "missing";
+      });
+      if (name === "reference") {
+        document.querySelectorAll('#compareRow [data-cue="reference"]').forEach((el) => (el.disabled = true));
+      }
+    });
+    a.src = fileFor(name);
+  });
+}
+
+function applyFilter() {
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  const tier = document.getElementById("tier").value;
+  document.querySelectorAll("#library .cue").forEach((el) => {
+    const okQ = !q || el.dataset.search.includes(q);
+    const okT = !tier || el.dataset.tier === tier;
+    el.classList.toggle("hidden", !(okQ && okT));
+  });
+  document.querySelectorAll("#library .group").forEach((g) => {
+    const any = g.querySelector(".cue:not(.hidden)");
+    g.classList.toggle("hidden", !any);
+  });
+}
+
+function setMaster(on, announce) {
+  state.on = on;
+  const m = document.getElementById("master");
+  m.setAttribute("aria-checked", String(on));
+  if (!on) stopAll();
+  if (announce && on) play("pock", { force: true, noJitter: true });
+}
+
+function wire() {
+  const vol = document.getElementById("vol");
+  vol.addEventListener("input", () => {
+    state.volume = vol.value / 100;
+    document.getElementById("volOut").textContent = vol.value + "%";
+  });
+  document.getElementById("jitter").addEventListener("change", (e) => (state.jitter = e.target.checked));
+  document.getElementById("limit").addEventListener("change", (e) => (state.limit = e.target.checked));
+  document.getElementById("overlap").addEventListener("change", (e) => (state.overlap = e.target.checked));
+  document.getElementById("stop").addEventListener("click", stopAll);
+  document.getElementById("master").addEventListener("click", () => setMaster(!state.on, true));
+  document.getElementById("q").addEventListener("input", applyFilter);
+  document.getElementById("tier").addEventListener("change", applyFilter);
+  document.getElementById("theme").addEventListener("click", () => {
+    const root = document.documentElement;
+    const dark = root.dataset.theme === "dark" || (!root.dataset.theme && matchMedia("(prefers-color-scheme: dark)").matches);
+    root.dataset.theme = dark ? "light" : "dark";
+  });
+  let pets = 0;
+  document.getElementById("duck").addEventListener("click", () => {
+    const name = "duck_pet_" + ((pets % 4) + 1);
+    const a = play(name, { limitMs: 120 });
+    if (a) {
+      pets += 1;
+      document.getElementById("pets").textContent = pets;
+    }
+  });
+  document.addEventListener("keydown", (e) => {
+    const tag = (e.target.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "select" || tag === "textarea") {
+      if (e.key === "Escape") e.target.blur();
+      return;
+    }
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === "Escape") stopAll();
+    else if (e.key === "r" || e.key === "R") {
+      if (lastName) play(lastName, { limitMs: 0 });
+    } else if (e.key === "m" || e.key === "M") setMaster(!state.on, true);
+    else if (e.key === "1") play("reference", { noJitter: true });
+    else if (e.key === "2") play("match_saved", { noJitter: true });
+    else if (e.key === "3") play("match_saved_run", { noJitter: true });
+  });
+}
+
+buildCompare();
+buildScenarios();
+buildLibrary();
+wire();
+preload();
+if (location.protocol === "file:") {
+  document.querySelector(".lede").textContent += " Opened from disk: everything works, no server needed.";
+}
+</script>
+</body>
+</html>
