@@ -21,6 +21,7 @@ const val APP_SETTINGS_NAME = "app-settings"
 
 private val DARK_THEME = booleanPreferencesKey("dark_theme")
 private val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
+private val SOUND_EFFECTS_ENABLED = booleanPreferencesKey("sound_effects_enabled")
 
 fun createAppSettingsDataStore(
     context: Context,
@@ -46,6 +47,7 @@ class DataStoreAppSettingsStore(
                 AppSettings(
                     darkTheme = preferences[DARK_THEME],
                     onboardingComplete = preferences[ONBOARDING_COMPLETE] ?: false,
+                    soundEffectsEnabled = preferences[SOUND_EFFECTS_ENABLED] ?: true,
                 )
             }.distinctUntilChanged()
 
@@ -55,5 +57,9 @@ class DataStoreAppSettingsStore(
 
     override suspend fun setOnboardingComplete(complete: Boolean) {
         dataStore.edit { preferences -> preferences[ONBOARDING_COMPLETE] = complete }
+    }
+
+    override suspend fun setSoundEffectsEnabled(enabled: Boolean) {
+        dataStore.edit { preferences -> preferences[SOUND_EFFECTS_ENABLED] = enabled }
     }
 }
