@@ -41,11 +41,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
@@ -70,6 +72,7 @@ import com.maxeydev.picklelog.ui.paywall.UpgradeReason
 import com.maxeydev.picklelog.ui.theme.PicklelogSpacing
 import com.maxeydev.picklelog.ui.theme.PicklelogTheme
 import kotlinx.coroutines.delay
+import kotlin.random.Random
 
 private val ICON_SIZE = 20.dp
 private val MESSAGE_ICON_SIZE = 18.dp
@@ -508,12 +511,14 @@ private fun NotesCard(
     notes: String,
     onNotesChanged: (String) -> Unit,
 ) {
+    val placeholders = stringArrayResource(R.array.notes_placeholders)
+    val placeholderIndex = rememberSaveable { Random.nextInt(placeholders.size) }
     FormCard {
         SectionLabel(icon = R.drawable.ic_notes, text = stringResource(R.string.label_notes))
         OutlinedTextField(
             value = notes,
             onValueChange = onNotesChanged,
-            label = { Text(stringResource(R.string.notes_hint)) },
+            placeholder = { Text(placeholders[placeholderIndex % placeholders.size]) },
             minLines = 3,
             shape = MaterialTheme.shapes.medium,
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
