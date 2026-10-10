@@ -49,6 +49,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -70,6 +71,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import com.maxeydev.picklelog.ui.R
 import com.maxeydev.picklelog.ui.common.DisplayNameField
+import com.maxeydev.picklelog.ui.sound.Cue
+import com.maxeydev.picklelog.ui.sound.LocalSoundEffects
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 private const val PAGE_SLIDE_MILLIS = 420
@@ -103,6 +107,12 @@ fun OnboardingScreen(
     val pages = IntroPage.entries
     val pagerState = rememberPagerState(initialPage = initialPage) { pages.size }
     val scope = rememberCoroutineScope()
+    val sound = LocalSoundEffects.current
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.settledPage }.drop(1).collect { page ->
+            Cue.ONBOARDING_STEPS.getOrNull(page)?.let { cue -> sound.play(cue) }
+        }
+    }
     val scrollStates = pages.map { rememberScrollState() }
     val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val showPage: (Int) -> Unit =
@@ -169,8 +179,10 @@ private fun IntroPageContent(
     onContinue: () -> Unit,
 ) {
     val shake = remember { Animatable(0f) }
+    val sound = LocalSoundEffects.current
     LaunchedEffect(state.nameRequiredAttempts) {
         if (state.nameRequiredAttempts > 0) {
+            sound.play(Cue.NAME_REQUIRED)
             shake.snapTo(0f)
             shake.animateTo(1f, tween(durationMillis = SHAKE_MILLIS, easing = LinearEasing))
         }
