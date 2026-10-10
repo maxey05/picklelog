@@ -102,11 +102,13 @@ class MatchEditViewModel(
     private var isSaving = false
     private var isFinished = false
     private var savedNewMatchId: String? = null
+    private var didSave = false
     private val suggestionInput = MutableStateFlow<SuggestionInput?>(null)
     private var suggestionResult: SuggestionResult? = null
     private var recentLocations: List<String> = emptyList()
     private var hasPhotoError = false
     private var showResultError = false
+    private var resultErrorAttempts = 0
     private var upgradePrompt: UpgradeReason? = null
     private var isPaywallRequested = false
     private val photoWatchers = mutableMapOf<String, Job>()
@@ -272,6 +274,7 @@ class MatchEditViewModel(
         }
         if (current.result == null && current.canSaveIgnoringResult()) {
             showResultError = true
+            resultErrorAttempts += 1
             mutableUiState.value = renderState()
             return
         }
@@ -302,6 +305,7 @@ class MatchEditViewModel(
             }
             isSaving = false
             isFinished = true
+            didSave = true
             if (current.isNew) {
                 savedNewMatchId = current.matchId
             }
@@ -461,9 +465,11 @@ class MatchEditViewModel(
             suggestions = visibleSuggestions(),
             recentLocations = recentLocations,
             savedNewMatchId = savedNewMatchId,
+            didSave = didSave,
             photoFilePath = { photoFile(it).path },
             hasPhotoError = hasPhotoError,
             showResultError = showResultError,
+            resultErrorAttempts = resultErrorAttempts,
             upgradePrompt = upgradePrompt,
             isPaywallRequested = isPaywallRequested,
         ) ?: MatchEditUiState(isLoading = !isFinished, isFinished = isFinished)
