@@ -8,5 +8,11 @@
     <string name="date_future_hint">You can\'t log a match in the future!</string>
     <string name="players_heading_partner">PARTNER</string>
     <string name="players_heading_opponents">OPPONENTS</string>
-    <string name="notes_hint">What went well, what to work on</string>
+    <string-array name="notes_placeholders">
+        <item>I gotta work on my backhand!</item>
+        <item>My shot was off today...</item>
+        <item>I need to practice more!</item>
+        <item>Those guys were crazy...</item>
+        <item>I\'m buying a new paddle...</item>
+    </string-array>
 </resources>
