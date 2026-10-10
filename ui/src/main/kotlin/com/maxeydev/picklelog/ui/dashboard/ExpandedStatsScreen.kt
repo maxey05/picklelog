@@ -33,6 +33,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,8 +55,8 @@ import androidx.compose.ui.unit.sp
 import com.maxeydev.picklelog.domain.stats.WinLoss
 import com.maxeydev.picklelog.domain.streak.StreakInsurance
 import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.common.AnimatedMascot
 import com.maxeydev.picklelog.ui.common.Mascot
-import com.maxeydev.picklelog.ui.common.MascotImage
 import com.maxeydev.picklelog.ui.theme.PicklelogSpacing
 import com.maxeydev.picklelog.ui.theme.PicklelogTextStyles
 import com.maxeydev.picklelog.ui.theme.PicklelogTheme
@@ -107,33 +109,43 @@ fun ExpandedStatsScreen(
                         )
                     }
                 },
+                actions = {
+                    if (state.isPro) {
+                        ProBadge(modifier = Modifier.padding(end = PicklelogSpacing.gutter))
+                    }
+                },
             )
         },
     ) { innerPadding ->
         if (!state.isLoading) {
-            Column(
-                modifier =
-                    Modifier
-                        .padding(innerPadding)
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(
-                            start = PicklelogSpacing.gutter,
-                            end = PicklelogSpacing.gutter,
-                            top = PicklelogSpacing.xs,
-                            bottom = PicklelogSpacing.xxl,
-                        ),
-                verticalArrangement = Arrangement.spacedBy(PicklelogSpacing.xl),
-            ) {
-                FilterIndicator(filter = state.filter, opponentName = state.filteredOpponentName)
-                RecordSection(state)
-                StreakSection(state)
-                FormatSection(state)
-                if (state.isPro) {
-                    AdvancedStatsSection(state)
-                } else {
-                    LockedPreview(state = state, onSeePro = onSeePro)
-                    LockedProSection(onSeePro = onSeePro)
+            val scrollState = rememberScrollState()
+            val reveal = remember(scrollState) { RevealState(scrollState) }
+            CompositionLocalProvider(LocalRevealState provides reveal) {
+                Column(
+                    modifier =
+                        Modifier
+                            .padding(innerPadding)
+                            .fillMaxSize()
+                            .trackViewport(reveal)
+                            .verticalScroll(scrollState)
+                            .padding(
+                                start = PicklelogSpacing.gutter,
+                                end = PicklelogSpacing.gutter,
+                                top = PicklelogSpacing.xs,
+                                bottom = PicklelogSpacing.xxl,
+                            ),
+                    verticalArrangement = Arrangement.spacedBy(PicklelogSpacing.xl),
+                ) {
+                    FilterIndicator(filter = state.filter, opponentName = state.filteredOpponentName)
+                    RecordSection(state)
+                    StreakSection(state)
+                    FormatSection(state)
+                    if (state.isPro) {
+                        AdvancedStatsSection(state)
+                    } else {
+                        LockedPreview(state = state, onSeePro = onSeePro)
+                        LockedProSection(onSeePro = onSeePro)
+                    }
                 }
             }
         }
@@ -162,6 +174,23 @@ internal fun StatsCard(
         modifier = modifier.fillMaxWidth(),
     ) {
         Column(content = content)
+    }
+}
+
+@Composable
+private fun ProBadge(modifier: Modifier = Modifier) {
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        modifier = modifier,
+    ) {
+        Text(
+            text = stringResource(R.string.stats_pro_tag),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = PicklelogSpacing.md, vertical = PicklelogSpacing.xs),
+        )
     }
 }
 
@@ -431,7 +460,7 @@ private fun SplitRow(
             horizontalArrangement = Arrangement.spacedBy(PicklelogSpacing.md),
         ) {
             if (!record.hasMatches) {
-                MascotImage(mascot = Mascot.HEAD_SMILE, modifier = Modifier.size(EMPTY_ROW_MASCOT_SIZE))
+                AnimatedMascot(mascot = Mascot.HEAD_SMILE, modifier = Modifier.size(EMPTY_ROW_MASCOT_SIZE))
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
