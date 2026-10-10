@@ -120,6 +120,7 @@ internal fun RollingText(
     style: TextStyle,
     color: Color,
     modifier: Modifier = Modifier,
+    travelFraction: Float = 1f,
 ) {
     var previous by remember { mutableStateOf(value) }
     var current by remember { mutableStateOf(value) }
@@ -153,7 +154,7 @@ internal fun RollingText(
                                 color = color,
                                 modifier =
                                     Modifier.graphicsLayer {
-                                        translationY = -direction * progress.value * size.height
+                                        translationY = -direction * progress.value * size.height * travelFraction
                                         alpha = 1f - progress.value
                                     },
                             )
@@ -165,7 +166,7 @@ internal fun RollingText(
                                 color = color,
                                 modifier =
                                     Modifier.graphicsLayer {
-                                        translationY = direction * (1f - progress.value) * size.height
+                                        translationY = direction * (1f - progress.value) * size.height * travelFraction
                                         alpha = progress.value
                                     },
                             )
