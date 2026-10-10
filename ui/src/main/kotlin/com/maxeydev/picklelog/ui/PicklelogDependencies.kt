@@ -18,6 +18,7 @@ import com.maxeydev.picklelog.domain.settings.AppSettingsStore
 import com.maxeydev.picklelog.domain.share.CardFormatStore
 import com.maxeydev.picklelog.domain.streak.StreakNoticeStore
 import com.maxeydev.picklelog.ui.share.CardRendering
+import com.maxeydev.picklelog.ui.sound.SoundEffects
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.datetime.TimeZone
 import java.io.File
@@ -39,6 +40,7 @@ interface PicklelogDependencies {
     val reminderStore: ReminderStore
     val streakReminder: StreakReminder
     val appSettingsStore: AppSettingsStore
+    val soundEffects: SoundEffects
     val appCache: AppCache
     val onboarding: Onboarding
     val eraseAllData: EraseAllData
