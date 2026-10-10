@@ -29,7 +29,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,6 +49,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import com.maxeydev.picklelog.ui.R
 import com.maxeydev.picklelog.ui.dashboard.motionScale
+import com.maxeydev.picklelog.ui.sound.Cue
+import com.maxeydev.picklelog.ui.sound.LocalSoundEffects
 import com.maxeydev.picklelog.ui.theme.PicklelogSpacing
 import com.maxeydev.picklelog.ui.theme.PicklelogTextStyles
 import com.maxeydev.picklelog.ui.theme.PicklelogTheme
@@ -75,7 +81,16 @@ fun MascotSheet(
     @DrawableRes titleIcon: Int? = null,
     secondaryLabel: String? = null,
     onSecondary: () -> Unit = {},
+    entranceCue: Cue? = null,
 ) {
+    val sound = LocalSoundEffects.current
+    var entranceCuePlayed by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(entranceCue) {
+        if (entranceCue != null && !entranceCuePlayed) {
+            entranceCuePlayed = true
+            sound.play(entranceCue)
+        }
+    }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -176,7 +191,7 @@ private fun EnteringMascot(
             progress.snapTo(1f)
         }
     }
-    MascotImage(
+    AnimatedMascot(
         mascot = mascot,
         modifier =
             modifier.graphicsLayer {
