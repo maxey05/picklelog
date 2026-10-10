@@ -29,7 +29,17 @@ object DashboardTestTags {
     const val GROUP_HEAD_TO_HEAD = "head_to_head"
     const val GROUP_PARTNER = "partner"
     const val GROUP_LOCATION = "location"
+    const val GROUP_PADDLE = "paddle"
     const val GROUP_MONTH = "month"
+    const val STATS_PRO_TREND = "stats_pro_trend"
+    const val STATS_PRO_PER_WEEK = "stats_pro_per_week"
+    const val STATS_PRO_DAYS = "stats_pro_days"
+    const val STATS_PRO_LAST_TEN = "stats_pro_last_ten"
+    const val STATS_PRO_HEATMAP = "stats_pro_heatmap"
+    const val STATS_PRO_HEATMAP_SIX_MONTHS = "stats_pro_heatmap_six_months"
+    const val STATS_PRO_HEATMAP_YEAR = "stats_pro_heatmap_year"
+    const val STATS_PRO_FORM = "stats_pro_form"
+    const val STATS_PRO_WEEKDAYS = "stats_pro_weekdays"
 
     fun proRow(index: Int): String = "stats_pro_row_$index"
 
