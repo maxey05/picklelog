@@ -30,6 +30,10 @@ private class MemorySettings(
     override suspend fun setOnboardingComplete(complete: Boolean) {
         state.update { it.copy(onboardingComplete = complete) }
     }
+
+    override suspend fun setSoundEffectsEnabled(enabled: Boolean) {
+        state.update { it.copy(soundEffectsEnabled = enabled) }
+    }
 }
 
 private class MemoryProfile(
