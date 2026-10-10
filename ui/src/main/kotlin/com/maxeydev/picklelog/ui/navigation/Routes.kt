@@ -44,3 +44,6 @@ data object OnboardingRoute
 
 @Serializable
 data object AboutRoute
+
+@Serializable
+data object SupportRoute
