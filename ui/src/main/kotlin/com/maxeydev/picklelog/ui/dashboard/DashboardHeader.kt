@@ -60,6 +60,8 @@ import com.maxeydev.picklelog.domain.match.MatchResult
 import com.maxeydev.picklelog.ui.R
 import com.maxeydev.picklelog.ui.match.list.collapseVertically
 import com.maxeydev.picklelog.ui.match.resultLabel
+import com.maxeydev.picklelog.ui.sound.Cue
+import com.maxeydev.picklelog.ui.sound.LocalSoundEffects
 import com.maxeydev.picklelog.ui.theme.PicklelogSpacing
 import com.maxeydev.picklelog.ui.theme.PicklelogTextStyles
 import com.maxeydev.picklelog.ui.theme.PicklelogTheme
@@ -82,6 +84,8 @@ private const val DOTS_SLIDE_DELAY_MILLIS = 360L
 private const val WIN_RATE_ROLL_DELAY_MILLIS = 240L
 private const val RECORD_ROLL_DELAY_MILLIS = 320L
 private const val STREAK_ROLL_DELAY_MILLIS = 360L
+private const val TALLY_DUCKED_VOLUME = 0.5f
+private const val WIN_RATE_ROLL_TRAVEL = 0.35f
 private const val RESULTS_SEPARATOR = ","
 
 @Stable
@@ -120,15 +124,34 @@ private fun rememberHeaderFigures(state: DashboardUiState): HeaderFigures {
     val shownStreak =
         rememberRolledValue(target = current, step = streakStep, startDelayMillis = STREAK_ROLL_DELAY_MILLIS)
     val burst = remember { Animatable(0f) }
+    val sound = LocalSoundEffects.current
     var previousStreak by rememberSaveable { mutableIntStateOf(current) }
+    val matchCount = overall.wins + overall.losses
+    var previousMatchCount by rememberSaveable { mutableIntStateOf(matchCount) }
+    val streakRose = current > previousStreak
+    LaunchedEffect(matchCount) {
+        val before = previousMatchCount
+        previousMatchCount = matchCount
+        if (matchCount > before) {
+            if (motionScale() > 0f) {
+                delay(WIN_RATE_ROLL_DELAY_MILLIS)
+            }
+            sound.play(Cue.TALLY, volume = if (streakRose) TALLY_DUCKED_VOLUME else 1f)
+        }
+    }
     LaunchedEffect(current) {
         val before = previousStreak
         previousStreak = current
-        if (current > before && motionScale() > 0f) {
-            delay(BURST_DELAY_MILLIS)
-            burst.snapTo(0f)
-            burst.animateTo(1f, tween(durationMillis = BURST_MILLIS, easing = LinearEasing))
-            burst.snapTo(0f)
+        if (current > before) {
+            if (motionScale() > 0f) {
+                delay(BURST_DELAY_MILLIS)
+                sound.play(Cue.STREAK_UP)
+                burst.snapTo(0f)
+                burst.animateTo(1f, tween(durationMillis = BURST_MILLIS, easing = LinearEasing))
+                burst.snapTo(0f)
+            } else {
+                sound.play(Cue.STREAK_UP)
+            }
         }
     }
     val targetResults = resultsKey(state.recentResults)
@@ -203,7 +226,7 @@ private fun InfoButton(
                 .minimumInteractiveComponentSize()
                 .clip(CircleShape)
                 .clickable(role = Role.Button, onClick = onClick)
-                .padding(horizontal = PicklelogSpacing.md, vertical = PicklelogSpacing.xs)
+                .padding(start = PicklelogSpacing.md, top = PicklelogSpacing.xs, bottom = PicklelogSpacing.xs)
                 .testTag(DashboardTestTags.INFO_BUTTON),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(PicklelogSpacing.xs),
@@ -394,6 +417,7 @@ private fun WinRateFigure(
             step = figures.winRateStep,
             style = if (isCompact) MaterialTheme.typography.titleLarge else PicklelogTextStyles.hero,
             color = PicklelogTheme.colors.headerAccent,
+            travelFraction = WIN_RATE_ROLL_TRAVEL,
         )
         Text(
             text = stringResource(R.string.dashboard_win_rate_label),
