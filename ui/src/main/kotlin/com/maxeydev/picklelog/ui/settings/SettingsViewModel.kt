@@ -65,7 +65,9 @@ class SettingsViewModel(
         }
         viewModelScope.launch {
             appSettingsStore.observe().collect { settings ->
-                mutableUiState.update { it.copy(darkTheme = settings.darkTheme) }
+                mutableUiState.update {
+                    it.copy(darkTheme = settings.darkTheme, soundEffects = settings.soundEffectsEnabled)
+                }
             }
         }
         refreshCacheSize()
@@ -91,6 +93,10 @@ class SettingsViewModel(
 
     fun changeDarkTheme(dark: Boolean) {
         viewModelScope.launch { appSettingsStore.setDarkTheme(dark) }
+    }
+
+    fun changeSoundEffects(enabled: Boolean) {
+        viewModelScope.launch { appSettingsStore.setSoundEffectsEnabled(enabled) }
     }
 
     fun enableReminder() {
