@@ -50,9 +50,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.common.AnimatedMascot
 import com.maxeydev.picklelog.ui.common.Mascot
-import com.maxeydev.picklelog.ui.common.MascotImage
 import com.maxeydev.picklelog.ui.dashboard.motionScale
+import com.maxeydev.picklelog.ui.sound.Cue
+import com.maxeydev.picklelog.ui.sound.LocalSoundEffects
 import com.maxeydev.picklelog.ui.theme.PicklelogFonts
 import com.maxeydev.picklelog.ui.theme.PicklelogTheme
 
@@ -169,6 +171,7 @@ private fun AboutHero(versionName: String) {
 @Composable
 private fun PettableMascot() {
     var pets by rememberSaveable { mutableIntStateOf(0) }
+    val sound = LocalSoundEffects.current
     val scale = remember { Animatable(1f) }
     val description = stringResource(R.string.about_mascot_description)
     LaunchedEffect(pets) {
@@ -183,11 +186,14 @@ private fun PettableMascot() {
             Modifier
                 .size(MASCOT_TOUCH_SIZE)
                 .clip(CircleShape)
-                .clickable(role = Role.Button) { pets++ }
+                .clickable(role = Role.Button) {
+                    sound.play(Cue.DUCK_PETS[pets % Cue.DUCK_PETS.size])
+                    pets++
+                }
                 .semantics { contentDescription = description }
                 .testTag(AboutTestTags.MASCOT),
     ) {
-        MascotImage(
+        AnimatedMascot(
             mascot = MASCOT_FACES[pets % MASCOT_FACES.size],
             modifier =
                 Modifier
