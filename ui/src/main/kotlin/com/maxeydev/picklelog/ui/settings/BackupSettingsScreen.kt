@@ -47,9 +47,11 @@ import androidx.compose.ui.unit.dp
 import com.maxeydev.picklelog.domain.backup.ImportSummary
 import com.maxeydev.picklelog.domain.entitlement.FreeTier
 import com.maxeydev.picklelog.ui.R
-import com.maxeydev.picklelog.ui.common.BobbingMascot
+import com.maxeydev.picklelog.ui.common.AnimatedMascot
 import com.maxeydev.picklelog.ui.common.Mascot
-import com.maxeydev.picklelog.ui.common.MascotImage
+import com.maxeydev.picklelog.ui.common.WorkingMascot
+import com.maxeydev.picklelog.ui.sound.Cue
+import com.maxeydev.picklelog.ui.sound.LocalSoundEffects
 import com.maxeydev.picklelog.ui.theme.PicklelogTheme
 
 private val IMPORT_MIME_TYPES = arrayOf("*/*")
@@ -64,17 +66,24 @@ fun BackupSettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val sound = LocalSoundEffects.current
     val picker =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             actions.onImportPicked(uri?.toString())
         }
     LaunchedEffect(state.pendingShare) {
         val share = state.pendingShare ?: return@LaunchedEffect
+        sound.play(Cue.EXPORT_READY)
         try {
             ExportShareLauncher.launch(context, share)
             actions.onShareLaunched()
         } catch (noShareTarget: ActivityNotFoundException) {
             actions.onShareFailed()
+        }
+    }
+    LaunchedEffect(state.importSummary != null) {
+        if (state.importSummary != null) {
+            sound.play(Cue.IMPORT_DONE)
         }
     }
     Scaffold(
@@ -222,7 +231,7 @@ private fun ButtonLabel(
 @Composable
 private fun WorkingIndicator(label: Int) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        BobbingMascot(mascot = Mascot.HEAD_SMILE, modifier = Modifier.size(WORKING_MASCOT_SIZE))
+        WorkingMascot(modifier = Modifier.size(WORKING_MASCOT_SIZE))
         Text(
             text = stringResource(label),
             style = MaterialTheme.typography.labelSmall,
@@ -247,7 +256,7 @@ private fun MessageCard(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.Top,
         ) {
-            MascotImage(mascot = Mascot.HEAD_OOPS, modifier = Modifier.size(MESSAGE_MASCOT_SIZE))
+            AnimatedMascot(mascot = Mascot.HEAD_OOPS, modifier = Modifier.size(MESSAGE_MASCOT_SIZE))
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = stringResource(message.text),
