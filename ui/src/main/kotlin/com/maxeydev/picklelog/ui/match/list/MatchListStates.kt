@@ -28,8 +28,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.common.AnimatedMascot
 import com.maxeydev.picklelog.ui.common.Mascot
-import com.maxeydev.picklelog.ui.common.MascotImage
 import com.maxeydev.picklelog.ui.theme.PicklelogSpacing
 
 private val ACTION_MIN_HEIGHT = 48.dp
@@ -54,7 +54,7 @@ fun MatchListEmptyState(
             verticalArrangement = Arrangement.spacedBy(PicklelogSpacing.lg),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            MascotImage(
+            AnimatedMascot(
                 mascot = Mascot.READY,
                 modifier = Modifier.size(EMPTY_IMAGE_SIZE),
             )
@@ -113,7 +113,7 @@ fun NoResultsState(
                         .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                MascotImage(
+                AnimatedMascot(
                     mascot = Mascot.HEAD_OOPS,
                     modifier = Modifier.size(NO_RESULTS_MASCOT_SIZE),
                 )
