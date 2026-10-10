@@ -32,6 +32,7 @@ class SettingsDrawerTest {
     private var saves = 0
     private var eraseConfirmations = 0
     private var aboutOpens = 0
+    private var supportOpens = 0
     private var backupOpens = 0
     private var privacyOpens = 0
     private var proOpens = 0
@@ -46,6 +47,7 @@ class SettingsDrawerTest {
             onOpenPrivacy = { privacyOpens++ },
             onOpenAbout = { aboutOpens++ },
             onRateUs = {},
+            onOpenSupport = { supportOpens++ },
             onClearCache = { cacheClears++ },
             onEnableReminder = {},
             onDisableReminder = {},
@@ -229,6 +231,15 @@ class SettingsDrawerTest {
         compose.onNodeWithTag(SettingsTestTags.ABOUT_OPEN).performScrollTo().performClick()
 
         assertEquals(1, aboutOpens)
+    }
+
+    @Test
+    fun support_opens_from_settings() {
+        show(SettingsUiState())
+
+        compose.onNodeWithTag(SettingsTestTags.SUPPORT_OPEN).performScrollTo().performClick()
+
+        assertEquals(1, supportOpens)
     }
 
     @Test
