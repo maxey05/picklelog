@@ -24,8 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.maxeydev.picklelog.domain.entitlement.CapWarning
 import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.common.AnimatedMascot
 import com.maxeydev.picklelog.ui.common.Mascot
-import com.maxeydev.picklelog.ui.common.MascotImage
 
 private val MASCOT_SIZE = 32.dp
 
@@ -53,7 +53,7 @@ fun CapWarningBanner(
             modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp),
         ) {
             if (!isImminent) {
-                MascotImage(mascot = Mascot.HEAD_SMILE, modifier = Modifier.size(MASCOT_SIZE))
+                AnimatedMascot(mascot = Mascot.HEAD_SMILE, modifier = Modifier.size(MASCOT_SIZE))
             }
             Text(
                 text =
