@@ -6,6 +6,7 @@ import androidx.compose.ui.res.stringResource
 import com.maxeydev.picklelog.ui.R
 import com.maxeydev.picklelog.ui.common.Mascot
 import com.maxeydev.picklelog.ui.common.MascotSheet
+import com.maxeydev.picklelog.ui.sound.Cue
 
 @Composable
 fun FirstMatchSheet(
@@ -21,6 +22,7 @@ fun FirstMatchSheet(
         sheetTag = MatchListTestTags.FIRST_MATCH_SHEET,
         secondaryLabel = stringResource(R.string.log_another),
         onSecondary = onLogAnother,
+        entranceCue = Cue.FIRST_MATCH,
         modifier = modifier,
     )
 }
