@@ -15,6 +15,9 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -402,10 +405,60 @@ class DashboardUiTest {
             }
         }
 
+        compose.onNodeWithText("Month by month").performScrollTo()
         val gap = compose.onNodeWithTag(DashboardTestTags.advancedRow(DashboardTestTags.GROUP_MONTH, 1))
-        gap.performScrollTo()
-        gap.assert(hasText("No matches", substring = true))
+        gap.assert(hasContentDescription("no matches", substring = true))
         gap.assert(hasText("—", substring = true))
+    }
+
+    @Test
+    fun the_pro_key_numbers_show_the_last_ten_and_a_dash_when_the_trend_is_unknown() {
+        val advanced =
+            advancedOf(
+                line("2026-09-01", MatchResult.WIN, dave),
+                line("2026-09-02", MatchResult.WIN, casey),
+                line("2026-09-03", MatchResult.WIN, casey),
+                line("2026-09-04", MatchResult.LOSS, casey),
+            )
+        compose.setContent {
+            MaterialTheme {
+                ExpandedStatsScreen(
+                    state = state(isPro = true, advanced = advanced, peopleNames = names),
+                    onBack = {},
+                    onSeePro = {},
+                )
+            }
+        }
+
+        val lastTen = compose.onNodeWithTag(DashboardTestTags.STATS_PRO_LAST_TEN)
+        lastTen.performScrollTo()
+        lastTen.assert(hasText("3–1", substring = true))
+        val trend = compose.onNodeWithTag(DashboardTestTags.STATS_PRO_TREND)
+        trend.performScrollTo()
+        trend.assert(hasText("—", substring = true))
+    }
+
+    @Test
+    fun the_activity_graph_switches_between_six_months_and_a_year() {
+        val advanced = advancedOf(line("2026-09-01", MatchResult.WIN, dave))
+        compose.setContent {
+            MaterialTheme {
+                ExpandedStatsScreen(
+                    state = state(isPro = true, advanced = advanced, peopleNames = names),
+                    onBack = {},
+                    onSeePro = {},
+                )
+            }
+        }
+
+        val sixMonths = compose.onNodeWithTag(DashboardTestTags.STATS_PRO_HEATMAP_SIX_MONTHS)
+        val year = compose.onNodeWithTag(DashboardTestTags.STATS_PRO_HEATMAP_YEAR)
+        sixMonths.performScrollTo()
+        sixMonths.assertIsSelected()
+        year.assertIsNotSelected()
+        year.performClick()
+        year.assertIsSelected()
+        sixMonths.assertIsNotSelected()
     }
 
     @Test
