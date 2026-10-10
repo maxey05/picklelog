@@ -13,9 +13,11 @@ import androidx.compose.ui.res.stringResource
 import com.maxeydev.picklelog.ui.R
 import com.maxeydev.picklelog.ui.common.Mascot
 import com.maxeydev.picklelog.ui.common.MascotSheet
+import com.maxeydev.picklelog.ui.sound.Cue
 
 private const val NOT_LOADED = -1
 private const val NONE_PENDING = 0
+private const val MAJOR_MILESTONE_WEEKS = 26
 
 private val MILESTONE_BODIES: Map<Int, Int> =
     mapOf(
@@ -60,6 +62,8 @@ fun StreakMilestoneHost(
             titleIcon = R.drawable.ic_flame,
             onDismiss = { pendingWeeks = NONE_PENDING },
             sheetTag = StreakNoticeTestTags.MILESTONE_SHEET,
+            entranceCue =
+                if (pendingWeeks >= MAJOR_MILESTONE_WEEKS) Cue.STREAK_MILESTONE_MAJOR else Cue.STREAK_MILESTONE,
             modifier = modifier,
         )
     }
