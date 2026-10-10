@@ -2,4 +2,62 @@
 <resources>
     <string name="stats_pro_tag">Pro</string>
     <string name="stats_preview_sample">7–3</string>
+    <string name="stats_pro_trend_label">90-day trend</string>
+    <string name="stats_pro_points_signed">%1$+d pts</string>
+    <string name="stats_pro_trend_support">vs the 90 days before</string>
+    <string name="stats_pro_trend_unknown">Needs 3+ matches in each period</string>
+    <string name="stats_pro_per_week_label">Matches per week</string>
+    <string name="stats_pro_per_week_value">%1$.1f</string>
+    <string name="stats_pro_per_week_support">since your first match</string>
+    <string name="stats_pro_days_label">Days played</string>
+    <plurals name="stats_pro_longest_run">
+        <item quantity="one">Longest run: %1$d day</item>
+        <item quantity="other">Longest run: %1$d days</item>
+    </plurals>
+    <string name="stats_pro_last_ten_label">Last 10 matches</string>
+    <string name="stats_pro_last_ten_support">%1$d%% win rate</string>
+    <string name="stats_pro_activity_title">Activity</string>
+    <string name="stats_pro_range_label">Activity range</string>
+    <string name="stats_pro_range_six_months">6 mo</string>
+    <string name="stats_pro_range_year">1 yr</string>
+    <string name="stats_pro_legend_less">Less</string>
+    <string name="stats_pro_legend_more">More</string>
+    <plurals name="stats_pro_days_played">
+        <item quantity="one">%1$d day played</item>
+        <item quantity="other">%1$d days played</item>
+    </plurals>
+    <string name="stats_pro_join">%1$s · %2$s</string>
+    <string name="stats_pro_form_title">Form</string>
+    <string name="stats_pro_form_subtitle">10-match rolling win rate</string>
+    <string name="stats_pro_form_rolling">Rolling</string>
+    <string name="stats_pro_form_empty">Log 11 matches to see how your form is moving.</string>
+    <string name="stats_pro_form_average">All-time %1$d%%</string>
+    <string name="stats_pro_form_now">Now · %1$d%%</string>
+    <string name="stats_pro_form_then">%1$d matches ago</string>
+    <string name="stats_pro_form_up">Up %1$d pts over your last %2$d matches.</string>
+    <string name="stats_pro_form_down">Down %1$d pts over your last %2$d matches.</string>
+    <string name="stats_pro_form_flat">Steady over your last %1$d matches.</string>
+    <string name="stats_pro_form_a11y">Rolling win rate over your last %1$d matches. It started at %2$d%% and is now %3$d%%.</string>
+    <string name="stats_pro_weekdays_title">When you play</string>
+    <string name="stats_pro_weekdays_subtitle">matches and win %</string>
+    <string name="stats_pro_weekdays_best">You win most on %1$s (%2$d%%) and play most on %3$s.</string>
+    <string name="stats_pro_weekdays_busiest">You play most on %1$s.</string>
+    <string name="stats_pro_weekday_a11y">%1$s: %2$s, %3$s</string>
+    <string name="stats_pro_rivals_title">Rivals</string>
+    <string name="stats_pro_col_opponent">Opponent</string>
+    <string name="stats_pro_col_record">W–L</string>
+    <string name="stats_pro_col_win">Win</string>
+    <string name="stats_pro_col_versus">vs avg</string>
+    <string name="stats_pro_rivals_footnote" formatted="false">Win % appears after 3 matches. “vs avg” compares each rival with your overall win rate.</string>
+    <string name="stats_pro_partners_title">Partner chemistry</string>
+    <string name="stats_pro_partners_subtitle">vs your %1$d%% doubles</string>
+    <string name="stats_pro_partners_footnote">Green is above your doubles average, orange is below. Needs 3+ matches together.</string>
+    <string name="stats_pro_delta_signed">%1$+d</string>
+    <string name="stats_pro_courts_title">Courts</string>
+    <string name="stats_pro_paddles_title">Paddles</string>
+    <string name="stats_pro_no_paddles">No paddles logged yet.</string>
+    <string name="stats_pro_months_title">Month by month</string>
+    <string name="stats_pro_months_legend">Wins above the line, losses below it.</string>
+    <string name="stats_pro_month_a11y">%1$s: %2$d wins, %3$d losses</string>
+    <string name="stats_pro_month_a11y_gap">%1$s: no matches</string>
 </resources>
