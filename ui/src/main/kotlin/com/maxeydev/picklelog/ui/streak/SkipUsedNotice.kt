@@ -27,8 +27,8 @@ import androidx.compose.ui.unit.dp
 import com.maxeydev.picklelog.domain.streak.MissedSkipOpportunity
 import com.maxeydev.picklelog.domain.streak.WeekKey
 import com.maxeydev.picklelog.ui.R
+import com.maxeydev.picklelog.ui.common.AnimatedMascot
 import com.maxeydev.picklelog.ui.common.Mascot
-import com.maxeydev.picklelog.ui.common.MascotImage
 import kotlinx.datetime.toJavaLocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -121,7 +121,7 @@ private fun NoticeSurface(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp),
         ) {
-            MascotImage(mascot = mascot, modifier = Modifier.size(MASCOT_SIZE))
+            AnimatedMascot(mascot = mascot, modifier = Modifier.size(MASCOT_SIZE))
             Column(modifier = Modifier.weight(1f).padding(vertical = 8.dp)) {
                 content()
             }
