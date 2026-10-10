@@ -210,6 +210,19 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `sound effects start on and follow the switch`() {
+        val viewModel = viewModel()
+        assertTrue(viewModel.uiState.value.soundEffects)
+
+        viewModel.changeSoundEffects(false)
+        assertFalse(viewModel.uiState.value.soundEffects)
+        assertFalse(appSettings.current.soundEffectsEnabled)
+
+        viewModel.changeSoundEffects(true)
+        assertTrue(viewModel.uiState.value.soundEffects)
+    }
+
+    @Test
     fun `changing the reminder time re-arms the next friday at that time`() {
         val viewModel = viewModel()
         viewModel.enableReminder()
