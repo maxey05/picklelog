@@ -435,6 +435,7 @@
     <string name="onboarding_save_failed">Couldn\'t save your name. Try again.</string>
     <string name="settings_name_save">Save name</string>
     <string name="settings_dark_mode_label">Dark mode</string>
+    <string name="settings_sound_effects_label">Sound effects</string>
     <string name="settings_reminder_time_label">Reminder time</string>
     <string name="settings_reminder_time_button">Reminder time %1$s. Change</string>
     <string name="settings_erase_open">Erase all data</string>
