@@ -38,6 +38,7 @@ data class AdvancedStats(
     val byLocation: List<LabelRecord>,
     val byPaddle: List<LabelRecord>,
     val monthly: List<MonthRecord>,
+    val insights: ProInsights = ProInsights.EMPTY,
 ) {
     val isEmpty: Boolean
         get() = monthly.isEmpty()
@@ -71,6 +72,7 @@ data class AdvancedStats(
                 byLocation = labelRecords(all) { it.location },
                 byPaddle = labelRecords(all) { it.paddle },
                 monthly = monthlyRecords(all, today),
+                insights = ProInsights.from(all, today),
             )
         }
 
