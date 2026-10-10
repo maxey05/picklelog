@@ -10,8 +10,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -33,6 +35,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.maxeydev.picklelog.domain.match.MatchFormat
+import com.maxeydev.picklelog.domain.match.MatchResult
 import com.maxeydev.picklelog.ui.PicklelogDependencies
 import com.maxeydev.picklelog.ui.common.rememberIsResumed
 import com.maxeydev.picklelog.ui.dashboard.DashboardViewModel
@@ -65,12 +69,16 @@ import com.maxeydev.picklelog.ui.settings.SettingsActions
 import com.maxeydev.picklelog.ui.settings.SettingsDrawer
 import com.maxeydev.picklelog.ui.settings.SettingsDrawerHost
 import com.maxeydev.picklelog.ui.settings.SettingsViewModel
+import com.maxeydev.picklelog.ui.settings.SupportScreen
 import com.maxeydev.picklelog.ui.settings.openStoreListing
+import com.maxeydev.picklelog.ui.settings.shareApp
 import com.maxeydev.picklelog.ui.share.ResourceCardLabels
 import com.maxeydev.picklelog.ui.share.ShareIntentLauncher
 import com.maxeydev.picklelog.ui.share.SharePreviewScreen
 import com.maxeydev.picklelog.ui.share.SharePreviewViewModel
 import com.maxeydev.picklelog.ui.share.VariantPickerActions
+import com.maxeydev.picklelog.ui.sound.Cue
+import com.maxeydev.picklelog.ui.sound.LocalSoundEffects
 import com.maxeydev.picklelog.ui.streak.MissedSkipNotice
 import com.maxeydev.picklelog.ui.streak.SkipUsedNotice
 import com.maxeydev.picklelog.ui.streak.StreakMilestoneHost
@@ -91,14 +99,16 @@ fun PicklelogNavHost(
         value = dependencies.onboarding.isRequired()
     }
     requiresOnboarding?.let { required ->
-        PicklelogNavGraph(
-            dependencies = dependencies,
-            requiresOnboarding = required,
-            modifier = modifier,
-            navController = navController,
-            openLogging = openLogging,
-            onOpenLoggingHandled = onOpenLoggingHandled,
-        )
+        CompositionLocalProvider(LocalSoundEffects provides dependencies.soundEffects) {
+            PicklelogNavGraph(
+                dependencies = dependencies,
+                requiresOnboarding = required,
+                modifier = modifier,
+                navController = navController,
+                openLogging = openLogging,
+                onOpenLoggingHandled = onOpenLoggingHandled,
+            )
+        }
     }
 }
 
@@ -113,6 +123,7 @@ private fun PicklelogNavGraph(
 ) {
     val startDestination: Any = if (requiresOnboarding) OnboardingRoute else HomeRoute
     var proSheetRestored by rememberSaveable { mutableStateOf<Boolean?>(null) }
+    val sound = LocalSoundEffects.current
     NavHost(
         navController = navController,
         startDestination = startDestination,
@@ -129,6 +140,7 @@ private fun PicklelogNavGraph(
             val state by viewModel.uiState.collectAsStateWithLifecycle()
             LaunchedEffect(state.isFinished) {
                 if (state.isFinished) {
+                    sound.play(Cue.WELCOME)
                     navController.navigate(HomeRoute) { popUpTo<OnboardingRoute> { inclusive = true } }
                 }
             }
@@ -161,6 +173,7 @@ private fun PicklelogNavGraph(
                 if (settingsState.isErased) {
                     settingsViewModel.erasedHandled()
                     settingsOpen = false
+                    sound.play(Cue.ERASE_DONE)
                     navController.navigate(OnboardingRoute) { popUpTo<HomeRoute> { inclusive = true } }
                 }
             }
@@ -168,6 +181,13 @@ private fun PicklelogNavGraph(
                 if (settingsOpen) {
                     settingsViewModel.refreshCacheSize()
                 }
+            }
+            var wasClearingCache by remember { mutableStateOf(false) }
+            LaunchedEffect(settingsState.isClearingCache) {
+                if (wasClearingCache && !settingsState.isClearingCache) {
+                    sound.play(Cue.SWEEP)
+                }
+                wasClearingCache = settingsState.isClearingCache
             }
             val settingsActions =
                 remember(settingsViewModel) {
@@ -178,14 +198,30 @@ private fun PicklelogNavGraph(
                         onOpenPrivacy = { navController.navigate(PrivacyRoute) },
                         onOpenAbout = { navController.navigate(AboutRoute) },
                         onRateUs = { openStoreListing(context) },
+                        onOpenSupport = { navController.navigate(SupportRoute) },
                         onClearCache = settingsViewModel::clearCache,
-                        onEnableReminder = settingsViewModel::enableReminder,
-                        onDisableReminder = settingsViewModel::disableReminder,
+                        onEnableReminder = {
+                            sound.play(Cue.REMINDER_ON)
+                            settingsViewModel.enableReminder()
+                        },
+                        onDisableReminder = {
+                            sound.play(Cue.TOGGLE_OFF)
+                            settingsViewModel.disableReminder()
+                        },
                         onReminderTimeChanged = settingsViewModel::changeReminderTime,
                         onNameChanged = settingsViewModel::changeName,
                         onSaveName = settingsViewModel::saveName,
                         onNameEditCancelled = settingsViewModel::discardNameDraft,
-                        onDarkThemeChanged = settingsViewModel::changeDarkTheme,
+                        onDarkThemeChanged = { dark ->
+                            sound.play(if (dark) Cue.TOGGLE_ON else Cue.TOGGLE_OFF)
+                            settingsViewModel.changeDarkTheme(dark)
+                        },
+                        onSoundEffectsChanged = { enabled ->
+                            if (enabled) {
+                                sound.preview(Cue.POCK)
+                            }
+                            settingsViewModel.changeSoundEffects(enabled)
+                        },
                         onEraseConfirmed = settingsViewModel::eraseAll,
                         onEraseFailureDismissed = settingsViewModel::dismissEraseFailure,
                     )
@@ -237,11 +273,18 @@ private fun PicklelogNavGraph(
                             )
                         }
                     },
-                    onNewMatch = { navController.navigate(MatchEditRoute()) },
+                    onNewMatch = {
+                        sound.play(Cue.NEW_MATCH)
+                        navController.navigate(MatchEditRoute())
+                    },
                     onOpenMatch = { matchId -> navController.navigate(MatchDetailRoute(matchId)) },
-                    onSortSelected = viewModel::selectSort,
+                    onSortSelected = { sort ->
+                        sound.play(Cue.SHUFFLE)
+                        viewModel.selectSort(sort)
+                    },
                     onLastVisibleIndexChanged = viewModel::loadMoreIfNeeded,
                     onLogAnother = { savedMatchId ->
+                        sound.play(Cue.LOG_ANOTHER)
                         navController.navigate(MatchEditRoute(logAnotherFrom = savedMatchId))
                     },
                     onSavedConfirmationDismissed = viewModel::dismissSavedConfirmation,
@@ -250,10 +293,22 @@ private fun PicklelogNavGraph(
                         remember(viewModel) {
                             MatchListFilterActions(
                                 onSearchChanged = viewModel::changeSearch,
-                                onFilterChanged = viewModel::changeFilter,
-                                onFilterCleared = viewModel::clearFilter,
-                                onAllFiltersCleared = viewModel::clearAllFilters,
-                                onFiltersAndSearchCleared = viewModel::clearFiltersAndSearch,
+                                onFilterChanged = { filter ->
+                                    sound.play(Cue.TICK_SELECT)
+                                    viewModel.changeFilter(filter)
+                                },
+                                onFilterCleared = { kind ->
+                                    sound.play(Cue.TICK_CLEAR)
+                                    viewModel.clearFilter(kind)
+                                },
+                                onAllFiltersCleared = {
+                                    sound.play(Cue.SWEEP)
+                                    viewModel.clearAllFilters()
+                                },
+                                onFiltersAndSearchCleared = {
+                                    sound.play(Cue.SWEEP)
+                                    viewModel.clearFiltersAndSearch()
+                                },
                             )
                         },
                 )
@@ -268,6 +323,7 @@ private fun PicklelogNavGraph(
                     onDismiss = viewModel::dismissSavedConfirmation,
                     onLogAnother = {
                         state.savedMatchId?.let { savedMatchId ->
+                            sound.play(Cue.LOG_ANOTHER)
                             viewModel.dismissSavedConfirmation()
                             navController.navigate(MatchEditRoute(logAnotherFrom = savedMatchId))
                         }
@@ -297,6 +353,14 @@ private fun PicklelogNavGraph(
             val state by viewModel.uiState.collectAsStateWithLifecycle()
             val launcher = remember { ShareIntentLauncher(dependencies.ioDispatcher) }
             val scope = rememberCoroutineScope()
+            var soundedCard by remember { mutableStateOf(state.card) }
+            LaunchedEffect(state.card) {
+                val card = state.card
+                if (card != null && card !== soundedCard) {
+                    sound.play(if (soundedCard == null) Cue.CARD_READY else Cue.CARD_SWAP)
+                    soundedCard = card
+                }
+            }
             LaunchedEffect(state.isGone) {
                 if (state.isGone) {
                     navController.popBackStack()
@@ -307,6 +371,7 @@ private fun PicklelogNavGraph(
                 onBack = { navController.popBackStack() },
                 onShare = {
                     state.card?.let { card ->
+                        sound.play(Cue.SHARE_SEND)
                         scope.launch {
                             try {
                                 launcher.launch(context, launcher.prepare(context, card))
@@ -357,6 +422,20 @@ private fun PicklelogNavGraph(
             AboutScreen(
                 versionName = dependencies.appVersionName,
                 onBack = { navController.popBackStack() },
+            )
+        }
+        composable<SupportRoute> {
+            val context = LocalContext.current
+            val homeEntry = remember(it) { navController.getBackStackEntry<HomeRoute>() }
+            val settingsViewModel: SettingsViewModel =
+                viewModel(viewModelStoreOwner = homeEntry, factory = SettingsViewModel.factory(dependencies))
+            val settingsState by settingsViewModel.uiState.collectAsStateWithLifecycle()
+            SupportScreen(
+                hasPro = settingsState.hasPro,
+                onBack = { navController.popBackStack() },
+                onSeePro = { navController.navigate(PaywallRoute) },
+                onRateUs = { openStoreListing(context) },
+                onShareApp = { shareApp(context) },
             )
         }
         composable<BackupRoute> {
@@ -410,8 +489,29 @@ private fun PicklelogNavGraph(
                     navController.navigate(PaywallRoute)
                 }
             }
+            var soundedResultErrors by rememberSaveable { mutableIntStateOf(state.resultErrorAttempts) }
+            LaunchedEffect(state.resultErrorAttempts) {
+                if (state.resultErrorAttempts > soundedResultErrors) {
+                    sound.play(Cue.SOFT_ERROR)
+                }
+                soundedResultErrors = state.resultErrorAttempts
+            }
+            val readyPhotoCount = state.photos.count { !it.isImporting }
+            var knownPhotoCount by remember { mutableStateOf<Int?>(null) }
+            LaunchedEffect(readyPhotoCount, state.isLoading) {
+                if (!state.isLoading) {
+                    val known = knownPhotoCount
+                    if (known != null && readyPhotoCount > known) {
+                        sound.play(Cue.PHOTO_ADDED)
+                    }
+                    knownPhotoCount = readyPhotoCount
+                }
+            }
             LaunchedEffect(state.isFinished) {
                 if (state.isFinished) {
+                    if (state.didSave) {
+                        sound.play(if (state.savedNewMatchId != null) Cue.MATCH_SAVED else Cue.MATCH_UPDATED)
+                    }
                     state.savedNewMatchId?.let { savedMatchId ->
                         navController.previousBackStackEntry
                             ?.takeIf { it.destination.hasRoute<HomeRoute>() }
@@ -424,14 +524,26 @@ private fun PicklelogNavGraph(
             val actions =
                 remember(viewModel) {
                     MatchEditActions(
-                        onFormatSelected = viewModel::selectFormat,
-                        onResultSelected = viewModel::selectResult,
+                        onFormatSelected = { format ->
+                            sound.play(if (format == MatchFormat.SINGLES) Cue.FORMAT_SINGLES else Cue.FORMAT_DOUBLES)
+                            viewModel.selectFormat(format)
+                        },
+                        onResultSelected = { result ->
+                            sound.play(if (result == MatchResult.WIN) Cue.RESULT_WIN else Cue.RESULT_LOSS)
+                            viewModel.selectResult(result)
+                        },
                         onDateSelected = viewModel::selectDate,
                         onStartTimeChanged = viewModel::changeStartTime,
                         onEndTimeChanged = viewModel::changeEndTime,
                         onPersonNameChanged = viewModel::changePersonName,
-                        onGameAdded = viewModel::addGame,
-                        onGameRemoved = viewModel::removeGame,
+                        onGameAdded = {
+                            sound.play(Cue.POP_IN)
+                            viewModel.addGame()
+                        },
+                        onGameRemoved = { index ->
+                            sound.play(Cue.POP_OUT)
+                            viewModel.removeGame(index)
+                        },
                         onGameScoresChanged = viewModel::changeGameScores,
                         onLocationChanged = viewModel::changeLocation,
                         onPaddleChanged = viewModel::changePaddle,
@@ -443,14 +555,23 @@ private fun PicklelogNavGraph(
                                 viewModel.leaveSuggestionTarget(target)
                             }
                         },
-                        onSuggestionSelected = viewModel::selectSuggestion,
+                        onSuggestionSelected = { target, suggestion ->
+                            sound.play(Cue.SNAP)
+                            viewModel.selectSuggestion(target, suggestion)
+                        },
                         photoActions =
                             PhotoPickerActions(
                                 newCaptureUri = dependencies::newCaptureUri,
                                 onPhotosPicked = viewModel::addPickedPhotos,
                                 onPhotoCaptured = viewModel::addCapturedPhoto,
-                                onPhotoMoved = viewModel::movePhoto,
-                                onPhotoRemoved = viewModel::removePhoto,
+                                onPhotoMoved = { key, offset ->
+                                    sound.play(Cue.TICK_SELECT)
+                                    viewModel.movePhoto(key, offset)
+                                },
+                                onPhotoRemoved = { key ->
+                                    sound.play(Cue.WHISK)
+                                    viewModel.removePhoto(key)
+                                },
                                 onPhotoErrorDismissed = viewModel::dismissPhotoError,
                             ),
                         onSave = viewModel::save,
@@ -499,10 +620,16 @@ private fun PicklelogNavGraph(
             MatchDetailScreen(
                 state = state,
                 onBack = { navController.popBackStack() },
-                onEdit = { navController.navigate(MatchEditRoute(route.matchId)) },
+                onEdit = {
+                    sound.play(Cue.SHEET_UP)
+                    navController.navigate(MatchEditRoute(route.matchId))
+                },
                 onShare = { navController.navigate(ShareRoute(route.matchId)) },
                 onDeleteRequested = viewModel::requestDelete,
-                onDeleteConfirmed = viewModel::confirmDelete,
+                onDeleteConfirmed = {
+                    sound.play(Cue.DELETE)
+                    viewModel.confirmDelete()
+                },
                 onDeleteDismissed = viewModel::dismissDelete,
             )
         }
